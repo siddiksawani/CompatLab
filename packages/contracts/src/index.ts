@@ -1,3 +1,4 @@
+export * from "./comparison.js";
 export * from "./harness.js";
 export * from "./jobs.js";
 export * from "./local-report.js";

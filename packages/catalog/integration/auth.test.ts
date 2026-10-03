@@ -510,3 +510,32 @@ it("bounds repository history and does not invalidate proofs for no-op revocatio
       .where(eq(repositoryLinks.userId, fixture.user.userId)),
   ).toHaveLength(9);
 });
+it("refreshes background repository authority without requiring a live browser session", async () => {
+  const fixture = await signedIn();
+  const response = await fixture.service.handler(
+    request(
+      "/api/maintainer/repositories",
+      { repository: "owner/package", installationId: "91" },
+      fixture.cookie,
+    ),
+  );
+  const link = (await response.json()) as { id: string };
+  await catalog.db
+    .update(authAccounts)
+    .set({ accessTokenExpiresAt: new Date(0) })
+    .where(eq(authAccounts.userId, fixture.user.userId));
+  await catalog.db.delete(authSessions).where(eq(authSessions.userId, fixture.user.userId));
+  expect(await fixture.service.authorizeLink(fixture.user.userId, link.id)).toMatchObject({
+    userId: fixture.user.userId,
+    linkId: link.id,
+    proof: { repositoryId: "510" },
+  });
+  expect(
+    (await fixture.service.handler(request("/api/maintainer/monitors", undefined, fixture.cookie)))
+      .status,
+  ).toBe(401);
+  await revokeAccount(catalog.db, fixture.user.userId);
+  await expect(fixture.service.authorizeLink(fixture.user.userId, link.id)).rejects.toThrow(
+    "repository_authority_required",
+  );
+});

@@ -59,6 +59,9 @@ export const reportEnvelopeSchema = z.object({
     invalidatedAt: z.iso.datetime().nullable(),
     invalidationReason: z.string().nullable(),
     replacedBy: z.uuid().nullable(),
+    observationRevision: z.number().int().nonnegative().optional(),
+    previousScanId: z.uuid().nullable().optional(),
+    previousReportId: z.uuid().nullable().optional(),
   }),
   report: hostedReportSchema,
 });

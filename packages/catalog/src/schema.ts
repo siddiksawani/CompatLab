@@ -106,6 +106,8 @@ export const scans = pgTable("scans", {
   state: text("state").$type<ScanState>().notNull().default("requested"),
   requesterKey: text("requester_key"),
   accountKey: text("account_key"),
+  observationRevision: integer("observation_revision").notNull().default(0),
+  previousScanId: uuid("previous_scan_id"),
   requesterExpiresAt: time("requester_expires_at").notNull(),
   admissionPolicy: text("admission_policy").notNull(),
   progressRevision: integer("progress_revision").notNull().default(0),
@@ -180,3 +182,4 @@ export const serviceControls = pgTable("service_controls", {
   singleton: boolean("singleton").primaryKey().default(true),
   admissionPaused: boolean("admission_paused").notNull().default(false),
 });
+export * from "./monitoring/schema.js";

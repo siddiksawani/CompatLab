@@ -132,3 +132,38 @@ it("separates maintainer credentials from control and operator access", async ()
     (await web.pool.query("SELECT id FROM auth_sessions WHERE user_id=$1", [userId])).rowCount,
   ).toBe(0);
 });
+it("keeps monitor destinations private while allowing the deployed scheduler role", async () => {
+  const userId = randomUUID(),
+    linkId = randomUUID(),
+    monitorId = randomUUID();
+  await web.pool.query(
+    "INSERT INTO auth_users(id,name,email,email_verified) VALUES($1,'maintainer','monitor@example.com',true)",
+    [userId],
+  );
+  await web.pool.query(
+    "INSERT INTO repository_links(id,user_id,repository_id,installation_id,full_name) VALUES($1,$2,'901','92','owner/package')",
+    [linkId, userId],
+  );
+  await web.pool.query(
+    "INSERT INTO monitors(id,user_id,repository_link_id,package_name,version_range,matrix_id,rule) VALUES($1,$2,$3,'fixture','*',$4,'regressions_only')",
+    [monitorId, userId, linkId, matrixId],
+  );
+  await web.pool.query(
+    "INSERT INTO monitor_releases(monitor_id,version,state) VALUES($1,'1.0.0','pending')",
+    [monitorId],
+  );
+  for (const client of [control, operator])
+    for (const table of [
+      "monitors",
+      "monitor_releases",
+      "notifications",
+      "notification_deliveries",
+    ])
+      await expect(client.pool.query(`SELECT * FROM ${table}`)).rejects.toThrow(
+        "permission denied",
+      );
+  await web.pool.query("DELETE FROM auth_users WHERE id=$1", [userId]);
+  expect((await web.pool.query("SELECT id FROM monitors WHERE id=$1", [monitorId])).rowCount).toBe(
+    0,
+  );
+});

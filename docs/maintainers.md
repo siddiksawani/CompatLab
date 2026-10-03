@@ -53,3 +53,5 @@ PostgreSQL tests use the real Better Auth adapter with a mocked GitHub HTTP boun
 No live GitHub App is created by these tests. Before enabling accounts publicly, verify one real login, installation, token refresh and revocation with the deployment's App. Public deployment remains a separate release decision.
 
 References: [Better Auth GitHub](https://better-auth.com/docs/authentication/github), [Better Auth options](https://better-auth.com/docs/reference/options), [GitHub App user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app).
+
+Release monitoring, controlled rescans, comparisons and optional email are described in [monitoring](monitoring.md). Background reconciliation uses the encrypted account credentials with live repository checks; an expired browser session does not stop a configured monitor. Revocation does.

@@ -108,6 +108,11 @@ export default async function PackagePage({
           )}
         </div>
       </div>
+      <p>
+        <a href={`/history?${new URLSearchParams({ name: pkg.name })}`}>
+          Browse report history and comparisons
+        </a>
+      </p>
       <aside className="notice">
         <h2>What this scan observes</h2>
         <p>

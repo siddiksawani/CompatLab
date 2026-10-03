@@ -5,6 +5,7 @@ import type { CatalogDatabase } from "../database.js";
 import { PublicRequestError } from "../public/security.js";
 
 export const maintainerConfigSchema = z.strictObject({
+  emailEnabled: z.boolean().optional(),
   secret: z.string().regex(/^[a-f0-9]{64}$/),
   githubClientId: z.string().regex(/^[A-Za-z0-9._-]{8,100}$/),
   githubClientSecret: z.string().min(20).max(256),
@@ -19,6 +20,7 @@ export type MaintainerConfig = z.infer<typeof maintainerConfigSchema>;
 export function maintainerConfig(environment: NodeJS.ProcessEnv): MaintainerConfig | undefined {
   if (environment.MAINTAINER_AUTH_ENABLED !== "true") return undefined;
   return maintainerConfigSchema.parse({
+    emailEnabled: environment.MAINTAINER_EMAIL_ENABLED === "true",
     secret: environment.AUTH_SECRET,
     githubClientId: environment.GITHUB_CLIENT_ID,
     githubClientSecret: environment.GITHUB_CLIENT_SECRET,

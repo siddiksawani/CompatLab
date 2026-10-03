@@ -1,5 +1,6 @@
 import { type HostedReport, type ReportCell, reportEnvelopeSchema } from "@compatlab/contracts";
 import { displayIdentifier } from "@compatlab/engine";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Copy } from "../../../components/copy";
@@ -159,6 +160,36 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           )}
         </aside>
       )}
+      <p>
+        Observation {status.observationRevision ?? 0} ·{" "}
+        <a href={`/history?${new URLSearchParams({ name: report.artifact.name })}`}>
+          Report history
+        </a>{" "}
+        · <a href={`/account?rescan=${report.scanId}`}>Request a maintainer rescan</a>
+      </p>
+      {status.previousReportId && (
+        <p>
+          <a href={`/compare?before=${status.previousReportId}&after=${report.id}`}>
+            Compare with the previous observation
+          </a>
+        </p>
+      )}
+      <p>
+        <a href={`${webRuntime().config.origin}/reports/${report.id}`}>
+          <Image
+            unoptimized
+            width={600}
+            height={28}
+            className="evidence-badge"
+            src={`/api/v1/badges/${report.id}.svg`}
+            alt={`Immutable loading evidence badge for ${report.artifact.name}`}
+          />
+        </a>
+      </p>
+      <Copy
+        label="Copy evidence badge Markdown"
+        value={`[![CompatLab loading evidence](${webRuntime().config.origin}/api/v1/badges/${report.id}.svg)](${webRuntime().config.origin}/reports/${report.id})`}
+      />
       <div className="report-summary">
         <div>
           <span className={`result ${report.outcome}`}>{labels[report.outcome]}</span>
