@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. Persistent scheduling and the website are still in progress. See [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
+The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog adds immutable identities, transactional admission, quotas and cache policy checks. Durable dispatch and the website are still in progress. See [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 
@@ -16,7 +16,7 @@ pnpm cli --help
 pnpm cli doctor --json
 ```
 
-`pnpm check` runs formatting/lint checks, a strict workspace build, test type checking, and unit/CLI tests. Build before running the CLI or tests directly. Development checks work on macOS and Linux; a Docker daemon is only needed for `doctor` and sandbox tests.
+`pnpm check` runs formatting/lint checks, a strict workspace build, test type checking, and unit/CLI tests. Build before running the CLI or tests directly. Development checks work on macOS and Linux; a Docker daemon is needed for `doctor`, sandbox tests and the local PostgreSQL test server. See [database qualification](docs/catalog.md#migrations-and-qualification) for the separate integration gate.
 
 `doctor` reports whether a Linux amd64 Docker server has a registered runsc runtime. It returns exit code 1 when prerequisites are missing and never executes package code. Passing it does not qualify a host for untrusted execution. There is no fallback to running packages on the developer's machine.
 
@@ -35,6 +35,7 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 |---|---|
 | `apps/cli` | Prerequisite reporting, local checks and reproduction |
 | `packages/engine` | Registry resolution, analysis, planning and bounded probe orchestration |
+| `packages/catalog` | PostgreSQL migrations, identities, transactional admission and policy-aware cache lookup |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
 | `services/worker` | Preparation, sealed storage, runtime supervision and local evidence storage |
 | `harnesses` | Root and sequential batch loading/checkpoint protocol |

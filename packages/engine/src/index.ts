@@ -9,6 +9,7 @@ export * from "./registry/errors.js";
 export {
   artifactIntegrity,
   assertPackageName,
+  isDistTag,
   isExactVersion,
   registryTarballUrl,
 } from "./registry/validation.js";

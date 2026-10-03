@@ -11,7 +11,7 @@
     "build": "tsc -b",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit && tsc -p tsconfig.database-tests.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "pnpm lint && pnpm build && pnpm typecheck:tests && pnpm test",
@@ -20,7 +20,9 @@
     "test:preparation": "node scripts/preparation-smoke.mjs",
     "test:runtimes": "node scripts/runtime-smoke.mjs",
     "test:engine": "node scripts/engine-smoke.mjs",
-    "test:worker": "node scripts/worker-smoke.mjs"
+    "test:worker": "node scripts/worker-smoke.mjs",
+    "test:database": "vitest run --config vitest.database.config.ts",
+    "db:migrate": "node scripts/migrate-catalog.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

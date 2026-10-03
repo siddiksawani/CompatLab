@@ -152,3 +152,35 @@ jobs:
           sudo modprobe br_netfilter
           sudo sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1
       - run: sudo "$(command -v node)" scripts/worker-smoke.mjs
+
+  database:
+    name: Database qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6-bookworm@sha256:3725f4e2499eef5134592b3b4ab79a543ed7f8e533b05b5b637af926630f6650
+        env:
+          POSTGRES_PASSWORD: compatlab-test
+          POSTGRES_DB: compatlab_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d compatlab_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+          --memory 1g --cpus 2
+    env:
+      COMPATLAB_TEST_DATABASE_URL: postgres://postgres:compatlab-test@127.0.0.1:5432/compatlab_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:database
