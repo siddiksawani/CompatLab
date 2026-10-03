@@ -15,9 +15,7 @@ export function selectExport(
   if (depth > 32) return { kind: "uncertain" };
   if (value === null) return { kind: "blocked" };
   if (typeof value === "string")
-    return value.startsWith("./") && value.length <= 2048
-      ? { kind: "target", path: value }
-      : { kind: "uncertain" };
+    return validTarget(value) ? { kind: "target", path: value } : { kind: "uncertain" };
   if (Array.isArray(value)) {
     for (const option of value) {
       const result = selectExport(option, conditions, depth + 1);
@@ -33,6 +31,19 @@ export function selectExport(
     if (result.kind !== "unmatched") return result;
   }
   return { kind: "unmatched" };
+}
+
+function validTarget(value: string): boolean {
+  if (!value.startsWith("./") || value.length > 2048 || value.includes("\\")) return false;
+  const path = value.split(/[?#]/, 1)[0] ?? "";
+  if (/%2f|%5c/i.test(path)) return false;
+  try {
+    return !decodeURIComponent(path.slice(2))
+      .split("/")
+      .some((part) => part === "." || part === ".." || part.toLowerCase() === "node_modules");
+  } catch {
+    return false;
+  }
 }
 
 export function applicability(value: unknown, conditions: ReadonlySet<string>): Applicability {

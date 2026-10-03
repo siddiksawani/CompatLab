@@ -2,12 +2,13 @@ import { z } from "zod";
 
 export const PROBE_PLAN_REVISION = "explicit_exports_v1";
 export const MAX_SUBPATHS = 512;
-export const applicabilitySchema = z.discriminatedUnion("applicable", [
+export const applicabilitySchema = z.union([
   z.strictObject({
     applicable: z.literal(true),
-    reason: z.enum(["public_target", "resolution_required"]),
-    target: z.string().max(2048).optional(),
+    reason: z.literal("public_target"),
+    target: z.string().min(1).max(2048),
   }),
+  z.strictObject({ applicable: z.literal(true), reason: z.literal("resolution_required") }),
   z.strictObject({
     applicable: z.literal(false),
     reason: z.enum(["not_exported", "non_executable"]),

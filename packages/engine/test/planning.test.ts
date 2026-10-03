@@ -87,7 +87,17 @@ describe("public entry planning", () => {
     });
   });
   it("attempts malformed exports and legacy mains for runtime resolution evidence", () => {
-    for (const exports of [42, { ".": "./index.js", import: "./other.js" }, "../invalid.js"])
+    for (const exports of [
+      42,
+      { ".": "./index.js", import: "./other.js" },
+      "../invalid.js",
+      "./../outside.js",
+      "./node_modules/x.js",
+      "./%2e%2e/outside.js",
+      "./x/%6eode_modules/x.js",
+      "./a%2fb.js",
+      "./bad%zz.js",
+    ])
       expect(plan({ exports }).runtimes[0]?.root.esm).toEqual({
         applicable: true,
         reason: "resolution_required",
