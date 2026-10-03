@@ -49,10 +49,17 @@ export function requesterKey(request: Request, config: PublicConfig, now = new D
       const expanded = canonical.includes("::")
         ? [...start, ...Array<string>(8 - start.length - end.length).fill("0"), ...end]
         : start;
-      address = expanded
-        .slice(0, 4)
-        .map((part) => part.padStart(4, "0"))
-        .join(":");
+      const words = expanded.map((part) => Number.parseInt(part, 16));
+      if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) {
+        const high = words[6] ?? 0,
+          low = words[7] ?? 0;
+        address = [high >> 8, high & 255, low >> 8, low & 255].join(".");
+      } else {
+        address = expanded
+          .slice(0, 4)
+          .map((part) => part.padStart(4, "0"))
+          .join(":");
+      }
     }
   }
   return createHmac("sha256", config.requesterSecret)

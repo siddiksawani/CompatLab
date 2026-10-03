@@ -1,11 +1,12 @@
 import { RegistryClient } from "@compatlab/engine";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPublicApi, migrateCatalog, schema } from "../src/index.js";
 import { artifact, database, seedMatrix } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
 let api: ReturnType<typeof createPublicApi>;
 let calls = 0;
+let searchSize = 1;
 const origin = "http://127.0.0.1:3000";
 const source = artifact("@scope/public-fixture");
 const registry = new RegistryClient({
@@ -14,15 +15,13 @@ const registry = new RegistryClient({
     const url = new URL(String(input));
     if (url.pathname === "/-/v1/search")
       return Response.json({
-        objects: [
-          {
-            package: {
-              name: source.name,
-              version: source.version,
-              description: "<script>inert</script>",
-            },
+        objects: Array.from({ length: searchSize }, (_, index) => ({
+          package: {
+            name: index ? `${source.name}-${index}` : source.name,
+            version: source.version,
+            description: "<script>inert</script>",
           },
-        ],
+        })),
       });
     if (decodeURIComponent(url.pathname) === `/${source.name}`)
       return Response.json({
@@ -57,6 +56,7 @@ beforeEach(async () => {
     registry,
   );
   calls = 0;
+  searchSize = 1;
 });
 function post(value: unknown, headers: Record<string, string> = {}) {
   return api(
@@ -68,6 +68,18 @@ function post(value: unknown, headers: Record<string, string> = {}) {
   );
 }
 describe("public discovery and scan admission", () => {
+  it("looks up ten search results in one database query", async () => {
+    searchSize = 10;
+    const execute = vi.spyOn(catalog.db, "execute");
+    try {
+      const response = await api(new Request(`${origin}/api/v1/search?q=fixture`));
+      expect(response.status).toBe(200);
+      expect(((await response.json()) as { packages: unknown[] }).packages).toHaveLength(10);
+      expect(execute).toHaveBeenCalledTimes(1);
+    } finally {
+      execute.mockRestore();
+    }
+  });
   it("returns bodyless HEAD responses for successful and failed discovery", async () => {
     for (const path of ["search?q=fixture", "packages?name=missing", "missing"]) {
       const get = await api(new Request(`${origin}/api/v1/${path}`));

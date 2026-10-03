@@ -17,7 +17,7 @@ The development server listens on `127.0.0.1:3000`. Search uses public npm metad
 
 ## Public boundaries
 
-The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request. Search returns at most ten packages; the version picker suggests at most 200 versions and accepts another exact published version explicitly.
+The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request; search resolves all returned package/version pairs in one query. Search returns at most ten packages; the version picker suggests at most 200 versions and accepts another exact published version explicitly.
 
 | Route | Purpose |
 |---|---|
@@ -28,7 +28,7 @@ The web service owns a bounded PostgreSQL pool. It has no package execution path
 
 Admission requires JSON, same-origin headers and a body of at most 2 KiB. Public callers cannot choose commands, runtime images, policies or custom code. Eight API requests may be in flight per application handler, with a separate four-read report limit; saturation returns a bounded retry interval. Database admission atomically deduplicates work and applies requester, package and global queue limits across replicas.
 
-For a non-loopback origin, configure HTTPS and `PROXY_SECRET`. A trusted reverse proxy must **overwrite** `x-compatlab-proxy-token` with this secret and `x-compatlab-client-ip` with the actual client address; do not append user-supplied forwarding values. The application must be unreachable directly from the public network. A spoofed token or address cannot admit work. Requester keys rotate daily with keyed hashing; IPv6 addresses are grouped by /64. Loopback development shares one fixed requester identity and ignores forwarded addresses. Never log these secret headers or raw client addresses.
+For a non-loopback origin, configure HTTPS and `PROXY_SECRET`. A trusted reverse proxy must **overwrite** `x-compatlab-proxy-token` with this secret and `x-compatlab-client-ip` with the actual client address; do not append user-supplied forwarding values. The application must be unreachable directly from the public network. A spoofed token or address cannot admit work. Requester keys rotate daily with keyed hashing; IPv6 addresses are grouped by /64; IPv4-mapped addresses use their underlying IPv4 identity. Loopback development shares one fixed requester identity and ignores forwarded addresses. Never log these secret headers or raw client addresses.
 
 Pages use a per-response nonce CSP, escaped text, no remote scripts/fonts, and no client-side secrets. Production does not allow inline scripts without a nonce or `eval`. Same-origin JSON routes are not a cross-origin API. Responses avoid shared page caching so historical reports show current quarantine and invalidation state.
 

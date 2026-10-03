@@ -64,6 +64,13 @@ describe("anonymous mutation boundaries", () => {
     );
     expect(requesterKey(request("192.0.2.1"), config, day)).not.toContain("192.0.2");
   });
+  it("treats IPv4-mapped addresses as their distinct IPv4 clients", () => {
+    const day = new Date("2026-10-04T01:00:00Z");
+    const first = requesterKey(request("192.0.2.1"), config, day);
+    expect(requesterKey(request("::ffff:192.0.2.1"), config, day)).toBe(first);
+    expect(requesterKey(request("::ffff:c000:201"), config, day)).toBe(first);
+    expect(requesterKey(request("::ffff:198.51.100.9"), config, day)).not.toBe(first);
+  });
   it("rejects cross-origin requests, non-JSON bodies and streamed overflow", async () => {
     const make = (body: string, headers: Record<string, string> = {}) =>
       new Request(config.origin, {
