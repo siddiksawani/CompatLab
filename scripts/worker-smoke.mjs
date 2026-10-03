@@ -347,4 +347,20 @@ async function qualifyReuse() {
   await collectSnapshots(state);
   await assert.rejects(() => reuseSnapshot(snapshot.id, join(state, "snapshots"), artifact));
   assert.deepEqual(await readdir(join(state, "snapshots")), []);
+  const owner = await ExecutionSupervisor.open(state);
+  const retained = await owner.withScan((scanId) =>
+    owner.prepare(artifact, scanId, new AbortController().signal),
+  );
+  await owner.close();
+  const changed = await ExecutionSupervisor.open(join(base, "changed-state"));
+  try {
+    assert.deepEqual(
+      await readdir(join(state, "snapshots")),
+      [],
+      "Switching state roots must retire the old snapshot cache.",
+    );
+    await assert.rejects(() => reuseSnapshot(retained.id, join(state, "snapshots"), artifact));
+  } finally {
+    await changed.close();
+  }
 }

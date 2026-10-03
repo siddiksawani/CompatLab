@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 import type { RuntimeImage } from "@compatlab/contracts";
@@ -17,7 +18,14 @@ export class ExecutionSupervisor {
   readonly capacity: CapacityPool;
   private readonly cancellation = new AbortController();
   private readonly operations = new Set<Promise<unknown>>();
-  private readonly protectedSnapshots = new Set<string>();
+  private readonly scans = new Map<
+    string,
+    {
+      snapshots: Set<string>;
+      operations: Set<Promise<unknown>>;
+      cancellation: AbortController;
+    }
+  >();
   private closed = false;
   private constructor(
     readonly stateDirectory: string,
@@ -36,7 +44,7 @@ export class ExecutionSupervisor {
         (await exists(lease.previousState))
       ) {
         await recoverResources(lease.previousState);
-        await collectSnapshots(lease.previousState);
+        await collectSnapshots(lease.previousState, new Set(), 0);
       }
       await recoverResources(state);
       await collectSnapshots(state);
@@ -46,8 +54,31 @@ export class ExecutionSupervisor {
       throw error;
     }
   }
-  pinSnapshot(id: string): void {
-    this.protectedSnapshots.add(id);
+  async withScan<T>(work: (scanId: string) => Promise<T>): Promise<T> {
+    if (this.closed) throw new Error("The supervisor is closed.");
+    const scanId = randomUUID();
+    const scan = {
+      snapshots: new Set<string>(),
+      operations: new Set<Promise<unknown>>(),
+      cancellation: new AbortController(),
+    };
+    this.scans.set(scanId, scan);
+    const operation = (async () => {
+      try {
+        return await work(scanId);
+      } finally {
+        scan.cancellation.abort();
+        await Promise.allSettled([...scan.operations]);
+        this.scans.delete(scanId);
+      }
+    })();
+    return this.track(operation);
+  }
+  pinSnapshot(id: string, scanId: string): void {
+    this.scan(scanId).snapshots.add(id);
+  }
+  private get protectedSnapshots(): ReadonlySet<string> {
+    return new Set([...this.scans.values()].flatMap((scan) => [...scan.snapshots]));
   }
   async prepare(
     artifact: ResolvedArtifact,
@@ -55,7 +86,7 @@ export class ExecutionSupervisor {
     signal: AbortSignal,
     retainedLock?: Uint8Array,
   ): Promise<PreparedSnapshot> {
-    const combined = this.signal(signal);
+    const combined = this.signal(signal, scanId);
     return this.track(
       this.capacity.run("preparation", scanId, combined, async () => {
         await collectSnapshots(this.stateDirectory, this.protectedSnapshots, 6 * 1024 ** 3);
@@ -65,9 +96,10 @@ export class ExecutionSupervisor {
           combined,
           retainedLock,
         );
-        this.pinSnapshot(snapshot.id);
+        this.pinSnapshot(snapshot.id, scanId);
         return snapshot;
       }),
+      scanId,
     );
   }
   async backend(
@@ -75,7 +107,7 @@ export class ExecutionSupervisor {
     images: readonly RuntimeImage[],
     scanId: string,
   ): Promise<SandboxBackend> {
-    this.pinSnapshot(snapshot.id);
+    this.pinSnapshot(snapshot.id, scanId);
     const backend = await createProbeBackend(
       snapshot.workspace,
       join(this.stateDirectory, "jobs"),
@@ -83,9 +115,10 @@ export class ExecutionSupervisor {
     );
     return {
       run: (input, image, signal) => {
-        const combined = this.signal(signal);
+        const combined = this.signal(signal, scanId);
         return this.track(
           this.capacity.run("runtime", scanId, combined, () => backend.run(input, image, combined)),
+          scanId,
         );
       },
     };
@@ -97,16 +130,29 @@ export class ExecutionSupervisor {
     await Promise.allSettled([...this.operations]);
     await this.lease.close();
   }
-  private signal(signal: AbortSignal): AbortSignal {
+  private signal(signal: AbortSignal, scanId: string): AbortSignal {
     if (this.closed) throw new Error("The supervisor is closed.");
-    return AbortSignal.any([signal, this.cancellation.signal, this.lease.lost]);
+    return AbortSignal.any([
+      signal,
+      this.cancellation.signal,
+      this.lease.lost,
+      this.scan(scanId).cancellation.signal,
+    ]);
   }
-  private async track<T>(operation: Promise<T>): Promise<T> {
+  private scan(scanId: string) {
+    const scan = this.scans.get(scanId);
+    if (!scan || scan.cancellation.signal.aborted) throw new Error("The scan scope is closed.");
+    return scan;
+  }
+  private async track<T>(operation: Promise<T>, scanId?: string): Promise<T> {
+    const scan = scanId ? this.scan(scanId) : undefined;
+    scan?.operations.add(operation);
     this.operations.add(operation);
     try {
       return await operation;
     } finally {
       this.operations.delete(operation);
+      scan?.operations.delete(operation);
     }
   }
 }

@@ -57,14 +57,16 @@ export async function checkPackage(spec: string, options: LocalOptions): Promise
   const state = await localState(options.stateDirectory);
   const supervisor = await ExecutionSupervisor.open(state);
   try {
-    const images = await localImages(state);
-    const artifact = await new RegistryClient().resolve(name, version, options.signal);
-    await installerImages();
-    const signal = deadline(options.signal);
-    const snapshot = await supervisor.prepare(artifact, randomUUID(), signal);
-    return await scanSnapshot(snapshot, images, state, signal, supervisor, {
-      method: "prepared",
-      previousGeneration: null,
+    return await supervisor.withScan(async (scanId) => {
+      const images = await localImages(state);
+      const artifact = await new RegistryClient().resolve(name, version, options.signal);
+      await installerImages();
+      const signal = deadline(options.signal);
+      const snapshot = await supervisor.prepare(artifact, scanId, signal);
+      return await scanSnapshot(snapshot, images, state, signal, supervisor, scanId, {
+        method: "prepared",
+        previousGeneration: null,
+      });
     });
   } finally {
     await supervisor.close();
@@ -81,46 +83,49 @@ export async function reproduceReport(
   const state = await localState(options.stateDirectory);
   const supervisor = await ExecutionSupervisor.open(state);
   try {
-    const artifact: ResolvedArtifact = { ...report.artifact, manifest: {}, observedTags: {} };
-    assertPackageName(artifact.name);
-    if (!isExactVersion(artifact.version))
-      throw new TypeError("The report artifact version is invalid.");
-    artifactIntegrity(artifact.integrity);
-    registryTarballUrl(artifact.tarballUrl);
-    if (
-      report.snapshot.profileRevision !== PREPARATION_PROFILE ||
-      report.snapshot.installerImage !== INSTALLER_IMAGE
-    )
-      throw new TypeError("The report preparation profile is unavailable.");
-    await verifyRuntimeImages(report.images);
-    const signal = deadline(options.signal);
-    let snapshot: PreparedSnapshot;
-    if (options.rebuild) {
-      const lockBytes = await readBoundedFile(
-        join(state, "locks", `${report.snapshot.lockDigest}.json`),
-        MAX_LOCK_BYTES,
-      );
-      if (validateLock(lockBytes, artifact).digest !== report.snapshot.lockDigest)
-        throw new TypeError("The retained lock changed.");
-      await installerImages();
-      snapshot = await supervisor.prepare(artifact, randomUUID(), signal, lockBytes);
-    } else {
-      snapshot = await reuseSnapshot(
-        report.snapshot.id,
-        join(state, "snapshots"),
-        artifact,
-        signal,
-      );
+    return await supervisor.withScan(async (scanId) => {
+      const artifact: ResolvedArtifact = { ...report.artifact, manifest: {}, observedTags: {} };
+      assertPackageName(artifact.name);
+      if (!isExactVersion(artifact.version))
+        throw new TypeError("The report artifact version is invalid.");
+      artifactIntegrity(artifact.integrity);
+      registryTarballUrl(artifact.tarballUrl);
       if (
-        snapshot.generation !== report.snapshot.generation ||
-        snapshot.lock.digest !== report.snapshot.lockDigest ||
-        snapshot.tree.digest !== report.snapshot.treeDigest
+        report.snapshot.profileRevision !== PREPARATION_PROFILE ||
+        report.snapshot.installerImage !== INSTALLER_IMAGE
       )
-        throw new TypeError("The report snapshot identity changed.");
-    }
-    return await scanSnapshot(snapshot, report.images, state, signal, supervisor, {
-      method: options.rebuild ? "rebuilt_from_lock" : "verified_reuse",
-      previousGeneration: report.snapshot.generation,
+        throw new TypeError("The report preparation profile is unavailable.");
+      await verifyRuntimeImages(report.images);
+      const signal = deadline(options.signal);
+      let snapshot: PreparedSnapshot;
+      if (options.rebuild) {
+        const lockBytes = await readBoundedFile(
+          join(state, "locks", `${report.snapshot.lockDigest}.json`),
+          MAX_LOCK_BYTES,
+        );
+        if (validateLock(lockBytes, artifact).digest !== report.snapshot.lockDigest)
+          throw new TypeError("The retained lock changed.");
+        await installerImages();
+        snapshot = await supervisor.prepare(artifact, scanId, signal, lockBytes);
+      } else {
+        supervisor.pinSnapshot(report.snapshot.id, scanId);
+        snapshot = await reuseSnapshot(
+          report.snapshot.id,
+          join(state, "snapshots"),
+          artifact,
+          signal,
+        );
+        if (
+          snapshot.generation !== report.snapshot.generation ||
+          snapshot.lock.digest !== report.snapshot.lockDigest ||
+          snapshot.tree.digest !== report.snapshot.treeDigest
+        )
+          throw new TypeError("The report snapshot identity changed.");
+      }
+      return await scanSnapshot(snapshot, report.images, state, signal, supervisor, scanId, {
+        method: options.rebuild ? "rebuilt_from_lock" : "verified_reuse",
+        previousGeneration: report.snapshot.generation,
+      });
     });
   } finally {
     await supervisor.close();
@@ -133,6 +138,7 @@ async function scanSnapshot(
   state: string,
   signal: AbortSignal,
   supervisor: ExecutionSupervisor,
+  scanId: string,
   reproduction: LocalReport["reproduction"],
 ): Promise<LocalReport> {
   const manifest = await readBoundedFile(
@@ -143,7 +149,7 @@ async function scanSnapshot(
     manifest,
     images.map((image) => runtimeProfile(image.profileId)),
   );
-  const backend = await supervisor.backend(snapshot, images, randomUUID());
+  const backend = await supervisor.backend(snapshot, images, scanId);
   await mkdir(join(state, "locks"), { recursive: true, mode: 0o700 });
   await storeImmutable(
     join(state, "locks", `${snapshot.lock.digest}.json`),
