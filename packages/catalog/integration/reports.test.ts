@@ -379,6 +379,17 @@ describe("public report reads", () => {
       evidence: { entries: cell?.entries.map((entry) => entry.specifier) },
       displayEntries: cell?.entries.map((entry) => entry.displaySpecifier),
     });
+    const details = await api(
+      new Request(`http://localhost/api/v1/reports/${report.id}/cell?runId=${cell?.runId}`),
+    );
+    expect(await details.json()).toMatchObject({ schemaVersion: 1, cell });
+    expect(
+      (
+        await api(
+          new Request(`http://localhost/api/v1/reports/${report.id}/cell?runId=${randomUUID()}`),
+        )
+      ).status,
+    ).toBe(404);
   });
   it("validates identifiers and changes ETags immediately on quarantine and invalidation", async () => {
     const { scan } = await execution();

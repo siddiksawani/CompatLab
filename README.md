@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog and private control service provide transactional admission, durable leases, authenticated result ingestion and snapshot-local dispatch. Versioned classification, immutable reports, sanitized evidence and reproduction downloads are implemented; the website is the next slice. See [reports](docs/reports.md), [orchestration](docs/orchestration.md), [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
+The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog and private control service provide transactional admission, durable leases, authenticated result ingestion and snapshot-local dispatch. The anonymous website supports discovery, explicit scan requests, durable progress, report matrices, evidence and reproduction downloads. Operational release qualification is the next slice; public admission defaults to disabled. See [website setup](docs/website.md), [reports](docs/reports.md), [orchestration](docs/orchestration.md), [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 
@@ -34,6 +34,7 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 | Path | Implemented responsibility |
 |---|---|
 | `apps/cli` | Prerequisite reporting, local checks and reproduction |
+| `apps/web` | Anonymous discovery, scan requests, durable progress and report pages |
 | `packages/engine` | Registry resolution, analysis, planning and bounded probe orchestration |
 | `packages/catalog` | PostgreSQL identities, admission, leases, result validation, recovery and cache lookup |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |

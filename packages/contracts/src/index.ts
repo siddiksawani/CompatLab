@@ -4,6 +4,7 @@ export * from "./local-report.js";
 export * from "./plan.js";
 export * from "./preparation.js";
 export * from "./probes.js";
+export * from "./public.js";
 export * from "./report.js";
 export * from "./runtime.js";
 export * from "./vocabulary.js";

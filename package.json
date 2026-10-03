@@ -11,10 +11,10 @@
     "build": "tsc -b",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit && tsc -p tsconfig.database-tests.json --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit && tsc -p tsconfig.database-tests.json --noEmit && tsc -p tsconfig.browser-tests.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm build && pnpm typecheck:tests && pnpm test",
+    "check": "pnpm lint && pnpm build && pnpm --filter @compatlab/web typecheck && pnpm typecheck:tests && pnpm test",
     "cli": "node apps/cli/dist/bin.js",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
     "test:preparation": "node scripts/preparation-smoke.mjs",
@@ -23,12 +23,17 @@
     "test:worker": "node scripts/worker-smoke.mjs",
     "test:database": "vitest run --config vitest.database.config.ts",
     "test:orchestration": "node scripts/orchestration-smoke.mjs",
-    "db:migrate": "node scripts/migrate-catalog.mjs"
+    "db:migrate": "node scripts/migrate-catalog.mjs",
+    "web:build": "pnpm build && pnpm --filter @compatlab/web build",
+    "web:dev": "pnpm build && pnpm --filter @compatlab/web dev",
+    "test:browser": "tsc -p tsconfig.browser-fixtures.json && playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/node": "24.19.1",
     "typescript": "7.0.2",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "@playwright/test": "1.63.0",
+    "@axe-core/playwright": "4.13.0"
   }
 }

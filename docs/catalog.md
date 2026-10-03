@@ -1,6 +1,6 @@
 # Persistent catalog and admission
 
-`@compatlab/catalog` is the private PostgreSQL data layer. It uses PostgreSQL 18.6, Drizzle ORM 0.45.3 and node-postgres 8.23.1. It reserves work, provides policy-aware report lookup, and owns durable scheduling transactions. The [private control API](orchestration.md) dispatches work to authenticated execution workers. Hosted classification and public reads arrive in slice 09.
+`@compatlab/catalog` is the private PostgreSQL data layer. It uses PostgreSQL 18.6, Drizzle ORM 0.45.3 and node-postgres 8.23.1. It reserves work, provides policy-aware report lookup, and owns durable scheduling transactions. The [private control API](orchestration.md) dispatches work to authenticated execution workers. Hosted classification and public reads are documented in [reports](reports.md).
 
 ## Data and identities
 
@@ -40,11 +40,11 @@ The cooldown spans matrices and requesters. A completed scan without a usable re
 
 All callers that create public work must use this transaction. The database account belongs only to trusted control services. Raw worker clients must not receive it. Registration, quarantine, blocking and invalidation functions are private administrative primitives, not authentication or public endpoints; operator authorization arrives with the control and operations slices. Actor/reason records are required for their mutations.
 
-Requester keys must be rotating keyed pseudonyms produced by the future trusted ingress layer, never raw IP addresses. Rows store a seven-day expiry. The scheduled removal of expired keys and the remaining retention policies belong to the pre-launch operations gate. Public admission stays disabled until those controls exist.
+Requester keys are rotating keyed pseudonyms produced by the [trusted ingress layer](website.md#public-boundaries), never raw IP addresses. Rows store a seven-day expiry. The scheduled removal of expired keys and the remaining retention policies belong to the pre-launch operations gate. Public admission stays disabled until those controls exist.
 
 ## Reads and invalidation
 
-`findCachedReport` performs one policy-aware SQL query and returns IDs only. It excludes invalidated/superseded reports, mismatched classifier revisions, blocked inputs, changed artifacts, quarantined images and disabled matrices. Snapshot eviction does not invalidate a historical report. Callers must use this lookup for cache reuse rather than selecting a report by package name alone. Old report payloads remain available for historical explanation; no public report API is implemented yet.
+`findCachedReport` performs one policy-aware SQL query and returns IDs only. It excludes invalidated/superseded reports, mismatched classifier revisions, blocked inputs, changed artifacts, quarantined images and disabled matrices. Snapshot eviction does not invalidate a historical report. Callers must use this lookup for cache reuse rather than selecting a report by package name alone. Old report payloads remain available for historical explanation through the public report API.
 
 Indexes support exact artifacts, preparation reuse, active requester counts, the requested queue, package cooldown, current reports, runnable jobs and worker leases. The pool has ten connections with finite connection, statement and lock waits. Idle connection loss emits a bounded diagnostic without exposing the connection URL.
 

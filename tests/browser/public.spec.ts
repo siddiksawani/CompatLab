@@ -1,0 +1,132 @@
+import { AxeBuilder } from "@axe-core/playwright";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { reportEnvelopeSchema } from "../../packages/contracts/dist/index.js";
+
+async function fixture(request: APIRequestContext, operation: string) {
+  const response = await request.post(`http://127.0.0.1:3878/${operation}`, {
+    headers: { "x-compatlab-fixture": "browser_v1" },
+  });
+  expect(response.ok()).toBe(true);
+  return response;
+}
+test.beforeEach(async ({ request }) => {
+  await fixture(request, "reset");
+});
+async function requestScan(page: Page, name: string) {
+  await page.goto(`/packages?${new URLSearchParams({ name, version: "1.0.0" })}`);
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Request a scan", exact: true }).click();
+  await expect(page).toHaveURL(/\/scans\/[a-f0-9-]+$/);
+  await expect(page.getByRole("heading", { name: "requested", exact: true })).toBeVisible();
+}
+async function finish(page: Page, request: APIRequestContext) {
+  await fixture(request, "execute");
+  await expect(page).toHaveURL(/\/reports\/[a-f0-9-]+$/);
+  await expect(page.getByRole("heading", { name: "Runtime matrix", exact: true })).toBeVisible();
+}
+for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) {
+  test(`anonymous discovery and refresh recovery: ${name}`, async ({ page, request }) => {
+    await page.goto("/");
+    await page.getByRole("searchbox", { name: "Search npm packages" }).fill(name);
+    await page.locator(".search-results li > a:first-child").filter({ hasText: name }).click();
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await page.getByLabel("Exact version").fill("2.0.0");
+    await page.getByRole("button", { name: "Select version", exact: true }).click();
+    await expect(page.getByText("Deprecated by the publisher", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Request a scan", exact: true }).click();
+    await expect(page).toHaveURL(/\/scans\/[a-f0-9-]+$/);
+    const scanUrl = page.url();
+    await page.reload();
+    await expect(page).toHaveURL(scanUrl);
+    await expect(page.getByRole("heading", { name: "requested", exact: true })).toBeVisible();
+    await finish(page, request);
+    await expect(page.locator("body")).not.toContainText("Sign in");
+    const before: unknown = await (await fixture(request, "counts")).json();
+    const report = reportEnvelopeSchema.parse(
+      await (
+        await request.get(
+          `${new URL(page.url()).pathname.replace("/reports/", "/api/v1/reports/")}/json`,
+        )
+      ).json(),
+    );
+    expect(report.report.artifact).toMatchObject({ name, version: "2.0.0" });
+    await page.reload();
+    await page.getByRole("link", { name: "← Package details", exact: true }).click();
+    await page.getByRole("link", { name: "View report", exact: true }).click();
+    expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  });
+}
+test("lazy logs remain text, expire visibly, and reflect report invalidation", async ({
+  page,
+  request,
+}) => {
+  const logs: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/logs?")) logs.push(request.url());
+  });
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request);
+  expect(logs).toHaveLength(0);
+  const cell = page.locator(".cell-details").first();
+  await cell.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await cell.getByRole("button", { name: "Load entry details", exact: true }).click();
+  await expect(cell.locator(".entry-list")).toContainText("compatlab-browser-fixture");
+  await cell.getByRole("button", { name: "Load raw logs", exact: true }).click();
+  await expect(cell.getByRole("textbox", { name: "Session 1 standard output" })).toHaveValue(
+    "<script>window.packageCodeExecuted=true</script>",
+  );
+  expect(await page.evaluate(() => Reflect.has(window, "packageCodeExecuted"))).toBe(false);
+  expect(logs).toHaveLength(1);
+  await fixture(request, "expire-logs");
+  await cell.getByRole("button", { name: "Refresh logs", exact: true }).click();
+  await expect(
+    cell.getByText("These logs have expired. The report and provenance remain available."),
+  ).toBeVisible();
+  await fixture(request, "invalidate");
+  await page.reload();
+  await expect(page.getByText("Historical evidence", { exact: true })).toBeVisible();
+  await expect(page.getByText("Browser invalidation fixture.", { exact: true })).toBeVisible();
+});
+test("public pages support keyboard use, mobile layout and automated accessibility checks", async ({
+  page,
+  request,
+  browserName,
+}, info) => {
+  await page.goto("/");
+  await page.keyboard.press(
+    browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab",
+  );
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.screenshot({ path: info.outputPath("home.png"), fullPage: true });
+  await requestScan(page, "@compatlab/browser-fixture");
+  await finish(page, request);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.screenshot({ path: info.outputPath("report.png"), fullPage: true });
+  await page.getByRole("link", { name: "Methodology", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Methodology", exact: true })).toBeVisible();
+});
+test("missing artifacts cannot request work", async ({ page, request }) => {
+  await page.goto("/packages?name=missing-browser-fixture&version=1.0.0");
+  await expect(page.getByRole("heading", { name: "Package unavailable" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request a scan", exact: true })).toHaveCount(0);
+  expect(await (await fixture(request, "counts")).json()).toEqual({ scans: 0, jobs: 0 });
+});

@@ -22,7 +22,7 @@ import {
   registerMatrix,
   registerRuntime,
   schema,
-} from "../src/index.js";
+} from "../dist/index.js";
 
 export const actor = { actor: "test-maintainer", reason: "Catalog qualification fixture." };
 export const hash = (value: string) => createHash("sha256").update(value).digest("hex");
