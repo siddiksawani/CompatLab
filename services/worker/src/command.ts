@@ -12,6 +12,7 @@ export type CommandResult = {
   exitCode: number | null;
   stdout: string;
   stderr: string;
+  stderrTail: string;
   emittedBytes: number;
   stdoutTruncated: boolean;
   stderrTruncated: boolean;
@@ -21,6 +22,7 @@ export function streamCommand(
   file: string,
   args: string[],
   signal: AbortSignal,
+  observeStderr?: (bytes: Buffer) => void,
 ): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     signal.throwIfAborted();
@@ -29,6 +31,7 @@ export function streamCommand(
     const retained = { stdout: 0, stderr: 0 };
     const truncated = { stdout: false, stderr: false };
     let emittedBytes = 0;
+    let stderrTail = Buffer.alloc(0);
     let termination: CommandResult["termination"] = "completed";
     const abort = () => {
       termination = "cancelled";
@@ -38,7 +41,11 @@ export function streamCommand(
     for (const stream of ["stdout", "stderr"] as const) {
       child[stream].on("data", (buffer: Buffer) => {
         emittedBytes += buffer.length;
-        const available = 128 * 1024 - retained[stream];
+        if (stream === "stderr") {
+          stderrTail = Buffer.from(Buffer.concat([stderrTail, buffer]).subarray(-16 * 1024));
+          observeStderr?.(buffer);
+        }
+        const available = (stream === "stderr" ? 112 : 128) * 1024 - retained[stream];
         if (buffer.length > available) truncated[stream] = true;
         if (available > 0) {
           const bytes = buffer.subarray(0, available);
@@ -65,6 +72,7 @@ export function streamCommand(
         stderrTruncated: truncated.stderr,
         stdout: Buffer.concat(logs.stdout).toString("utf8"),
         stderr: Buffer.concat(logs.stderr).toString("utf8"),
+        stderrTail: stderrTail.toString("utf8"),
       });
     });
   });

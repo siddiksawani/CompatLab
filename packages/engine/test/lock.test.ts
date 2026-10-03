@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { MAX_LOCK_BYTES, validateLock } from "../src/preparation/lock.js";
+import { MAX_LOCK_BYTES, PreparationError, validateLock } from "../src/preparation/lock.js";
 import { parseInstalledManifest } from "../src/preparation/manifest.js";
 
 const integrity = `sha512-${createHash("sha512").update("fixture").digest("base64")}`;
@@ -24,6 +24,18 @@ const bytes = (extra: Record<string, unknown> = {}, root = rootEntry) =>
   );
 
 describe("frozen npm lock policy", () => {
+  it("normalizes registry and structure failures at the preparation boundary", () => {
+    for (const record of [
+      { ...rootEntry, resolved: "https://invalid.example/archive.tgz" },
+      { ...rootEntry, integrity: "sha1-unavailable" },
+    ])
+      expect(() => validateLock(bytes({ "node_modules/dep": record }), artifact)).toThrow(
+        PreparationError,
+      );
+    const nested = Buffer.from(`{"value":${"[".repeat(40)}0${"]".repeat(40)}}`);
+    expect(() => validateLock(nested, artifact)).toThrow(PreparationError);
+    expect(() => parseInstalledManifest(nested)).toThrow(PreparationError);
+  });
   it("retains exact lock identity and optional, alias, bundled and script observations", () => {
     const result = validateLock(
       bytes({

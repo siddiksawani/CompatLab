@@ -10,7 +10,8 @@ describe("bounded command output", () => {
     );
     expect(result.exitCode).toBe(0);
     expect(result.stdout.length).toBe(128 * 1024);
-    expect(result.stderr.length).toBe(128 * 1024);
+    expect(result.stderr.length).toBe(112 * 1024);
+    expect(result.stderrTail.length).toBe(16 * 1024);
     expect(result.emittedBytes).toBe(500000);
     expect(result.stdoutTruncated).toBe(true);
     expect(result.stderrTruncated).toBe(true);

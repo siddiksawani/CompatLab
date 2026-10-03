@@ -1,4 +1,4 @@
-import { mkdir, open, rm } from "node:fs/promises";
+import { lstat, mkdir, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { PreparationError } from "@compatlab/engine";
 import { command } from "../command.js";
@@ -30,14 +30,14 @@ export class WorkspaceVolume {
       throw new TypeError("Invalid workspace quota.");
     const volume = new WorkspaceVolume(directory);
     await mkdir(directory, { mode: 0o700 });
-    const file = await open(join(directory, "workspace.ext4"), "wx", 0o600);
     try {
-      await file.truncate(bytes);
-    } finally {
-      await file.close();
-    }
-    await mkdir(volume.path, { mode: 0o755 });
-    try {
+      const file = await open(join(directory, "workspace.ext4"), "wx", 0o600);
+      try {
+        await file.truncate(bytes);
+      } finally {
+        await file.close();
+      }
+      await mkdir(volume.path, { mode: 0o755 });
       await command(
         "mkfs.ext4",
         [
@@ -85,9 +85,16 @@ export class WorkspaceVolume {
   }
 
   async dispose(): Promise<void> {
-    let mounted = true;
+    const exists = await lstat(this.path).then(
+      () => true,
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return false;
+        throw error;
+      },
+    );
+    let mounted = exists;
     try {
-      await command("mountpoint", ["--quiet", this.path]);
+      if (exists) await command("mountpoint", ["--quiet", this.path]);
     } catch (error) {
       if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 32)
         throw error;

@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { chown, lstat, mkdir, rm, writeFile } from "node:fs/promises";
+import { chown, lstat, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   artifactIntegrity,
   assertPackageName,
   isExactVersion,
   MAX_LOCK_BYTES,
+  type PreparationClassification,
   PreparationError,
   parseInstalledManifest,
   type ResolvedArtifact,
@@ -16,6 +17,7 @@ import {
 import { type CommandResult, docker, removeContainer, streamCommand } from "../command.js";
 import { inspectDocker } from "../doctor.js";
 import { inspectTree, readBoundedFile, type TreeInspection } from "./files.js";
+import { installerFailure, NpmOutput } from "./npm-output.js";
 import { createPreparationNetwork, type PreparationNetwork } from "./proxy.js";
 import { WorkspaceVolume } from "./volume.js";
 
@@ -192,17 +194,11 @@ export async function prepareArtifact(
           "preparation_limit_exceeded",
           `Preparation stopped: ${result.termination}.`,
         );
-      if (result.exitCode !== 0) {
-        const classification = /\bEINTEGRITY\b/.test(result.stderr)
-          ? "artifact_integrity_mismatch"
-          : /\b(?:ENOSPC|ENOMEM)\b/.test(result.stderr)
-            ? "preparation_limit_exceeded"
-            : "dependency_install_failed";
+      if (result.failure)
         throw new PreparationError(
-          classification,
-          `npm ${phaseName} failed: ${result.stderr.slice(-4096)}`,
+          result.failure,
+          `npm ${phaseName} failed: ${result.stderrTail.slice(-4096)}`,
         );
-      }
       return result;
     }
   } catch (error) {
@@ -227,11 +223,13 @@ export async function runInstaller(options: {
   network: Pick<PreparationNetwork, "name" | "jobIp" | "proxyIp">;
   args: string[];
   signal: AbortSignal;
-}): Promise<CommandResult> {
+}): Promise<CommandResult & { failure?: PreparationClassification }> {
   const { name, workspace, state, network, args, signal } = options;
   const proxy = `http://${network.proxyIp}:3128`;
+  const output = new NpmOutput();
+  let result: CommandResult;
   try {
-    return await streamCommand(
+    result = await streamCommand(
       "docker",
       [
         "run",
@@ -281,10 +279,18 @@ export async function runInstaller(options: {
         ...args,
       ],
       signal,
+      (bytes) => output.write(bytes),
     );
   } finally {
     await removeContainer(name);
   }
+  output.finish();
+  const filesystem = await statfs(workspace);
+  const failure = installerFailure(result.exitCode, output, {
+    bytes: filesystem.bavail * filesystem.bsize,
+    inodes: filesystem.ffree,
+  });
+  return { ...result, ...(failure ? { failure } : {}) };
 }
 
 export async function assertPreparationHost(): Promise<void> {

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ResolvedArtifact } from "../registry/client.js";
+import { RegistryError } from "../registry/errors.js";
 import { JsonStructureLimit } from "../registry/json-limits.js";
 import {
   artifactIntegrity,
@@ -42,6 +43,13 @@ export type ValidatedLock = { digest: string; dependencies: LockedDependency[] }
 export const MAX_LOCK_BYTES = 16 * 1024 * 1024;
 
 export function validateLock(
+  bytes: Uint8Array,
+  artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl">,
+): ValidatedLock {
+  return preparationBoundary(() => inspectLock(bytes, artifact));
+}
+
+function inspectLock(
   bytes: Uint8Array,
   artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl">,
 ): ValidatedLock {
@@ -140,4 +148,22 @@ function assertLocation(location: string): void {
 
 function fail(classification: PreparationClassification, message: string): never {
   throw new PreparationError(classification, message);
+}
+
+export function preparationBoundary<T>(operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof RegistryError) {
+      const classification = [
+        "dependency_source_unsupported",
+        "artifact_integrity_unavailable",
+        "preparation_limit_exceeded",
+      ].includes(error.classification)
+        ? (error.classification as PreparationClassification)
+        : "package_manifest_invalid";
+      throw new PreparationError(classification, error.message);
+    }
+    throw error;
+  }
 }

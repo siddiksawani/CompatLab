@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { chown, mkdir, mkdtemp, readFile, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import {
+  chown,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  rmdir,
+  stat,
+  statfs,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { RegistryClient, validateLock } from "../packages/engine/dist/index.js";
@@ -196,12 +206,14 @@ try {
       });
       if (scenario === "integrity") {
         assert.notEqual(result.exitCode, 0);
-        assert.match(result.stderr, /EINTEGRITY/);
+        assert.equal(result.failure, "artifact_integrity_mismatch");
+        assert.match(result.stderrTail, /EINTEGRITY/);
       } else if (["expanded", "inodes"].includes(scenario)) {
-        assert.notEqual(result.exitCode, 0, JSON.stringify(result));
-        assert.match(result.stderr, /ENOSPC/);
+        assert.equal(result.failure, "preparation_limit_exceeded", JSON.stringify(result));
+        assert.match(`${result.stderr}\n${result.stderrTail}`, /ENOSPC/);
       } else {
         assert.equal(result.exitCode, 0, JSON.stringify(result));
+        assert.equal(result.failure, undefined, JSON.stringify(result));
         let tree;
         try {
           tree = await inspectTree(workspace);
@@ -238,6 +250,20 @@ try {
       if (network) await network.dispose();
       await volume.dispose();
     }
+  }
+  const limited = await WorkspaceVolume.create(join(base, randomUUID()), 64 * 1024 ** 2, 1024);
+  try {
+    const remaining = (await statfs(limited.path)).ffree;
+    for (let index = 0; index < remaining - 1; index++)
+      await writeFile(join(limited.path, `fill-${index}`), "");
+    const partial = join(limited.path, "partial");
+    await assert.rejects(() => WorkspaceVolume.create(partial, 64 * 1024 ** 2, 1024), {
+      code: "ENOSPC",
+    });
+    assert.equal(await exists(partial), false);
+    process.stdout.write("partial creation: failed backing-file setup cleaned up\n");
+  } finally {
+    await limited.dispose();
   }
 } finally {
   if (live) await live.dispose();

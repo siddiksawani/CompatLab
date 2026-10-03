@@ -29,7 +29,9 @@ Lock validation requires npm lock version 3, the exact consumer dependency, publ
 | Lock | 16 MiB, 10,000 dependency records |
 | Installed manifest | 2 MiB, bounded JSON structure |
 | Proxy return traffic | 512 MiB including TLS and metadata overhead |
-| Logs | First 128 KiB per stream; stop after 8 MiB emitted per command |
+| Logs | 128 KiB stdout; 112 KiB stderr prefix plus 16 KiB tail; stop after 8 MiB emitted per command |
+
+A successful npm exit is insufficient when extraction reports an entry error or the filesystem exhausts bytes/inodes. The supervisor rejects partial installations, including npm warning-only `ENOSPC` outcomes. Terminal npm error codes are observed throughout the bounded stream and retained in the stderr tail.
 
 The ext4 backing file is sparse, so the supervisor must reserve its maximum growth and maintain disk headroom. Host-wide reservation and low-disk admission arrive in slice 06. Cleanup removes containers before unmounting. A failed cleanup or unmount leaves resources for investigation instead of deleting an active mount.
 
