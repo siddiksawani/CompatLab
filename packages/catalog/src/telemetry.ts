@@ -2,6 +2,7 @@ import { captureMessage, type ErrorEvent, init } from "@sentry/node";
 
 const events = [
   "public_request_failed",
+  "maintainer_request_failed",
   "report_read_failed",
   "web_configuration_unavailable",
   "reconciliation_failed",

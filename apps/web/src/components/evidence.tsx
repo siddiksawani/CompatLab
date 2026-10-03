@@ -1,6 +1,6 @@
 "use client";
 import { type ReportCell, reportCellSchema } from "@compatlab/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { labels } from "./labels";
 
@@ -23,6 +23,8 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
   const [logs, setLogs] = useState<Logs | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   async function load(includeLogs: boolean) {
     setBusy(true);
     setError("");
@@ -47,12 +49,17 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
         <button
           className="secondary"
           type="button"
-          disabled={busy}
+          disabled={busy || !ready}
           onClick={() => void load(false)}
         >
           {cell ? "Refresh entry details" : "Load entry details"}
         </button>
-        <button className="secondary" type="button" disabled={busy} onClick={() => void load(true)}>
+        <button
+          className="secondary"
+          type="button"
+          disabled={busy || !ready}
+          onClick={() => void load(true)}
+        >
           {logs ? "Refresh logs" : "Load raw logs"}
         </button>
         <a href={`/api/v1/reports/${reportId}/evidence?runId=${runId}`}>Evidence JSON</a>

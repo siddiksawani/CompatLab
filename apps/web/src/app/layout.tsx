@@ -25,6 +25,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav aria-label="Main navigation">
             <a href="/">Explore</a>
             <a href="/methodology">Methodology</a>
+            <a href="/account">Maintainers</a>
             <a href="https://github.com/siddiksawani/CompatLab" rel="noreferrer">
               Source
             </a>

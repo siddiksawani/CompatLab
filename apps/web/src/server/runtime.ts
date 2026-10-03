@@ -1,7 +1,9 @@
 import "server-only";
 import {
+  createMaintainerService,
   createPublicApi,
   initializeTelemetry,
+  maintainerConfig,
   openCatalog,
   publicConfigSchema,
 } from "@compatlab/catalog/web";
@@ -17,7 +19,16 @@ function initialize() {
   });
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
   const catalog = openCatalog(process.env.DATABASE_URL);
-  return { catalog, config, api: createPublicApi(catalog.db, config) };
+  const accountConfig = maintainerConfig(process.env);
+  const maintainer = accountConfig
+    ? createMaintainerService(catalog.db, config, accountConfig)
+    : undefined;
+  return {
+    catalog,
+    config,
+    maintainer,
+    api: createPublicApi(catalog.db, config, undefined, maintainer?.quotaKey),
+  };
 }
 const state = globalThis as typeof globalThis & { compatlabWeb?: ReturnType<typeof initialize> };
 export function webRuntime() {

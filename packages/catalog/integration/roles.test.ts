@@ -104,3 +104,31 @@ it("audits direct operator writes and prevents forged database audit origins", a
     details: { claimedActor: "claimed-user", databaseRole: roles[2] },
   });
 });
+it("separates maintainer credentials from control and operator access", async () => {
+  const userId = randomUUID();
+  await web.pool.query(
+    "INSERT INTO auth_users(id,name,email,email_verified) VALUES($1,'maintainer','fixture@example.com',true)",
+    [userId],
+  );
+  await web.pool.query(
+    "INSERT INTO auth_sessions(user_id,token,expires_at) VALUES($1,'fixture-session',now()+interval '1 day')",
+    [userId],
+  );
+  await web.pool.query(
+    "INSERT INTO auth_accounts(user_id,account_id,provider_id,access_token) VALUES($1,'12','github','encrypted-fixture')",
+    [userId],
+  );
+  for (const client of [control, operator]) {
+    await expect(client.pool.query("SELECT * FROM auth_accounts")).rejects.toThrow(
+      "permission denied",
+    );
+    await expect(client.pool.query("SELECT token FROM auth_sessions")).rejects.toThrow(
+      "permission denied",
+    );
+    await expect(client.pool.query("DELETE FROM auth_sessions")).rejects.toThrow("Only expired");
+  }
+  await web.pool.query("DELETE FROM auth_users WHERE id=$1", [userId]);
+  expect(
+    (await web.pool.query("SELECT id FROM auth_sessions WHERE user_id=$1", [userId])).rowCount,
+  ).toBe(0);
+});

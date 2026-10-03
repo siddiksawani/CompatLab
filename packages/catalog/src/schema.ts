@@ -11,6 +11,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+export * from "./auth/schema.js";
+
 const bytes = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 const time = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
 const identity = () => uuid("id").primaryKey().defaultRandom();
@@ -103,6 +105,7 @@ export const scans = pgTable("scans", {
   matrixId: uuid("matrix_id").notNull(),
   state: text("state").$type<ScanState>().notNull().default("requested"),
   requesterKey: text("requester_key"),
+  accountKey: text("account_key"),
   requesterExpiresAt: time("requester_expires_at").notNull(),
   admissionPolicy: text("admission_policy").notNull(),
   progressRevision: integer("progress_revision").notNull().default(0),

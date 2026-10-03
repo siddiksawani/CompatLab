@@ -11,6 +11,24 @@ GRANT UPDATE (observed_tags,tags_observed_at,integrity_anomaly) ON package_versi
 GRANT INSERT ON jobs,runs,reports,audit_events TO compatlab_control;
 GRANT UPDATE ON workers,preparations,scans,jobs,runs,reports TO compatlab_control;
 GRANT DELETE ON audit_events TO compatlab_control;
+REVOKE SELECT ON auth_users,auth_sessions,auth_accounts,auth_verifications FROM compatlab_operator,compatlab_control;
+GRANT SELECT,INSERT,UPDATE,DELETE ON auth_users,auth_sessions,auth_accounts,auth_verifications,repository_links,github_deliveries,request_buckets TO compatlab_web;
+GRANT SELECT,UPDATE ON auth_authority_state TO compatlab_web;
+GRANT SELECT (id,expires_at) ON auth_sessions,auth_verifications TO compatlab_control,compatlab_operator;
+GRANT DELETE ON auth_sessions,auth_verifications,github_deliveries,request_buckets TO compatlab_control,compatlab_operator;
+
+CREATE OR REPLACE FUNCTION public.expired_auth_only() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$
+BEGIN
+  IF current_user IN ('compatlab_control','compatlab_operator') AND OLD.expires_at>clock_timestamp() THEN
+    RAISE EXCEPTION 'Only expired authentication records may be removed by maintenance';
+  END IF;
+  RETURN OLD;
+END $$;
+DROP TRIGGER IF EXISTS expired_auth_only ON auth_sessions;
+CREATE TRIGGER expired_auth_only BEFORE DELETE ON auth_sessions FOR EACH ROW EXECUTE FUNCTION public.expired_auth_only();
+DROP TRIGGER IF EXISTS expired_auth_only ON auth_verifications;
+CREATE TRIGGER expired_auth_only BEFORE DELETE ON auth_verifications FOR EACH ROW EXECUTE FUNCTION public.expired_auth_only();
 
 CREATE OR REPLACE FUNCTION public.stamp_operator_audit() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$

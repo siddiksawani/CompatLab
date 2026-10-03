@@ -18,7 +18,6 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
   scroll-padding-top: 2rem;
 }
 body {
@@ -787,4 +786,18 @@ summary {
   border: 1px solid var(--line);
   border-radius: 5px;
   padding: 16px;
+}
+
+.account-settings form {
+  display: grid;
+  gap: 10px;
+  max-width: 480px;
+  margin: 24px 0;
+}
+.account-settings li {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.account-settings li button {
+  margin: 8px 12px;
 }

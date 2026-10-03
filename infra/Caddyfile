@@ -20,8 +20,12 @@
   }
 }
 {$PUBLIC_DOMAIN} {
-  request_body {
+  @ordinary not path /api/maintainer/github-webhook
+  request_body @ordinary {
     max_size 16KB
+  }
+  request_body /api/maintainer/github-webhook {
+    max_size 1MB
   }
   header Strict-Transport-Security "max-age=31536000"
   reverse_proxy web:3000 {

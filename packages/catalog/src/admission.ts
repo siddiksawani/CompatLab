@@ -16,7 +16,7 @@ import {
 import { adminActionSchema, revisionSchema, uuidSchema, validateArtifact } from "./validation.js";
 
 export const ADMISSION_POLICY = {
-  revision: "admission_v2",
+  revision: "admission_v3",
   queuedScans: 20,
   activePerRequester: 2,
   hourlyPerRequester: 10,
@@ -26,6 +26,10 @@ const active: ScanState[] = ["requested", "preparing", "running", "aggregating"]
 const optionsSchema = z.strictObject({
   matrixId: uuidSchema,
   requesterKey: z.string().regex(/^[a-f0-9]{64}$/),
+  accountKey: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   requesterAliases: z
     .array(z.string().regex(/^[a-f0-9]{64}$/))
     .max(7)
@@ -120,15 +124,23 @@ export async function admitScan(
     const [requester] = await tx
       .select({ count: count() })
       .from(scans)
-      .where(and(inArray(scans.requesterKey, requesterKeys), inArray(scans.state, active)));
+      .where(
+        and(
+          or(
+            inArray(scans.requesterKey, requesterKeys),
+            options.accountKey ? eq(scans.accountKey, options.accountKey) : undefined,
+          ),
+          inArray(scans.state, active),
+        ),
+      );
     if ((requester?.count ?? 0) >= ADMISSION_POLICY.activePerRequester)
       return { kind: "throttled", reason: "requester_limit", retryAfterSeconds: 30 };
     const recentRequests = (
       await tx.execute<{ count: number; oldest: string }>(
-        sql`SELECT count(*)::int AS count, floor(extract(epoch FROM min(requested_at))*1000)::bigint AS oldest FROM scans WHERE requester_key IN (${sql.join(
+        sql`SELECT count(*)::int AS count, floor(extract(epoch FROM min(requested_at))*1000)::bigint AS oldest FROM scans WHERE (requester_key IN (${sql.join(
           requesterKeys.map((key) => sql`${key}`),
           sql`,`,
-        )}) AND requested_at > ${new Date(now.getTime() - 3_600_000)}`,
+        )}) OR account_key=${options.accountKey ?? null}) AND requested_at > ${new Date(now.getTime() - 3_600_000)}`,
       )
     ).rows[0];
     if ((recentRequests?.count ?? 0) >= ADMISSION_POLICY.hourlyPerRequester)
@@ -227,6 +239,7 @@ export async function admitScan(
         preparationId: preparation.id,
         matrixId: options.matrixId,
         requesterKey: options.requesterKey,
+        accountKey: options.accountKey ?? null,
         requesterExpiresAt: new Date(now.getTime() + 7 * 86400_000),
         requestedAt: now,
         admissionPolicy: ADMISSION_POLICY.revision,
