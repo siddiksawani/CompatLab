@@ -7,6 +7,9 @@ import { command, docker, removeContainer, streamCommand } from "../command.js";
 export const PROXY_IMAGE =
   "ubuntu/squid:6.6-24.04_beta@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce";
 export const SQUID_POLICY = `http_port 3128
+pinger_enable off
+eui_lookup off
+dns_nameservers 1.1.1.1 1.0.0.1
 acl CONNECT method CONNECT
 acl registry dstdomain -n registry.npmjs.org
 acl tls port 443
@@ -22,7 +25,8 @@ http_access deny all
 cache deny all
 cache_mem 8 MB
 maximum_object_size 0 KB
-access_log stdio:/dev/stdout
+logformat preparation %ts.%03tu %>a %rm %ru %>Hs %err_code/%err_detail %<a
+access_log stdio:/dev/stdout preparation
 cache_log /dev/stderr
 logfile_rotate 0
 pid_filename /tmp/squid.pid
@@ -234,7 +238,14 @@ export async function createPreparationNetwork(
           "--format",
           "{{json .NetworkSettings.Networks}}",
         ]);
-        return `${logs.stdout}\n${logs.stderr}\n${networks}`.slice(-8192);
+        const resolver = await docker([
+          "exec",
+          proxyName,
+          "cat",
+          "/etc/resolv.conf",
+          "/proc/net/route",
+        ]);
+        return `${logs.stdout}\n${logs.stderr}\n${networks}\n${resolver}`.slice(-8192);
       },
     };
   } catch (error) {
