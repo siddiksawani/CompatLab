@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "packages/catalog/integration",
+    "outDir": "packages/catalog/.browser-fixtures",
+    "skipLibCheck": true
+  },
+  "include": [
+    "packages/catalog/integration/fixtures.ts",
+    "packages/catalog/integration/execution-fixtures.ts"
+  ]
+}

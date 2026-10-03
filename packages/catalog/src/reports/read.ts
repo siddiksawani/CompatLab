@@ -158,14 +158,21 @@ export function createReportApi(db: CatalogDatabase) {
       const etag = `"scan-${id}-${result.revision}"`;
       return conditional(request, etag) ?? json(result, 200, { etag });
     }
-    const match = /^\/api\/v1\/reports\/([^/]+)(?:\/(json|logs|evidence|reproduction|lock))?$/.exec(
-      url.pathname,
-    );
+    const match =
+      /^\/api\/v1\/reports\/([^/]+)(?:\/(json|logs|evidence|reproduction|lock|cell))?$/.exec(
+        url.pathname,
+      );
     if (!match) return json({ error: "not_found" }, 404);
     const id = identifier(match[1]);
     const part = match[2];
     const status = await reportHeader(db, id);
     if (!status) return json({ error: "not_found" }, 404);
+    if (part === "cell") {
+      const runId = identifier(url.searchParams.get("runId"));
+      const report = await reportPayload(db, id);
+      const cell = report?.cells.find((cell) => cell.runId === runId);
+      return cell ? json({ schemaVersion: 1, cell }) : json({ error: "not_found" }, 404);
+    }
     if (part === "logs") {
       const logs = await readReportLogs(db, id, identifier(url.searchParams.get("runId")));
       return logs ? json(logs) : json({ error: "not_found" }, 404);

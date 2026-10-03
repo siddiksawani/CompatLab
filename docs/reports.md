@@ -12,7 +12,7 @@ The control reconciler reserves aggregation work for successful and terminal sca
 
 ## Reads and downloads
 
-The `createReportApi` Request/Response handler provides these public read routes. The website mounts it in slice 10; the private worker server does not expose them.
+The `createReportApi` Request/Response handler provides these public read routes through the website. The private worker server does not expose them.
 
 | Route | Content |
 |---|---|
@@ -21,6 +21,7 @@ The `createReportApi` Request/Response handler provides these public read routes
 | `GET /api/v1/reports/:id/json` | The same versioned envelope as an attachment |
 | `GET /api/v1/reports/:id/logs?runId=…` | Separately loaded sanitized logs, truncation and expiry |
 | `GET /api/v1/reports/:id/evidence?runId=…` | Sanitized retained group evidence, excluding duplicated logs |
+| `GET /api/v1/reports/:id/cell?runId=…` | One classified cell with per-entry details, loaded on demand |
 | `GET /api/v1/reports/:id/reproduction` | Exact artifact, snapshot, runtime and policy inputs |
 | `GET /api/v1/reports/:id/lock` | Byte-exact lock with its SHA-256 digest header |
 

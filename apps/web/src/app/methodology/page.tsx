@@ -1,0 +1,92 @@
+export const metadata = { title: "Methodology and local CLI" };
+export default function Methodology() {
+  const commands = [
+    "pnpm install --frozen-lockfile",
+    "pnpm build",
+    "pnpm cli doctor --json",
+    'sudo "$(command -v node)" apps/cli/dist/bin.js check is-number@7.0.0 --json',
+  ].join("\n");
+  return (
+    <article className="page prose">
+      <p className="eyebrow">How to read the evidence</p>
+      <h1>Methodology</h1>
+      <p className="lede">
+        CompatLab observes exact published packages in a controlled consumer workspace. Each report
+        names its inputs, coverage and limits.
+      </p>
+      <h2>One artifact, one shared snapshot</h2>
+      <p>
+        The service resolves an exact npm version, verifies supplied integrity, and uses a pinned
+        npm installer with lifecycle scripts disabled. Every runtime in a comparison reads the same
+        sealed dependency snapshot. Preparation and package code execute on a dedicated Linux amd64
+        host behind gVisor, outside the web and database services.
+      </p>
+      <h2>Independent roots, ordered subpaths</h2>
+      <p>
+        ESM import and CommonJS require each start in a fresh sandbox. Explicit executable subpaths
+        are observed in ordered batches; those entries share a module cache and globals. Root
+        success does not imply complete subpath coverage. Wildcard patterns, assets, work limits and
+        interruptions stay visible.
+      </p>
+      <h2>Reading outcomes</h2>
+      <dl className="definitions">
+        <dt>Passed</dt>
+        <dd>Every applicable planned observation in this group succeeded.</dd>
+        <dt>Mixed results</dt>
+        <dd>Valid successes and failures coexist.</dd>
+        <dt>Failed</dt>
+        <dd>An applicable loading operation failed with retained evidence.</dd>
+        <dt>Inconclusive</dt>
+        <dd>
+          Coverage, resource limits, policy or prerequisites prevented a complete observation.
+        </dd>
+        <dt>Unsupported workflow</dt>
+        <dd>
+          The requested workflow needs something excluded by this profile, such as native
+          compilation.
+        </dd>
+        <dt>Not applicable</dt>
+        <dd>No executable public path applies to that group.</dd>
+        <dt>Service error</dt>
+        <dd>
+          The service could not produce a valid observation. This is separate from a package loading
+          failure.
+        </dd>
+      </dl>
+      <h2>What success does not establish</h2>
+      <p>
+        Loading does not exercise arbitrary functions, test an application, or establish safety.
+        Package-visible harness observations can be tampered with by malicious code in the same
+        process. Stdout and stderr are logs, never verdicts. Only a named behavioral assertion can
+        earn a separate probe-verified evidence label.
+      </p>
+      <h2 id="local-cli">Run the local CLI</h2>
+      <p>
+        Use a dedicated Linux amd64 host with the qualified Docker/runsc, mount and firewall
+        prerequisites. Ordinary Docker alone does not reproduce this execution profile. The CLI
+        refuses to fall back to host execution.
+      </p>
+      <pre>
+        <code>{commands}</code>
+      </pre>
+      <p>
+        Reproduction can reuse the actual retained snapshot or explicitly rebuild from downloaded
+        inputs and their exact lock. Rebuilding records a new generation and may produce different
+        installed bytes. Missing images, unavailable artifacts or required prerequisites can prevent
+        replay.
+      </p>
+      <a
+        href="https://github.com/siddiksawani/CompatLab/blob/main/docs/probe-execution.md"
+        rel="noreferrer"
+      >
+        Read the complete execution setup and limits →
+      </a>
+      <h2>Public evidence and retention</h2>
+      <p>
+        Reports, locks and provenance are public and retained as history. Raw package logs expire
+        after 30 days. Sealed worker snapshots have a bounded cache and can become unavailable
+        before report metadata expires. Quarantine and invalidation appear on historical reports.
+      </p>
+    </article>
+  );
+}

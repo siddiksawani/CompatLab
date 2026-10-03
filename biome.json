@@ -6,7 +6,18 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/dist", "!**/coverage", "!docs/archive", "!pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/coverage",
+      "!docs/archive",
+      "!pnpm-lock.yaml",
+      "!**/.next",
+      "!**/next-env.d.ts",
+      "!playwright-report",
+      "!test-results",
+      "!**/.browser-fixtures"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
@@ -14,9 +25,14 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended" }
+    "rules": {
+      "preset": "recommended"
+    }
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "semicolons": "always" }
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
   }
 }
