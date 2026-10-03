@@ -26,10 +26,14 @@ const active: ScanState[] = ["requested", "preparing", "running", "aggregating"]
 const optionsSchema = z.strictObject({
   matrixId: uuidSchema,
   requesterKey: z.string().regex(/^[a-f0-9]{64}$/),
+  requesterAliases: z
+    .array(z.string().regex(/^[a-f0-9]{64}$/))
+    .max(7)
+    .default([]),
   classifierRevision: revisionSchema,
   retry: adminActionSchema.extend({ scanId: uuidSchema }).optional(),
 });
-export type AdmissionOptions = z.infer<typeof optionsSchema>;
+export type AdmissionOptions = z.input<typeof optionsSchema>;
 export type AdmissionResult =
   | { kind: "cached"; reportId: string; scanId: string }
   | { kind: "existing" | "admitted"; scanId: string; preparationId: string }
@@ -105,6 +109,7 @@ export async function admitScan(
       )
     ).rows[0]?.millis;
     const now = new Date(Number(millis));
+    const requesterKeys = [...new Set([options.requesterKey, ...options.requesterAliases])];
     if (!Number.isFinite(now.getTime())) throw new Error("Database time is unavailable.");
     const [queue] = await tx
       .select({ count: count() })
@@ -115,17 +120,26 @@ export async function admitScan(
     const [requester] = await tx
       .select({ count: count() })
       .from(scans)
-      .where(and(eq(scans.requesterKey, options.requesterKey), inArray(scans.state, active)));
+      .where(and(inArray(scans.requesterKey, requesterKeys), inArray(scans.state, active)));
     if ((requester?.count ?? 0) >= ADMISSION_POLICY.activePerRequester)
       return { kind: "throttled", reason: "requester_limit", retryAfterSeconds: 30 };
-    const recentRequests =
-      (
-        await tx.execute<{ count: number }>(
-          sql`SELECT count(*)::int AS count FROM scans WHERE requester_key=${options.requesterKey} AND requested_at > ${new Date(now.getTime() - 3_600_000)}`,
-        )
-      ).rows[0]?.count ?? 0;
-    if (recentRequests >= ADMISSION_POLICY.hourlyPerRequester)
-      return { kind: "throttled", reason: "requester_rate", retryAfterSeconds: 3600 };
+    const recentRequests = (
+      await tx.execute<{ count: number; oldest: string }>(
+        sql`SELECT count(*)::int AS count, floor(extract(epoch FROM min(requested_at))*1000)::bigint AS oldest FROM scans WHERE requester_key IN (${sql.join(
+          requesterKeys.map((key) => sql`${key}`),
+          sql`,`,
+        )}) AND requested_at > ${new Date(now.getTime() - 3_600_000)}`,
+      )
+    ).rows[0];
+    if ((recentRequests?.count ?? 0) >= ADMISSION_POLICY.hourlyPerRequester)
+      return {
+        kind: "throttled",
+        reason: "requester_rate",
+        retryAfterSeconds: Math.max(
+          1,
+          Math.ceil((Number(recentRequests?.oldest) + 3_600_000 - now.getTime()) / 1000),
+        ),
+      };
     const [recent] = await tx
       .select({ requestedAt: scans.requestedAt })
       .from(scans)

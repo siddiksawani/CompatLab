@@ -5,6 +5,11 @@
 **/*.tsbuildinfo
 **/.browser-fixtures
 **/.env*
+**/*.env
+**/operator-url
+**/migration-url
+**/backup-key
+**/worker-token
 test-results
 playwright-report
 coverage

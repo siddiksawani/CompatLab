@@ -25,7 +25,7 @@ ADMIN_DATABASE_URL_FILE=/etc/compatlab/migration-url pnpm cli admin migrate --re
 docker compose --env-file /var/lib/compatlab-release-001/release.env -f infra/compose.yaml exec -T postgres psql -U postgres -d compatlab -v ON_ERROR_STOP=1 < infra/grants.sql
 ```
 
-Reapply grants after migrations that introduce tables. The web role admits work and reads reports; it cannot change workers, results, service controls or schema. The control role reconciles execution and retention; it cannot admit arbitrary policy changes. The operator role performs audited application operations but cannot bypass immutable-identity triggers. Only the migration credential owns schema changes. Never give that credential to the web, worker or routine operator process.
+Reapply grants after migrations that introduce tables. The web role admits work and reads reports; it cannot change workers, results, service controls or schema. The control role reconciles execution and retention; it cannot admit arbitrary policy changes. The operator role has explicit table/column grants for its operations and cannot change migration history or delete execution rows. Database triggers append a reserved mutation event even for direct SQL writes. Operator-supplied annotations are stamped with the authenticated database role and transaction ID; the SSH actor is retained as a claimed actor. These triggers and immutable-identity constraints do not protect against the separate schema administrator. Only the migration credential owns schema changes. Never give that credential to the web, worker or routine operator process.
 
 ## Connect and qualify a worker
 
@@ -66,13 +66,13 @@ Set `ADMIN_DATABASE_URL_FILE=/etc/compatlab/operator-url` in an SSH operator she
 | Remove logs | `remove-logs SCAN_UUID` removes retained logs for a terminal scan and audits the request; structured observations and the original classification remain |
 | Retain | `retention` removes expired data in bounded batches of 1,000 rows per category; the control process runs it automatically every minute |
 
-Audit entries cannot be edited or deleted within 180 days, including by routine operator credentials. Apply a package block when reviewing recurring abuse. Never relabel infrastructure failures as package incompatibility to clear an incident.
+Audit entries cannot be edited or deleted within 180 days, including by routine operator credentials. Operators cannot backdate audit inserts or forge reserved database-mutation events. Apply a package block when reviewing recurring abuse. Never relabel infrastructure failures as package incompatibility to clear an incident.
 
 ## Backup and recovery
 
 The recovery targets are RPO 24 hours and RTO 4 hours, with no high-availability SLA. A database and a control VPS remain single points of failure. Before launch, configure a separate backup host/account with restricted storage access, a pinned SSH host key, and enough space for seven days of archives. Install the Node toolchain on the control host too; the backup unit uses `/opt/compatlab-node/bin/node`.
 
-Copy `infra/backup.env.example` to the private configuration directory, set the real target, install `compatlab-backup.service` and `compatlab-backup.timer`, and enable the timer. Run the service once immediately. The script streams a PostgreSQL custom-format dump, encrypts it using AES-256-GCM and a fresh nonce, uploads to a temporary name, verifies SHA-256 remotely, renames and syncs the archive, then audits success. Keys are never uploaded. Partial or failed uploads are not successful backups. Both local and remote completed archives expire after seven days. Restrict the remote directory to this application; the retention command owns the `compatlab-*.clb` namespace there.
+Copy `infra/backup.env.example` to the private configuration directory, set the real target, install `compatlab-backup.service` and `compatlab-backup.timer`, and enable the timer. Run the service once immediately. The script streams a PostgreSQL custom-format dump, encrypts it using AES-256-GCM and a fresh nonce, uploads to a temporary name, verifies SHA-256 remotely, renames and syncs the archive, then audits success. Keys are never uploaded. Partial or failed uploads are not successful backups. Failed attempts remove their local encrypted copy and attempt removal of the remote temporary object; completed and abandoned remote temporary archives expire after seven days on the next successful connection. Dump size is bounded by available storage, reserving space for encryption and 1 GiB headroom. Both local and remote completed archives expire after seven days. Restrict the remote directory to this application; the retention command owns the `compatlab-*.clb` namespace there.
 
 Restore procedure:
 

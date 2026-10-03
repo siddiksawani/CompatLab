@@ -63,3 +63,44 @@ it("allows control maintenance and operator controls without superuser privilege
   });
   await expect(operator.pool.query("DELETE FROM audit_events")).rejects.toThrow("immutable");
 });
+it("audits direct operator writes and prevents forged database audit origins", async () => {
+  await operator.pool.query("UPDATE service_controls SET admission_paused=false");
+  const records = (
+    await catalog.pool.query(
+      "SELECT actor,details FROM audit_events WHERE action='operator_database_mutation' ORDER BY created_at DESC LIMIT 1",
+    )
+  ).rows;
+  expect(records[0]).toMatchObject({
+    actor: `database:${roles[2]}`,
+    details: { table: "service_controls", operation: "UPDATE", rowId: "singleton" },
+  });
+  await expect(operator.pool.query("DELETE FROM jobs")).rejects.toMatchObject({ code: "42501" });
+  await expect(
+    operator.pool.query("UPDATE schema_migrations SET checksum='forged'"),
+  ).rejects.toMatchObject({ code: "42501" });
+  await expect(
+    operator.pool.query(
+      "INSERT INTO audit_events(actor,reason,action,details) VALUES('forged','Forged audit.','operator_database_mutation','{}')",
+    ),
+  ).rejects.toThrow("cannot be supplied");
+  await operator.pool.query(
+    "INSERT INTO audit_events(actor,reason,action,details,created_at) VALUES('forged','Forged timestamp.','backdated_annotation','{}','2000-01-01')",
+  );
+  const backdated = (
+    await catalog.pool.query(
+      "SELECT actor,created_at FROM audit_events WHERE action='backdated_annotation'",
+    )
+  ).rows[0];
+  expect(backdated.actor).toBe(`database:${roles[2]}`);
+  expect(new Date(backdated.created_at).getTime()).toBeGreaterThan(Date.now() - 5000);
+  await operator.pool.query(
+    "INSERT INTO audit_events(actor,reason,action,details) VALUES('claimed-user','Operator annotation.','annotation','{}')",
+  );
+  expect(
+    (await catalog.pool.query("SELECT actor,details FROM audit_events WHERE action='annotation'"))
+      .rows[0],
+  ).toMatchObject({
+    actor: `database:${roles[2]}`,
+    details: { claimedActor: "claimed-user", databaseRole: roles[2] },
+  });
+});

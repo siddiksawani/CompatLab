@@ -28,6 +28,7 @@ import {
   admitted,
   artifact,
   database,
+  hash,
   image,
   matrix,
   options,
@@ -74,6 +75,85 @@ async function claim() {
   return claimJob(catalog.db, worker.token, { sessionId: worker.sessionId });
 }
 describe("audited operator controls", () => {
+  it("returns only the remaining delay when an hourly request is about to expire", async () => {
+    const source = admitted(await admitScan(catalog.db, artifact(), options(selection.matrixId)));
+    const [original] = await catalog.db
+      .select()
+      .from(schema.preparations)
+      .where(eq(schema.preparations.id, source.preparationId));
+    if (!original) throw new Error("Missing preparation fixture.");
+    const preparations = await catalog.db
+      .insert(schema.preparations)
+      .values(
+        Array.from({ length: 10 }, () => ({
+          artifactId: original.artifactId,
+          profileRevision: original.profileRevision,
+          platform: original.platform,
+        })),
+      )
+      .returning();
+    const key = hash("expiring-client");
+    await catalog.db.insert(schema.scans).values(
+      preparations.map((prep) => ({
+        preparationId: prep.id,
+        matrixId: selection.matrixId,
+        requesterKey: key,
+        requestedAt: new Date(Date.now() - 3_590_000),
+        requesterExpiresAt: new Date(Date.now() + 86400_000),
+        admissionPolicy: "fixture",
+        state: "cancelled" as const,
+      })),
+    );
+    const result = await admitScan(catalog.db, artifact(), {
+      ...options(selection.matrixId),
+      requesterKey: key,
+    });
+    expect(result).toMatchObject({ kind: "throttled", reason: "requester_rate" });
+    if (result.kind !== "throttled") throw new Error("Expected rate limit.");
+    expect(result.retryAfterSeconds).toBeGreaterThan(0);
+    expect(result.retryAfterSeconds).toBeLessThanOrEqual(10);
+  });
+  it("counts old daily pseudonyms for active work and the remaining hourly window", async () => {
+    const previous = hash("previous-day"),
+      current = hash("current-day");
+    const first = admitted(
+      await admitScan(catalog.db, artifact(), {
+        ...options(selection.matrixId),
+        requesterKey: previous,
+      }),
+    );
+    const second = admitted(
+      await admitScan(catalog.db, artifact(), {
+        ...options(selection.matrixId),
+        requesterKey: previous,
+      }),
+    );
+    const rotated = {
+      ...options(selection.matrixId),
+      requesterKey: current,
+      requesterAliases: [previous],
+    };
+    expect(await admitScan(catalog.db, artifact(), rotated)).toMatchObject({
+      kind: "throttled",
+      reason: "requester_limit",
+    });
+    await cancelScan(catalog.db, first.scanId, actor);
+    await cancelScan(catalog.db, second.scanId, actor);
+    for (let index = 0; index < 8; index++) {
+      const source = admitted(
+        await admitScan(catalog.db, artifact(), {
+          ...options(selection.matrixId),
+          requesterKey: previous,
+        }),
+      );
+      await cancelScan(catalog.db, source.scanId, actor);
+    }
+    const blocked = await admitScan(catalog.db, artifact(), rotated);
+    expect(blocked).toMatchObject({ kind: "throttled", reason: "requester_rate" });
+    if (blocked.kind !== "throttled") throw new Error("Expected requester rate limit.");
+    expect(blocked.retryAfterSeconds).toBeGreaterThan(3500);
+    expect(blocked.retryAfterSeconds).toBeLessThanOrEqual(3600);
+  });
   it("fails closed when admission controls are missing", async () => {
     await catalog.pool.query("DELETE FROM service_controls");
     try {

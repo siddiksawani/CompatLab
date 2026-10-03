@@ -17,7 +17,7 @@ import {
   PublicRequestError,
   publicConfigSchema,
   readAdmissionBody,
-  requesterKey,
+  requesterIdentity,
 } from "./security.js";
 
 export function createPublicApi(
@@ -42,7 +42,7 @@ export function createPublicApi(
       const url = new URL(request.url);
       if (/^\/api\/v1\/(reports|scans)\//.test(url.pathname)) return await reports(request);
       if (url.pathname === "/api/v1/scans" && request.method === "POST") {
-        const key = requesterKey(request, config);
+        const identity = requesterIdentity(request, config);
         const body = admissionRequestSchema.parse(await readAdmissionBody(request, config.origin));
         assertPackageName(body.name);
         if (!isExactVersion(body.version))
@@ -51,7 +51,7 @@ export function createPublicApi(
           return json({ error: "scans_paused" }, 503, { "retry-after": "60" });
         const result = await admitScan(db, await discovery.resolve(body.name, body.version), {
           matrixId: config.matrixId,
-          requesterKey: key,
+          ...identity,
           classifierRevision: CLASSIFIER_REVISION,
         });
         return json(

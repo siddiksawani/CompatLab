@@ -1,20 +1,27 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const [domain, directory, ...extra] = process.argv.slice(2);
 if (
   extra.length ||
   !domain ||
-  !/^(?=.{1,253}$)[a-z0-9]+(?:[a-z0-9.-]*[a-z0-9])?$/.test(domain) ||
+  domain.length > 253 ||
+  !domain.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)) ||
   !directory
 )
   throw new Error("Usage: node infra/configure.mjs DOMAIN NEW_PRIVATE_DIRECTORY");
-const path = resolve(directory);
-if (!relative(fileURLToPath(new URL("../", import.meta.url)), path).startsWith(".."))
+const input = resolve(directory),
+  parent = await realpath(dirname(input));
+const path = join(parent, basename(input));
+const relativePath = relative(await realpath(fileURLToPath(new URL("../", import.meta.url))), path);
+if (relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
   throw new Error("Keep private configuration outside the checkout.");
 await mkdir(path, { mode: 0o700 });
+const info = await lstat(path);
+if (!info.isDirectory() || ![0, process.getuid?.()].includes(info.uid) || (info.mode & 0o077) !== 0)
+  throw new Error("Private configuration directory ownership or permissions are invalid.");
 const secret = () => randomBytes(32).toString("hex");
 const postgres = secret(),
   web = secret(),

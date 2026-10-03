@@ -66,6 +66,14 @@ export function requesterKey(request: Request, config: PublicConfig, now = new D
     .update(`${now.toISOString().slice(0, 10)}:${address}`)
     .digest("hex");
 }
+export function requesterIdentity(request: Request, config: PublicConfig, now = new Date()) {
+  return {
+    requesterKey: requesterKey(request, config, now),
+    requesterAliases: Array.from({ length: 7 }, (_, index) =>
+      requesterKey(request, config, new Date(now.getTime() - (index + 1) * 86400_000)),
+    ),
+  };
+}
 export async function readAdmissionBody(request: Request, origin: string): Promise<unknown> {
   if (
     request.headers.get("origin") !== origin ||

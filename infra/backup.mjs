@@ -32,7 +32,18 @@ const file = `compatlab-${new Date().toISOString().replaceAll(":", "-")}-${rando
 const destination = join(directory, file),
   execute = promisify(execFile);
 const sshOptions = ["-oBatchMode=yes", "-oStrictHostKeyChecking=yes", "-oConnectTimeout=10"];
+const [, remoteHost, remotePath] = match;
+let completed = false;
+async function localRetention() {
+  for (const name of await readdir(directory)) {
+    if (!/^compatlab-[0-9TZ:.-]+-[a-f0-9-]+\.clb$/.test(name)) continue;
+    const path = join(directory, name),
+      entry = await lstat(path);
+    if (entry.isFile() && entry.mtimeMs < Date.now() - 7 * 86400_000) await rm(path);
+  }
+}
 try {
+  await localRetention();
   const dump = join(temporary, "database.dump");
   const disk = await statfs(directory);
   const maximumDump = Math.min(
@@ -94,6 +105,15 @@ try {
   await execute("ssh", [...sshOptions, _host, `mkdir -p -m 700 -- '${_path}'`], {
     timeout: 15_000,
   });
+  await execute(
+    "ssh",
+    [
+      ...sshOptions,
+      _host,
+      `find '${_path}' -maxdepth 1 -type f \\( -name 'compatlab-*.clb' -o -name 'compatlab-*.clb.partial' \\) -mtime +6 -delete`,
+    ],
+    { timeout: 15_000 },
+  );
   await execute("scp", [...sshOptions, destination, `${_host}:${_path}/${file}.partial`], {
     timeout: 3_600_000,
   });
@@ -126,22 +146,13 @@ try {
     ],
     { timeout: 15_000 },
   );
+
+  completed = true;
   process.stdout.write(`${JSON.stringify({ file, digest, bytes, uploaded: true })}\n`);
-  for (const name of await readdir(directory)) {
-    if (!/^compatlab-[0-9TZ:.-]+-[a-f0-9-]+\.clb$/.test(name)) continue;
-    const path = join(directory, name),
-      entry = await lstat(path);
-    if (entry.isFile() && entry.mtimeMs < Date.now() - 7 * 86400_000) await rm(path);
-  }
-  await execute(
-    "ssh",
-    [
-      ...sshOptions,
-      _host,
-      `find '${_path}' -maxdepth 1 -type f -name 'compatlab-*.clb' -mtime +6 -delete`,
-    ],
-    { timeout: 15_000 },
-  );
 } finally {
+  if (!completed) await rm(destination, { force: true });
+  await execute("ssh", [...sshOptions, remoteHost, `rm -f -- '${remotePath}/${file}.partial'`], {
+    timeout: 15_000,
+  }).catch(() => {});
   await rm(temporary, { recursive: true, force: true });
 }
