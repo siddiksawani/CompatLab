@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The project is in its foundation stage. This branch provides a TypeScript workspace, a prerequisite-checking CLI, a versioned harness completion contract, and fixed Linux/gVisor smoke fixtures. Package scanning, the website, and the production worker are not implemented yet.
+The project has a TypeScript workspace, bounded npm registry discovery and artifact resolution, a prerequisite-checking CLI, a versioned harness completion contract, and fixed Linux/gVisor smoke fixtures. Package scanning, the website, and the production worker are not implemented yet. See [registry resolution](docs/registry-resolution.md) for supported inputs and limits.
 
 ## Development
 
@@ -34,6 +34,7 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 | Path | Implemented responsibility |
 |---|---|
 | `apps/cli` | CLI argument handling and prerequisite reporting |
+| `packages/engine` | Bounded public registry discovery and exact artifact resolution |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
 | `services/worker` | Docker prerequisite inspection |
 | `fixtures/smoke` | Fixed module/protocol fixtures and test image |
