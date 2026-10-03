@@ -68,4 +68,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: bash scripts/install-ci-runsc.sh
+      - run: |
+          sudo modprobe br_netfilter
+          sudo sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1
       - run: sudo "$(command -v node)" scripts/preparation-smoke.mjs

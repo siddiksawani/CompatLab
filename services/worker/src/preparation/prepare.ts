@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { chown, mkdir, rm, writeFile } from "node:fs/promises";
+import { chown, lstat, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   artifactIntegrity,
@@ -36,7 +36,7 @@ export const NPM_FLAGS = [
   "--update-notifier=false",
   "--logs-max=0",
   "--progress=false",
-];
+] as const;
 
 export type PreparedSnapshot = {
   id: string;
@@ -70,6 +70,12 @@ export async function prepareArtifact(
   const id = randomUUID();
   const directory = join(resolve(stateDirectory), id);
   await mkdir(resolve(stateDirectory), { recursive: true, mode: 0o700 });
+  const stateStat = await lstat(resolve(stateDirectory));
+  if (!stateStat.isDirectory() || stateStat.uid !== 0 || (stateStat.mode & 0o022) !== 0)
+    throw new PreparationError(
+      "runner_unavailable",
+      "Snapshot storage must be owned by root and not writable by other users.",
+    );
   const deadline = AbortSignal.any([AbortSignal.timeout(180_000), ...(signal ? [signal] : [])]);
   const volume = await WorkspaceVolume.create(directory);
   let network: PreparationNetwork | undefined;
@@ -256,6 +262,12 @@ export async function runInstaller(options: {
         "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m",
         "--env=HOME=/state/home",
         "--env=NODE_OPTIONS=",
+        "--env=HTTP_PROXY=",
+        "--env=http_proxy=",
+        "--env=ALL_PROXY=",
+        "--env=all_proxy=",
+        "--env=FTP_PROXY=",
+        "--env=ftp_proxy=",
         "--env=NO_PROXY=",
         "--env=no_proxy=",
         `--env=HTTPS_PROXY=${proxy}`,
