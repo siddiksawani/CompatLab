@@ -28,7 +28,7 @@ export const NPM_FLAGS = [
   "--no-fund",
   "--registry=https://registry.npmjs.org",
   "--userconfig=/dev/null",
-  "--globalconfig=/dev/null",
+  "--globalconfig=/etc/compatlab-global.npmrc",
   "--cache=/state/cache",
   "--fetch-retries=0",
   "--fetch-timeout=30000",
