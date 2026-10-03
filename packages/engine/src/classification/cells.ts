@@ -6,7 +6,7 @@ import type {
   ReportCell,
 } from "@compatlab/contracts";
 import { classifyLoad, classifyStop } from "./failures.js";
-import { sanitizeText } from "./text.js";
+import { displayIdentifier, sanitizeText } from "./text.js";
 
 export function combineOutcomes(values: readonly CompatibilityOutcome[]): CompatibilityOutcome {
   const applicable = values.filter((value) => value !== "not_applicable");
@@ -39,9 +39,9 @@ export function classifyCell(input: {
       .filter((entry) => entry.index !== null)
       .map((entry) => [entry.index, classifyStop(entry.reason)]),
   );
-  const interruptedFailure = evidence?.interruptions[0]
-    ? classifyStop(evidence.interruptions[0].reason)
-    : null;
+  const failures = evidence?.interruptions.map((entry) => classifyStop(entry.reason)) ?? [];
+  const interruptedFailure =
+    failures.find((failure) => failure.origin === "infrastructure") ?? failures[0] ?? null;
   const failure = input.failure ?? interruptedFailure;
   const entries = (input.entries ?? []).map((specifier, index) => {
     const observation = observations.get(index);
@@ -51,7 +51,8 @@ export function classifyCell(input: {
         : (interruptions.get(index) ?? null);
     return {
       index,
-      specifier: sanitizeText(specifier, false),
+      specifier,
+      displaySpecifier: displayIdentifier(specifier),
       outcome: observation?.outcome ?? (error ? failureOutcome(error) : ("inconclusive" as const)),
       durationMs: observation?.durationMs ?? null,
       resolvedTo: observation?.resolvedTo ? sanitizeText(observation.resolvedTo) : null,
@@ -60,16 +61,19 @@ export function classifyCell(input: {
   });
   const passed = evidence?.observations.filter((entry) => entry.outcome === "pass").length ?? 0;
   const failed = evidence?.observations.filter((entry) => entry.outcome === "fail").length ?? 0;
-  const complete = !failure && !!evidence?.coverage.complete;
-  const outcome = failure
-    ? failureOutcome(failure)
-    : !evidence
-      ? "infrastructure_error"
-      : !evidence.entries.length
-        ? "not_applicable"
-        : !complete
-          ? "inconclusive"
-          : combineOutcomes(entries.map((entry) => entry.outcome));
+  const inapplicable = input.entries !== null && input.entries.length === 0;
+  const complete = inapplicable || (!failure && !!evidence?.coverage.complete);
+  const outcome = inapplicable
+    ? "not_applicable"
+    : failure
+      ? failureOutcome(failure)
+      : !evidence
+        ? "infrastructure_error"
+        : !evidence.entries.length
+          ? "not_applicable"
+          : !complete
+            ? "inconclusive"
+            : combineOutcomes(entries.map((entry) => entry.outcome));
   return {
     runId: input.runId,
     profileId: input.profileId,
@@ -91,7 +95,9 @@ export function classifyCell(input: {
       complete,
     },
     durationMs: evidence?.sessions.reduce((sum, session) => sum + session.durationMs, 0) ?? 0,
-    failure: failure ?? entries.find((entry) => entry.failure)?.failure ?? null,
+    failure: inapplicable
+      ? null
+      : (failure ?? entries.find((entry) => entry.failure)?.failure ?? null),
     entries,
     sessions:
       evidence?.sessions.map(

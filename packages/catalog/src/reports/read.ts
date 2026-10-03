@@ -5,7 +5,7 @@ import {
   probeSessionSchema,
   reproductionInputsSchema,
 } from "@compatlab/contracts";
-import { boundedText, sanitizeJson, sanitizeText } from "@compatlab/engine";
+import { boundedText, displayIdentifier, sanitizeJson, sanitizeText } from "@compatlab/engine";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { CatalogDatabase } from "../database.js";
@@ -176,12 +176,17 @@ export function createReportApi(db: CatalogDatabase) {
         .select({ raw: runs.rawEvidence })
         .from(runs)
         .where(and(eq(runs.id, runId), eq(runs.scanId, status.scanId)));
+      const raw = row?.raw ? probeGroupResultSchema.parse(row.raw) : null;
+      const evidence = raw
+        ? { ...probeGroupResultSchema.parse(sanitizeJson(raw)), entries: raw.entries }
+        : null;
       return row
         ? json({
             schemaVersion: 1,
             runId,
             sanitization: "display_v1",
-            evidence: row.raw ? sanitizeJson(probeGroupResultSchema.parse(row.raw)) : null,
+            evidence,
+            displayEntries: raw?.entries.map(displayIdentifier) ?? [],
           })
         : json({ error: "not_found" }, 404);
     }

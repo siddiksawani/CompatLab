@@ -94,6 +94,7 @@ export function classifyDiagnostic(
     classification === "job_cancelled" ||
     classification === "service_policy_rejected" ||
     classification === "coverage_limit_exceeded";
+  const policy = control || classification === "preparation_limit_exceeded";
   const phase =
     record.phase === "static_analysis"
       ? "static_analysis"
@@ -115,7 +116,7 @@ export function classifyDiagnostic(
       ? "infrastructure"
       : prerequisite
         ? "prerequisite"
-        : control
+        : policy
           ? "policy"
           : "package",
     retryable: infrastructure,

@@ -50,6 +50,14 @@ export function sanitizeJson(value: unknown): unknown {
   return value;
 }
 
+export function displayIdentifier(value: string): string {
+  return value.replace(
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: Escape controls without changing the stored identifier.
+    /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 export function boundedText(
   value: string,
   maximumBytes: number,

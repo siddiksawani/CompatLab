@@ -102,6 +102,7 @@ export const reportCellSchema = z.strictObject({
       z.strictObject({
         index: count,
         specifier: z.string().max(2304),
+        displaySpecifier: z.string().max(13824),
         outcome: compatibilityOutcomeSchema,
         durationMs: z.number().nonnegative().nullable(),
         resolvedTo: z.string().max(4096).nullable(),
@@ -128,7 +129,7 @@ export const hostedReportSchema = z.strictObject({
   id: z.uuid(),
   scanId: z.uuid(),
   classifierRevision: z.string().min(1).max(128),
-  observedAt: z.iso.datetime(),
+  observedAt: z.iso.datetime().nullable(),
   classifiedAt: z.iso.datetime(),
   artifact: localReportSchema.shape.artifact,
   preparation: z.strictObject({

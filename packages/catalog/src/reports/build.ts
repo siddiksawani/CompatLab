@@ -67,7 +67,10 @@ export async function buildReport(
     rejected: "service_policy_rejected",
     failed_infrastructure: "runner_unavailable",
   } as const;
-  const reason = terminalReasons[row.scan.state as keyof typeof terminalReasons];
+  const reason =
+    row.scan.aggregationFailedAt && row.scan.state === "failed_infrastructure"
+      ? undefined
+      : terminalReasons[row.scan.state as keyof typeof terminalReasons];
   const terminalFailure = reason ? classifyDiagnostic(null, reason) : null;
   const preparationFailure =
     row.scan.diagnostics?.phase === "static_analysis"
@@ -115,7 +118,7 @@ export async function buildReport(
         );
       }
   const omissions = row.scan.plan
-    ? probePlanSchema.shape.omissions.parse(sanitizeJson(row.scan.plan.omissions))
+    ? probePlanSchema.shape.omissions.parse(row.scan.plan.omissions)
     : null;
   const omittedCoverage = omissions
     ? omissions.counts.pattern + omissions.counts.invalid_subpath + omissions.counts.coverage_limit
@@ -147,7 +150,7 @@ export async function buildReport(
     id: randomUUID(),
     scanId,
     classifierRevision: CLASSIFIER_REVISION,
-    observedAt: (row.scan.finishedAt ?? now).toISOString(),
+    observedAt: row.scan.evidenceCompletedAt?.toISOString() ?? null,
     classifiedAt: now.toISOString(),
     artifact: {
       name: row.name,

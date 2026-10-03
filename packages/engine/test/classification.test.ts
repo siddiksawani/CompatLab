@@ -158,6 +158,11 @@ describe("versioned evidence classification", () => {
     ]);
   });
   it("distinguishes containment limits from service failures", () => {
+    expect(classifyDiagnostic({ classification: "preparation_limit_exceeded" })).toMatchObject({
+      origin: "policy",
+      phase: "preparation",
+      source: "preparation",
+    });
     expect(classifyStop("memory_limit_exceeded")).toMatchObject({
       classification: "process_out_of_memory",
       origin: "policy",
@@ -189,6 +194,49 @@ describe("versioned evidence classification", () => {
     const evidence = group(["pass"]);
     evidence.entries = [randomUUID()];
     expect(cell(evidence).entries[0]?.specifier).toBe(evidence.entries[0]);
+  });
+  it("preserves exact bidi-containing specifiers and provides escaped display labels", () => {
+    const evidence = group(["pass", "pass"]);
+    evidence.entries = ["fixture/a\u202eb", "fixture/ab"];
+    const result = cell(evidence);
+    expect(result.entries.map((entry) => entry.specifier)).toEqual(evidence.entries);
+    expect(result.entries.map((entry) => entry.displaySpecifier)).toEqual([
+      "fixture/a\\u202eb",
+      "fixture/ab",
+    ]);
+  });
+  it("prioritizes a later service failure over an earlier batch timeout", () => {
+    const evidence = group(["pass"]);
+    evidence.entries.push("fixture/timeout", "fixture/startup");
+    evidence.interruptions = [
+      { index: 1, reason: "entry_timeout" },
+      { index: 2, reason: "sandbox_start_failed" },
+    ];
+    evidence.coverage = { planned: 3, observed: 1, interrupted: 2, untested: 0, complete: false };
+    expect(cell(evidence)).toMatchObject({
+      outcome: "infrastructure_error",
+      coverage: { passed: 1, complete: false },
+      failure: { classification: "sandbox_start_failed" },
+    });
+  });
+  it("separates known-empty groups from unknown coverage after cancellation", () => {
+    const input = {
+      runId: null,
+      profileId: "node_24_21_0",
+      group: "root" as const,
+      mode: "esm" as const,
+      evidence: null,
+      failure: classifyDiagnostic(null, "job_cancelled"),
+    };
+    expect(classifyCell({ ...input, entries: [] })).toMatchObject({
+      outcome: "not_applicable",
+      failure: null,
+      coverage: { planned: 0, complete: true },
+    });
+    expect(classifyCell({ ...input, entries: null })).toMatchObject({
+      outcome: "inconclusive",
+      coverage: { planned: null, complete: false },
+    });
   });
 });
 describe("public evidence text", () => {

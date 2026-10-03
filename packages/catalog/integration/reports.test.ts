@@ -157,6 +157,36 @@ describe("immutable report classification", () => {
     } finally {
       await catalog.pool.query("ALTER TABLE reports DROP CONSTRAINT fixture_aggregation_failure");
     }
+    const raw = await catalog.db.select().from(schema.runs);
+    const recoveredId = await reclassifyScan(catalog.db, broken.scan.scanId, actor);
+    expect((await readReport(catalog.db, recoveredId))?.report).toMatchObject({
+      outcome: "pass",
+      coverageComplete: true,
+    });
+    expect((await scanProgress(catalog.db, broken.scan.scanId))?.state).toBe("completed");
+    expect(await catalog.db.select().from(schema.runs)).toEqual(raw);
+  });
+  it("retains execution completion time independently of publication and reclassification", async () => {
+    const { scan } = await execution();
+    const [row] = await catalog.db
+      .select()
+      .from(schema.scans)
+      .where(eq(schema.scans.id, scan.scanId));
+    expect(row?.evidenceCompletedAt).toBeInstanceOf(Date);
+    const observedAt = row?.evidenceCompletedAt?.toISOString();
+    const { report } = await aggregate(scan.scanId);
+    expect(report.observedAt).toBe(observedAt);
+    expect(Date.parse(report.classifiedAt)).toBeGreaterThanOrEqual(Date.parse(observedAt ?? ""));
+    await expect(
+      catalog.db
+        .update(schema.scans)
+        .set({ evidenceCompletedAt: new Date(0) })
+        .where(eq(schema.scans.id, scan.scanId)),
+    ).rejects.toThrow();
+    expect(
+      (await readReport(catalog.db, await reclassifyScan(catalog.db, scan.scanId, actor)))?.report
+        .observedAt,
+    ).toBe(observedAt);
   });
   it("aggregates once under concurrent callers and serves views without creating work", async () => {
     const { scan } = await execution();
@@ -331,6 +361,25 @@ describe("immutable report classification", () => {
 });
 
 describe("public report reads", () => {
+  it("preserves exact entry identities in reports and evidence downloads", async () => {
+    const { scan } = await execution({
+      manifest: { exports: { ".": "./index.js", "./a\u202eb": "./a.js", "./ab": "./b.js" } },
+    });
+    const { report } = await aggregate(scan.scanId);
+    const cell = report.cells.find((cell) => cell.group === "subpaths");
+    expect(cell?.entries.map((entry) => entry.specifier)).toEqual([
+      "@scope/report-fixture/a\u202eb",
+      "@scope/report-fixture/ab",
+    ]);
+    const api = createReportApi(catalog.db);
+    const response = await api(
+      new Request(`http://localhost/api/v1/reports/${report.id}/evidence?runId=${cell?.runId}`),
+    );
+    expect(await response.json()).toMatchObject({
+      evidence: { entries: cell?.entries.map((entry) => entry.specifier) },
+      displayEntries: cell?.entries.map((entry) => entry.displaySpecifier),
+    });
+  });
   it("validates identifiers and changes ETags immediately on quarantine and invalidation", async () => {
     const { scan } = await execution();
     const { report } = await aggregate(scan.scanId);

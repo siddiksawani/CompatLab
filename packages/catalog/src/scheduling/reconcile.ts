@@ -256,6 +256,7 @@ export async function scanProgress(db: CatalogDatabase, scanId: string) {
       startedAt: scans.startedAt,
       deadlineAt: scans.deadlineAt,
       finishedAt: scans.finishedAt,
+      aggregationFailedAt: scans.aggregationFailedAt,
       reportId: sql<
         string | null
       >`(SELECT r.id FROM reports r WHERE r.scan_id=scans.id ORDER BY r.created_at DESC,r.id LIMIT 1)`,

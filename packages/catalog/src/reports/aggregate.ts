@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { CLASSIFIER_REVISION } from "@compatlab/contracts";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { databaseNow } from "../scheduling/workers.js";
@@ -54,8 +54,17 @@ async function persistReport(tx: CatalogTransaction, scanId: string) {
     .set({
       state: payload.outcome === "infrastructure_error" ? "failed_infrastructure" : "completed",
       finishedAt: now,
+      aggregationFailedAt: null,
     })
-    .where(and(eq(scans.id, scanId), eq(scans.state, "aggregating")));
+    .where(
+      and(
+        eq(scans.id, scanId),
+        or(
+          eq(scans.state, "aggregating"),
+          and(eq(scans.state, "failed_infrastructure"), isNotNull(scans.aggregationFailedAt)),
+        ),
+      ),
+    );
   await tx
     .update(scans)
     .set({ progressRevision: sql`${scans.progressRevision}+1` })
@@ -97,7 +106,7 @@ export async function aggregatePendingReports(db: CatalogDatabase, limit = 10) {
         await tx.execute(sql`UPDATE jobs SET attempt=least(attempt+1,3),state=CASE WHEN attempt>=2 THEN 'finished' ELSE 'queued' END,
           available_at=now()+interval '10 seconds',attempt_summary='{"classification":"control_plane_error"}'::jsonb
           WHERE id=${job.id} AND state='queued'`);
-        await tx.execute(sql`UPDATE scans SET state='failed_infrastructure',finished_at=now(),progress_revision=progress_revision+1
+        await tx.execute(sql`UPDATE scans SET state='failed_infrastructure',finished_at=now(),aggregation_failed_at=now(),progress_revision=progress_revision+1
           WHERE id=${job.scanId} AND state='aggregating' AND EXISTS (SELECT 1 FROM jobs WHERE id=${job.id} AND attempt=3)`);
         return "failed";
       }
