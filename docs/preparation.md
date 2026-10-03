@@ -45,6 +45,8 @@ The volume is remounted read-only before returning a snapshot. The snapshot has 
 
 Local metadata lives outside the sealed filesystem and is readable only by the supervisor. Filesystem operations and Docker arguments are internal worker interfaces; they are not public request payloads. Persistent catalog ownership and durable job authorization arrive in slices 07 and 08.
 
+Profile `npm_11_19_0_linux_amd64_v2` reserves an empty `.compatlab` directory in the consumer for the read-only harness mount. It is included in tree verification. Snapshots from the earlier layout require fresh preparation; they cannot be reused under this profile.
+
 ## Qualification
 
 On a disposable Linux amd64 execution host with runsc, after `pnpm build`:

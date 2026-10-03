@@ -193,6 +193,9 @@ importers:
 
   packages/engine:
     dependencies:
+      '@compatlab/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       semver:
         specifier: 7.8.5
         version: 7.8.5
@@ -215,6 +218,9 @@ importers:
 
   services/worker:
     dependencies:
+      '@compatlab/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@compatlab/engine':
         specifier: workspace:*
         version: link:../../packages/engine
