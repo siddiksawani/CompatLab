@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  MAX_REPORT_BYTES,
   MAX_SCAN_LOG_BYTES,
   PROBE_LIMITS,
   type ProbeGroupResult,
@@ -20,13 +21,26 @@ export async function executePlan(
   images: readonly RuntimeImage[],
   backend: SandboxBackend,
   signal: AbortSignal,
+  maxResultBytes = MAX_REPORT_BYTES,
 ): Promise<ProbeGroupResult[]> {
+  if (
+    !Number.isSafeInteger(maxResultBytes) ||
+    maxResultBytes < 1024 ||
+    maxResultBytes > MAX_REPORT_BYTES
+  )
+    throw new TypeError("The report has insufficient evidence space.");
   if (
     plan.runtimes.length !== images.length ||
     plan.runtimes.some((runtime, index) => runtime.profileId !== images[index]?.profileId)
   )
     throw new TypeError("The plan and immutable runtime matrix differ.");
   const results: ProbeGroupResult[] = [];
+  const assertBudget = () => {
+    if (Buffer.byteLength(JSON.stringify(results)) > maxResultBytes)
+      throw new TypeError(
+        "The report evidence byte limit was reached; further probes were stopped.",
+      );
+  };
   let remainingLogs = MAX_SCAN_LOG_BYTES;
   for (const [runtimeIndex, runtime] of plan.runtimes.entries()) {
     const image = images[runtimeIndex];
@@ -53,6 +67,8 @@ export async function executePlan(
             complete: entries.length === 0,
           },
         };
+        results.push(result);
+        assertBudget();
         let startIndex = 0;
         while (
           startIndex < entries.length &&
@@ -87,6 +103,7 @@ export async function executePlan(
           }
           result.sessions.push(session);
           if (session.checkpoint) result.observations.push(...session.checkpoint.observations);
+          assertBudget();
           if (session.stopReason === "completed") {
             startIndex = entries.length;
             break;
@@ -116,7 +133,7 @@ export async function executePlan(
           result.coverage.observed === entries.length &&
           result.interruptions.length === 0 &&
           (entries.length === 0 || result.sessions.at(-1)?.stopReason === "completed");
-        results.push(result);
+        assertBudget();
       }
   }
   return results;

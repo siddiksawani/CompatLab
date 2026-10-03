@@ -133,15 +133,12 @@ async function scanSnapshot(
     join(state, "locks", `${snapshot.lock.digest}.json`),
     await readBoundedFile(join(snapshot.workspace, "package-lock.json"), MAX_LOCK_BYTES),
   );
-  const groups = await executePlan(plan, images, backend, signal);
   const { name, version, integrity, tarballUrl } = snapshot.artifact;
-  const report = localReportSchema.parse({
+  const report: LocalReport = {
     schemaVersion: 1,
     id: randomUUID(),
     createdAt: new Date().toISOString(),
-    evidenceLevel: groups.some((group) => group.sessions.length > 0)
-      ? "smoke_tested"
-      : "static_only",
+    evidenceLevel: "static_only",
     harnessRevision: PROBE_HARNESS_REVISION,
     policyRevision: PROBE_POLICY_REVISION,
     artifact: { name, version, integrity, tarballUrl },
@@ -160,11 +157,18 @@ async function scanSnapshot(
       manifest,
       snapshot.tree.entries.map((entry) => entry.path),
     ),
-    groups,
-    deadlineReached: signal.aborted,
-  });
+    groups: [],
+    deadlineReached: false,
+  };
+  const evidenceBytes = MAX_REPORT_BYTES - Buffer.byteLength(JSON.stringify(report)) - 64;
+  report.groups = await executePlan(plan, images, backend, signal, evidenceBytes);
+  report.evidenceLevel = report.groups.some((group) => group.sessions.length > 0)
+    ? "smoke_tested"
+    : "static_only";
+  report.deadlineReached = signal.aborted;
   const bytes = Buffer.from(JSON.stringify(report));
   if (bytes.length > MAX_REPORT_BYTES) throw new TypeError("The local report exceeds 20 MiB.");
+  localReportSchema.parse(report);
   await mkdir(join(state, "reports"), { recursive: true, mode: 0o700 });
   await storeImmutable(join(state, "reports", `${report.id}.json`), bytes);
   return report;

@@ -132,3 +132,54 @@ it("keeps cancelled work visibly untested and rejects false backend completion",
     "without valid evidence",
   );
 });
+
+it("stops dispatch when bounded evidence exhausts the report budget", async () => {
+  const run = vi.fn(async (input: ProbeInput) => ({
+    ...session(input),
+    logs: { ...session(input).logs, stdout: "x".repeat(2048) },
+  }));
+  await expect(
+    executePlan(plan("./index.js"), [image], { run }, new AbortController().signal, 1024),
+  ).rejects.toThrow("evidence byte limit");
+  expect(run).toHaveBeenCalledTimes(1);
+});
+
+it("limits total retained logs across variable runtime matrices", async () => {
+  const profiles = Array.from({ length: 12 }, (_, i) => ({ ...profile, id: `fixture_${i}` }));
+  const images = profiles.map((value, i) => ({
+    ...image,
+    profileId: value.id,
+    imageId: `sha256:${i.toString(16).padStart(64, "0")}`,
+  }));
+  const input = planProbes(
+    Buffer.from(JSON.stringify({ name: "fixture", version: "1.0.0", main: "index.js" })),
+    profiles,
+  );
+  const result = await executePlan(
+    input,
+    images,
+    {
+      run: async (input) => ({
+        ...session(input),
+        logs: {
+          stdout: "λ".repeat(64 * 1024),
+          stderr: "x".repeat(128 * 1024),
+          stdoutTruncated: false,
+          stderrTruncated: false,
+          emittedBytes: 256 * 1024,
+        },
+      }),
+    },
+    new AbortController().signal,
+  );
+  expect(
+    result
+      .flatMap((group) => group.sessions)
+      .reduce(
+        (sum, session) =>
+          sum + Buffer.byteLength(session.logs.stdout) + Buffer.byteLength(session.logs.stderr),
+        0,
+      ),
+  ).toBe(4 * 1024 ** 2);
+  expect(result.at(-3)?.sessions[0]?.logs.stdoutTruncated).toBe(true);
+});
