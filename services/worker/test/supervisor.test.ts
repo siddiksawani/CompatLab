@@ -28,6 +28,7 @@ const snapshot = { id: "shared" } as PreparedSnapshot;
 const lease = () => ({
   previousState: null,
   lost: new AbortController().signal,
+  activate: vi.fn(async () => {}),
   close: vi.fn(async () => {}),
 });
 const signal = () => new AbortController().signal;
@@ -124,5 +125,14 @@ describe("scan snapshot ownership", () => {
     const supervisor = await ExecutionSupervisor.open("/state");
     expect(vi.mocked(collectSnapshots).mock.calls).toEqual([[tmpdir(), new Set(), 0], ["/state"]]);
     await supervisor.close();
+  });
+
+  it("does not activate the new root when retirement fails", async () => {
+    const ownership = { ...lease(), previousState: tmpdir() };
+    vi.mocked(acquireHostLease).mockResolvedValue(ownership);
+    vi.mocked(collectSnapshots).mockRejectedValueOnce(new Error("retirement failed"));
+    await expect(ExecutionSupervisor.open("/state")).rejects.toThrow("retirement failed");
+    expect(ownership.activate).not.toHaveBeenCalled();
+    expect(ownership.close).toHaveBeenCalledOnce();
   });
 });

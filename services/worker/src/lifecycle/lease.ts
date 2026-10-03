@@ -10,9 +10,12 @@ type Owner = {
   stateDirectory: string;
   active: boolean;
 };
-export async function acquireHostLease(
-  stateDirectory: string,
-): Promise<{ previousState: string | null; lost: AbortSignal; close(): Promise<void> }> {
+export async function acquireHostLease(stateDirectory: string): Promise<{
+  previousState: string | null;
+  lost: AbortSignal;
+  activate(): Promise<void>;
+  close(): Promise<void>;
+}> {
   const file = await open(leasePath, "ax", 0o600).catch((error: NodeJS.ErrnoException) => {
     if (error.code !== "EEXIST") throw error;
     return null;
@@ -80,7 +83,7 @@ export async function acquireHostLease(
       schemaVersion: 1,
       pid: process.pid,
       processStart: await processStart(process.pid),
-      stateDirectory,
+      stateDirectory: previousState ?? stateDirectory,
       active: true,
     };
     if (!owner.processStart) throw new Error("Process identity is unavailable.");
@@ -88,6 +91,10 @@ export async function acquireHostLease(
     return {
       previousState,
       lost: lost.signal,
+      async activate() {
+        owner.stateDirectory = stateDirectory;
+        await writeFile(leasePath, JSON.stringify(owner), { mode: 0o600 });
+      },
       async close() {
         if (closing) return;
         closing = true;

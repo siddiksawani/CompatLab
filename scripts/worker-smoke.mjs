@@ -352,6 +352,17 @@ async function qualifyReuse() {
     owner.prepare(artifact, scanId, new AbortController().signal),
   );
   await owner.close();
+  await mkdir(join(state, "snapshots", "unexpected"), { mode: 0o700 });
+  await assert.rejects(
+    () => ExecutionSupervisor.open(join(base, "changed-state")),
+    /Unrecognized snapshot directory/,
+  );
+  assert.equal(
+    JSON.parse(await readFile("/run/compatlab-worker.lock", "utf8")).stateDirectory,
+    state,
+    "Failed retirement must keep the previous state root recoverable.",
+  );
+  await rm(join(state, "snapshots", "unexpected"), { recursive: true });
   const changed = await ExecutionSupervisor.open(join(base, "changed-state"));
   try {
     assert.deepEqual(

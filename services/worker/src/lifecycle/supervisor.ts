@@ -48,6 +48,7 @@ export class ExecutionSupervisor {
       }
       await recoverResources(state);
       await collectSnapshots(state);
+      await lease.activate();
       return new ExecutionSupervisor(state, lease);
     } catch (error) {
       await lease.close();
