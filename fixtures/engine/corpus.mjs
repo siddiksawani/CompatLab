@@ -247,6 +247,7 @@ export const liveCorpus = [
   ["lodash.debounce", "4.0.8"],
 ];
 export const protocolCases = [
+  ["exit-code", null, cjs("process.exit(125);")],
   [
     "mixed",
     null,

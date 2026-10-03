@@ -16,6 +16,7 @@ import {
   artifactIntegrity,
   assertPackageName,
   executePlan,
+  executionSummary,
   isExactVersion,
   MAX_LOCK_BYTES,
   manifestObservations,
@@ -159,13 +160,11 @@ async function scanSnapshot(
     ),
     groups: [],
     deadlineReached: false,
+    cancelled: false,
   };
   const evidenceBytes = MAX_REPORT_BYTES - Buffer.byteLength(JSON.stringify(report)) - 64;
   report.groups = await executePlan(plan, images, backend, signal, evidenceBytes);
-  report.evidenceLevel = report.groups.some((group) => group.sessions.length > 0)
-    ? "smoke_tested"
-    : "static_only";
-  report.deadlineReached = signal.aborted;
+  Object.assign(report, executionSummary(report.groups, signal));
   const bytes = Buffer.from(JSON.stringify(report));
   if (bytes.length > MAX_REPORT_BYTES) throw new TypeError("The local report exceeds 20 MiB.");
   localReportSchema.parse(report);

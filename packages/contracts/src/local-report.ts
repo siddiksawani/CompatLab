@@ -33,5 +33,6 @@ export const localReportSchema = z.strictObject({
   staticObservations: z.record(z.string(), z.unknown()),
   groups: z.array(probeGroupResultSchema).max(64),
   deadlineReached: z.boolean(),
+  cancelled: z.boolean(),
 });
 export type LocalReport = z.infer<typeof localReportSchema>;

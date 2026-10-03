@@ -20,6 +20,7 @@ import { readBoundedFile } from "../preparation/files.js";
 import { assertPreparationHost } from "../preparation/prepare.js";
 import { runtimeContainerArguments } from "./arguments.js";
 import { verifyRuntimeImages } from "./images.js";
+import { type RuntimeState, runtimeOutcome } from "./outcome.js";
 import { OutputVolume } from "./output.js";
 
 type Limits = { entryMs: number; batchMs: number };
@@ -155,44 +156,33 @@ async function runSession(
         if (!missing(error)) stop("harness_protocol_error");
       }
       const now = performance.now();
-      if (now - started >= (input.group === "root" ? limits.entryMs : limits.batchMs))
+      if (!finished && now - started >= (input.group === "root" ? limits.entryMs : limits.batchMs))
         stop(input.group === "root" ? "entry_timeout" : "batch_timeout");
-      else if (now - progressAt >= limits.entryMs) stop("entry_timeout");
+      else if (!finished && now - progressAt >= limits.entryMs) stop("entry_timeout");
       if (!finished && !controller.signal.aborted) await delay(100);
     }
     const processResult = await commandResult;
     result.exitCode = processResult.exitCode;
     result.logs = logs(processResult);
+    let state: RuntimeState | null = null;
     try {
-      const state: { OOMKilled?: boolean } = JSON.parse(
-        await docker(["inspect", "--format", "{{json .State}}", name]),
-      );
-      result.oomKilled = state.OOMKilled === true;
-    } catch {
-      if (!reason) reason = "sandbox_start_failed";
-    }
+      state = JSON.parse(await docker(["inspect", "--format", "{{json .State}}", name]));
+      result.oomKilled = state?.OOMKilled === true;
+      if (state && !state.Running) result.exitCode = state.ExitCode;
+    } catch {}
     await removeContainer(name);
     removed = true;
     let finalValid = false;
     try {
       await readCheckpoint();
       finalValid = true;
-    } catch {
-      if (!reason && processResult.exitCode === 0) reason = "harness_protocol_error";
-    }
-    result.stopReason =
-      reason ??
-      (processResult.termination === "output_limit_exceeded"
-        ? "output_limit_exceeded"
-        : result.oomKilled
-          ? "memory_limit_exceeded"
-          : [125, 126, 127].includes(processResult.exitCode ?? -1)
-            ? "sandbox_start_failed"
-            : processResult.exitCode !== 0
-              ? "unexpected_process_exit"
-              : !finalValid || !(checkpoint as ProbeCheckpoint | null)?.completed
-                ? "harness_protocol_error"
-                : "completed");
+    } catch {}
+    result.stopReason = runtimeOutcome(
+      processResult,
+      state,
+      reason,
+      finalValid && (checkpoint as ProbeCheckpoint | null)?.completed === true,
+    );
     result.checkpoint = checkpoint;
     result.durationMs = performance.now() - started;
     return result;

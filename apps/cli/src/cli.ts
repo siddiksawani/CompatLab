@@ -76,10 +76,12 @@ export async function runCli(
       }
       io.stdout(`Report: ${options.stateDirectory}/reports/${report.id}.json\n`);
     }
-    return report.groups.every(
-      (group) =>
-        group.coverage.complete && group.observations.every((entry) => entry.outcome === "pass"),
-    )
+    return !report.deadlineReached &&
+      !report.cancelled &&
+      report.groups.every(
+        (group) =>
+          group.coverage.complete && group.observations.every((entry) => entry.outcome === "pass"),
+      )
       ? 0
       : 1;
   } catch (error) {

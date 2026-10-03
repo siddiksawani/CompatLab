@@ -61,7 +61,13 @@ try {
     const report = await runFixture(id, id === "timeout" ? bounded : backend);
     const groups = report.filter((group) => group.entries.length);
     for (const group of groups) {
-      if (id === "mixed")
+      if (id === "exit-code")
+        assert.equal(
+          group.sessions[0].stopReason,
+          "unexpected_process_exit",
+          diagnostic(id, report),
+        );
+      else if (id === "mixed")
         assert.deepEqual(
           group.observations.map((entry) => entry.outcome),
           ["pass", "fail", "pass"],
@@ -133,7 +139,7 @@ try {
       await snapshot.dispose();
     }
   }
-  process.stdout.write(`${profile.id}: 50 package versions and 10 protocol cases qualified\n`);
+  process.stdout.write(`${profile.id}: 50 package versions and 11 protocol cases qualified\n`);
   if (profile.id === "node_24_21_0") {
     const invoke = async (args) =>
       JSON.parse(
