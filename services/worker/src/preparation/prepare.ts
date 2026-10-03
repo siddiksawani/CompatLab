@@ -210,9 +210,17 @@ export async function prepareArtifact(
       return result;
     }
   } catch (error) {
+    const failure =
+      error instanceof PreparationError && network
+        ? new PreparationError(
+            error.classification,
+            error.message,
+            await network.diagnostics().catch(() => "Proxy diagnostics unavailable."),
+          )
+        : error;
     if (network) await network.dispose();
     await volume.dispose();
-    throw error;
+    throw failure;
   }
 }
 

@@ -23,6 +23,7 @@ export class PreparationError extends Error {
   constructor(
     readonly classification: PreparationClassification,
     message: string,
+    readonly diagnostics?: string,
   ) {
     super(message);
   }

@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createConnection } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { command, docker, removeContainer } from "../command.js";
+import { command, docker, removeContainer, streamCommand } from "../command.js";
 
 export const PROXY_IMAGE =
   "ubuntu/squid:6.6-24.04_beta@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce";
@@ -39,6 +39,7 @@ export type PreparationNetwork = {
   name: string;
   jobIp: string;
   proxyIp: string;
+  diagnostics(): Promise<string>;
   dispose(): Promise<void>;
 };
 
@@ -178,10 +179,7 @@ export async function createPreparationNetwork(
       "compatlab.managed=true",
       "--pull=never",
       "--runtime=runsc",
-      "--network",
-      name,
-      "--ip",
-      proxyIp,
+      "--network=bridge",
       "--read-only",
       "--user=13:13",
       "--cap-drop=ALL",
@@ -204,7 +202,7 @@ export async function createPreparationNetwork(
       "/etc/squid/squid.conf",
     ]);
     proxyCreated = true;
-    await docker(["network", "connect", "bridge", proxyName]);
+    await docker(["network", "connect", "--ip", proxyIp, name, proxyName]);
     await docker(["start", proxyName]);
     const readyDeadline = Date.now() + 5000;
     while (true) {
@@ -219,7 +217,26 @@ export async function createPreparationNetwork(
         await delay(100);
       }
     }
-    return { name, jobIp, proxyIp, dispose };
+    return {
+      name,
+      jobIp,
+      proxyIp,
+      dispose,
+      diagnostics: async () => {
+        const logs = await streamCommand(
+          "docker",
+          ["logs", "--tail", "20", proxyName],
+          AbortSignal.timeout(3000),
+        );
+        const networks = await docker([
+          "inspect",
+          proxyName,
+          "--format",
+          "{{json .NetworkSettings.Networks}}",
+        ]);
+        return `${logs.stdout}\n${logs.stderr}\n${networks}`.slice(-8192);
+      },
+    };
   } catch (error) {
     await dispose();
     throw error;
