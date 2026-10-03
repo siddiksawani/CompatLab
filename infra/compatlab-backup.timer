@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily CompatLab backup
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+RandomizedDelaySec=10m
+Unit=compatlab-backup.service
+
+[Install]
+WantedBy=timers.target

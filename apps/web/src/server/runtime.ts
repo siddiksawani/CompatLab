@@ -1,7 +1,13 @@
 import "server-only";
-import { createPublicApi, openCatalog, publicConfigSchema } from "@compatlab/catalog/web";
+import {
+  createPublicApi,
+  initializeTelemetry,
+  openCatalog,
+  publicConfigSchema,
+} from "@compatlab/catalog/web";
 
 function initialize() {
+  initializeTelemetry();
   const config = publicConfigSchema.parse({
     origin: process.env.PUBLIC_ORIGIN,
     matrixId: process.env.PUBLIC_MATRIX_ID,

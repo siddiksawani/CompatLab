@@ -12,6 +12,7 @@ import type { CatalogDatabase } from "../database.js";
 import { selectionAllowed } from "../policy.js";
 import { scanProgress } from "../scheduling/reconcile.js";
 import { preparations, reports, runs, scans } from "../schema.js";
+import { reportControlError } from "../telemetry.js";
 
 export async function reportHeader(db: CatalogDatabase, reportId: string) {
   z.uuid().parse(reportId);
@@ -141,7 +142,7 @@ export function createReportApi(db: CatalogDatabase) {
     } catch (error) {
       if (error instanceof InvalidIdentifier || error instanceof URIError)
         return json({ error: "invalid_identifier" }, 400);
-      process.stderr.write('{"level":"error","event":"report_read_failed"}\n');
+      reportControlError("report_read_failed");
       return json({ error: "temporarily_unavailable" }, 503, { "retry-after": "5" });
     } finally {
       inFlight--;

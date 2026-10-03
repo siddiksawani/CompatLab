@@ -1,0 +1,36 @@
+{
+  admin off
+  log default {
+    format filter {
+      wrap json
+      fields {
+        request delete
+        user_id delete
+        upstream_request delete
+      }
+    }
+  }
+  servers {
+    timeouts {
+      read_header 5s
+      read_body 10s
+      idle 30s
+    }
+    max_header_size 16KB
+  }
+}
+{$PUBLIC_DOMAIN} {
+  request_body {
+    max_size 16KB
+  }
+  header Strict-Transport-Security "max-age=31536000"
+  reverse_proxy web:3000 {
+    header_up X-CompatLab-Proxy-Token {$PROXY_SECRET}
+    header_up X-CompatLab-Client-IP {remote_host}
+    header_up -Forwarded
+    transport http {
+      dial_timeout 3s
+      response_header_timeout 15s
+    }
+  }
+}

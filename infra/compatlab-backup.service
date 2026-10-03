@@ -1,0 +1,15 @@
+[Unit]
+Description=CompatLab encrypted off-host database backup
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/compatlab
+EnvironmentFile=/etc/compatlab/backup.env
+ExecStart=/opt/compatlab-node/bin/node infra/backup.mjs
+UMask=0077
+TimeoutStartSec=2h
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=compatlab-backup

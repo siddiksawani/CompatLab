@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MetadataBusy, MetadataCache } from "../src/public/cache.js";
-import { publicConfigSchema, readAdmissionBody, requesterKey } from "../src/public/security.js";
+import {
+  publicConfigSchema,
+  readAdmissionBody,
+  requesterIdentity,
+  requesterKey,
+} from "../src/public/security.js";
 
 const config = publicConfigSchema.parse({
   origin: "https://compatlab.example",
@@ -46,6 +51,14 @@ describe("bounded public metadata cache", () => {
   });
 });
 describe("anonymous mutation boundaries", () => {
+  it("carries retained daily aliases across midnight without storing the network address", () => {
+    const before = requesterKey(request("192.0.2.1"), config, new Date("2026-10-04T23:59:00Z"));
+    const after = requesterIdentity(request("192.0.2.1"), config, new Date("2026-10-05T00:01:00Z"));
+    expect(after.requesterAliases).toHaveLength(7);
+    expect(after.requesterAliases).toContain(before);
+    expect(after.requesterKey).not.toBe(before);
+    expect(JSON.stringify(after)).not.toContain("192.0.2");
+  });
   it("requires an authenticated proxy for non-loopback deployments", () => {
     expect(() => publicConfigSchema.parse({ ...config, proxySecret: undefined })).toThrow();
     expect(() => requesterKey(request("192.0.2.1", "wrong"), config)).toThrow("untrusted_proxy");

@@ -32,6 +32,7 @@ export async function claimJob(
     const worker = await activeWorker(tx, token, sessionId);
     const now = await databaseNow(tx);
     await tx.update(workers).set({ lastSeenAt: now }).where(eq(workers.id, worker.id));
+    if (!worker.acceptingJobs) return null;
     const { capabilities: caps } = worker;
     const selected = (
       await tx.execute<{ id: string }>(sql`

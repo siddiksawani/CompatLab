@@ -13,28 +13,39 @@ import {
   scans,
   workers,
 } from "./schema.js";
-import { revisionSchema, uuidSchema, validateArtifact } from "./validation.js";
+import { adminActionSchema, revisionSchema, uuidSchema, validateArtifact } from "./validation.js";
 
 export const ADMISSION_POLICY = {
-  revision: "admission_v1",
+  revision: "admission_v2",
   queuedScans: 20,
   activePerRequester: 2,
+  hourlyPerRequester: 10,
   cooldownSeconds: 300,
 } as const;
 const active: ScanState[] = ["requested", "preparing", "running", "aggregating"];
 const optionsSchema = z.strictObject({
   matrixId: uuidSchema,
   requesterKey: z.string().regex(/^[a-f0-9]{64}$/),
+  requesterAliases: z
+    .array(z.string().regex(/^[a-f0-9]{64}$/))
+    .max(7)
+    .default([]),
   classifierRevision: revisionSchema,
+  retry: adminActionSchema.extend({ scanId: uuidSchema }).optional(),
 });
-export type AdmissionOptions = z.infer<typeof optionsSchema>;
+export type AdmissionOptions = z.input<typeof optionsSchema>;
 export type AdmissionResult =
   | { kind: "cached"; reportId: string; scanId: string }
   | { kind: "existing" | "admitted"; scanId: string; preparationId: string }
   | { kind: "blocked"; reason: "policy_or_matrix" | "artifact_integrity_changed" }
   | {
       kind: "throttled";
-      reason: "queue_full" | "requester_limit" | "package_cooldown";
+      reason:
+        | "queue_full"
+        | "requester_limit"
+        | "requester_rate"
+        | "package_cooldown"
+        | "admission_paused";
       retryAfterSeconds: number;
     };
 
@@ -50,6 +61,20 @@ export async function admitScan(
     if (observed.integrityAnomaly) return { kind: "blocked", reason: "artifact_integrity_changed" };
     const selected = await allowedSelection(tx, observed.id, options.matrixId);
     if (!selected) return { kind: "blocked", reason: "policy_or_matrix" };
+    if (options.retry) {
+      const previous = (
+        await tx.execute<{ id: string }>(sql`
+        SELECT s.id FROM scans s JOIN preparations p ON p.id=s.preparation_id
+        WHERE s.id=${options.retry.scanId} AND s.state='failed_infrastructure'
+        AND s.matrix_id=${options.matrixId} AND p.artifact_id=${observed.id}
+        AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.scan_id=s.id AND (j.state IN ('leased','running') OR j.cleanup_required))
+      `)
+      ).rows[0];
+      if (!previous)
+        throw new TypeError(
+          "Retry requires a matching infrastructure failure and confirmed cleanup.",
+        );
+    }
     const cached = await findCachedReport(tx, {
       artifactId: observed.id,
       matrixId: options.matrixId,
@@ -70,12 +95,21 @@ export async function admitScan(
       .orderBy(desc(scans.requestedAt))
       .limit(1);
     if (existing) return { kind: "existing", ...existing };
+    if (
+      (
+        await tx.execute<{ paused: boolean }>(
+          sql`SELECT admission_paused AS paused FROM service_controls WHERE singleton`,
+        )
+      ).rows[0]?.paused !== false
+    )
+      return { kind: "throttled", reason: "admission_paused", retryAfterSeconds: 60 };
     const millis = (
       await tx.execute<{ millis: string }>(
         sql`SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint AS millis`,
       )
     ).rows[0]?.millis;
     const now = new Date(Number(millis));
+    const requesterKeys = [...new Set([options.requesterKey, ...options.requesterAliases])];
     if (!Number.isFinite(now.getTime())) throw new Error("Database time is unavailable.");
     const [queue] = await tx
       .select({ count: count() })
@@ -86,9 +120,26 @@ export async function admitScan(
     const [requester] = await tx
       .select({ count: count() })
       .from(scans)
-      .where(and(eq(scans.requesterKey, options.requesterKey), inArray(scans.state, active)));
+      .where(and(inArray(scans.requesterKey, requesterKeys), inArray(scans.state, active)));
     if ((requester?.count ?? 0) >= ADMISSION_POLICY.activePerRequester)
       return { kind: "throttled", reason: "requester_limit", retryAfterSeconds: 30 };
+    const recentRequests = (
+      await tx.execute<{ count: number; oldest: string }>(
+        sql`SELECT count(*)::int AS count, floor(extract(epoch FROM min(requested_at))*1000)::bigint AS oldest FROM scans WHERE requester_key IN (${sql.join(
+          requesterKeys.map((key) => sql`${key}`),
+          sql`,`,
+        )}) AND requested_at > ${new Date(now.getTime() - 3_600_000)}`,
+      )
+    ).rows[0];
+    if ((recentRequests?.count ?? 0) >= ADMISSION_POLICY.hourlyPerRequester)
+      return {
+        kind: "throttled",
+        reason: "requester_rate",
+        retryAfterSeconds: Math.max(
+          1,
+          Math.ceil((Number(recentRequests?.oldest) + 3_600_000 - now.getTime()) / 1000),
+        ),
+      };
     const [recent] = await tx
       .select({ requestedAt: scans.requestedAt })
       .from(scans)
@@ -102,7 +153,7 @@ export async function admitScan(
       )
       .orderBy(desc(scans.requestedAt))
       .limit(1);
-    if (recent) {
+    if (recent && !options.retry) {
       const seconds = Math.ceil(
         (recent.requestedAt.getTime() + ADMISSION_POLICY.cooldownSeconds * 1000 - now.getTime()) /
           1000,
@@ -146,6 +197,7 @@ export async function admitScan(
               isNotNull(preparations.snapshotId),
               isNotNull(preparations.installedManifest),
               eq(workers.state, "healthy"),
+              eq(workers.acceptingJobs, true),
               eq(workers.recoveryRequired, false),
               isNotNull(workers.sessionId),
               isNull(workers.revokedAt),
@@ -185,6 +237,14 @@ export async function admitScan(
       await tx
         .insert(jobs)
         .values({ kind: "preparation", preparationId: preparation.id, scanId: scan.id });
+    if (options.retry) {
+      const { scanId: previousScanId, ...actor } = options.retry;
+      await tx.insert(auditEvents).values({
+        ...actor,
+        action: "infrastructure_retry_requested",
+        details: { previousScanId, scanId: scan.id },
+      });
+    }
     return { kind: "admitted", scanId: scan.id, preparationId: preparation.id };
   });
 }

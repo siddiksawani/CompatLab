@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+**/.browser-fixtures
+**/.env*
+**/*.env
+**/operator-url
+**/migration-url
+**/backup-key
+**/worker-token
+test-results
+playwright-report
+coverage
+.DS_Store

@@ -1,7 +1,14 @@
 import { execFile } from "node:child_process";
 import { networkInterfaces } from "node:os";
 import { promisify } from "node:util";
-import { aggregatePendingReports, openCatalog, reconcileCatalog } from "@compatlab/catalog";
+import {
+  aggregatePendingReports,
+  applyRetention,
+  initializeTelemetry,
+  openCatalog,
+  reconcileCatalog,
+  reportControlError,
+} from "@compatlab/catalog";
 import { createControlServer } from "./server.js";
 
 const address = process.env.CONTROL_BIND_ADDRESS;
@@ -31,19 +38,28 @@ const port = Number(process.env.CONTROL_PORT ?? 4871);
 if (!Number.isInteger(port) || port < 1024 || port > 65535)
   throw new Error("Invalid control port.");
 const catalog = openCatalog(databaseUrl);
+initializeTelemetry();
 const server = createControlServer(catalog.db);
 let stopping = false;
 let timer: NodeJS.Timeout | undefined;
 let maintenance: Promise<void> = Promise.resolve();
+let lastRetention = 0;
 function schedule() {
   timer = setTimeout(() => {
     maintenance = reconcileCatalog(catalog.db)
       .then(async () => {
         const result = await aggregatePendingReports(catalog.db);
-        if (result.failed) process.stderr.write('{"level":"error","event":"aggregation_failed"}\n');
+        if (result.failed) reportControlError("aggregation_failed");
+        if (Date.now() - lastRetention > 60_000) {
+          lastRetention = Date.now();
+          await applyRetention(catalog.db, {
+            actor: "control",
+            reason: "Scheduled retention policy.",
+          }).catch(() => reportControlError("retention_failed"));
+        }
       })
       .catch(() => {
-        process.stderr.write('{"level":"error","event":"reconciliation_failed"}\n');
+        reportControlError("reconciliation_failed");
       })
       .finally(() => {
         if (!stopping) schedule();

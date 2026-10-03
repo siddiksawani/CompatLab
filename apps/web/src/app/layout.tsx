@@ -39,6 +39,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             <p>Exact inputs. Observable results.</p>
           </div>
           <nav aria-label="Footer">
+            <a href="/privacy">Privacy &amp; retention</a>
+            <a href="/terms">Terms</a>
+            <a href="/security">Security &amp; disclosure</a>
             <a href="/methodology">Methodology &amp; CLI</a>
             <a
               href="https://github.com/siddiksawani/CompatLab/blob/main/SECURITY.md"
