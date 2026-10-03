@@ -213,7 +213,11 @@ importers:
         specifier: 4.0.2
         version: 4.0.2
 
-  services/worker: {}
+  services/worker:
+    dependencies:
+      '@compatlab/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
 
 packages:
 

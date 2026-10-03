@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "check": "pnpm lint && pnpm build && pnpm typecheck:tests && pnpm test",
     "cli": "node apps/cli/dist/bin.js",
-    "test:sandbox": "node scripts/sandbox-smoke.mjs"
+    "test:sandbox": "node scripts/sandbox-smoke.mjs",
+    "test:preparation": "node scripts/preparation-smoke.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

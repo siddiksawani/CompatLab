@@ -1,0 +1,82 @@
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
+
+const exec = promisify(execFile);
+export async function command(file: string, args: string[], timeout = 10_000): Promise<string> {
+  const { stdout } = await exec(file, args, { timeout, maxBuffer: 128 * 1024, encoding: "utf8" });
+  return stdout.trim();
+}
+export const docker = (args: string[], timeout?: number) => command("docker", args, timeout);
+
+export type CommandResult = {
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  emittedBytes: number;
+  termination: "completed" | "cancelled" | "output_limit_exceeded";
+};
+export function streamCommand(
+  file: string,
+  args: string[],
+  signal: AbortSignal,
+): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    signal.throwIfAborted();
+    const child = spawn(file, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const logs = { stdout: [] as Buffer[], stderr: [] as Buffer[] };
+    const retained = { stdout: 0, stderr: 0 };
+    let emittedBytes = 0;
+    let termination: CommandResult["termination"] = "completed";
+    const abort = () => {
+      termination = "cancelled";
+      child.kill("SIGKILL");
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    for (const stream of ["stdout", "stderr"] as const) {
+      child[stream].on("data", (buffer: Buffer) => {
+        emittedBytes += buffer.length;
+        const available = 128 * 1024 - retained[stream];
+        if (available > 0) {
+          const bytes = buffer.subarray(0, available);
+          logs[stream].push(bytes);
+          retained[stream] += bytes.length;
+        }
+        if (emittedBytes > 8 * 1024 * 1024) {
+          termination = "output_limit_exceeded";
+          child.kill("SIGKILL");
+        }
+      });
+    }
+    child.once("error", (error) => {
+      signal.removeEventListener("abort", abort);
+      reject(error);
+    });
+    child.once("close", (exitCode) => {
+      signal.removeEventListener("abort", abort);
+      resolve({
+        exitCode,
+        termination,
+        emittedBytes,
+        stdout: Buffer.concat(logs.stdout).toString("utf8"),
+        stderr: Buffer.concat(logs.stderr).toString("utf8"),
+      });
+    });
+  });
+}
+
+export async function removeContainer(name: string): Promise<void> {
+  if (!/^compatlab-[a-z0-9-]+$/.test(name))
+    throw new TypeError("Expected a CompatLab container name.");
+  try {
+    await docker(["rm", "--force", name]);
+  } catch (error) {
+    if (
+      typeof error !== "object" ||
+      error === null ||
+      !("stderr" in error) ||
+      typeof error.stderr !== "string" ||
+      !error.stderr.includes(`No such container: ${name}`)
+    )
+      throw error;
+  }
+}
