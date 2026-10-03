@@ -125,17 +125,13 @@ export async function prepareArtifact(
         "dependency_install_failed",
         "A required locked dependency was not installed.",
       );
-    const installedManifest = parseInstalledManifest(
+    parseInstalledManifest(
       await readBoundedFile(
         join(workspace, "node_modules", artifact.name, "package.json"),
         2 * 1024 ** 2,
       ),
+      artifact,
     );
-    if (installedManifest.name !== artifact.name || installedManifest.version !== artifact.version)
-      throw new PreparationError(
-        "package_manifest_invalid",
-        "Installed root identity differs from the selected artifact.",
-      );
     await rm(state, { recursive: true });
     deadline.throwIfAborted();
     await volume.seal();

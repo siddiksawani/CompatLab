@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MAX_LOCK_BYTES, validateLock } from "../src/preparation/lock.js";
+import { parseInstalledManifest } from "../src/preparation/manifest.js";
 
 const integrity = `sha512-${createHash("sha512").update("fixture").digest("base64")}`;
 const artifact = {
@@ -102,4 +103,19 @@ describe("frozen npm lock policy", () => {
     ).toThrow();
     expect(() => validateLock(bytes(), { ...artifact, version: "2.0.0" })).toThrow();
   });
+});
+
+it("validates the installed root identity without loading its entrypoint", () => {
+  const published = { name: artifact.name, version: artifact.version, main: "dangerous.cjs" };
+  expect(parseInstalledManifest(Buffer.from(JSON.stringify(published)), artifact)).toEqual(
+    published,
+  );
+  expect(() =>
+    parseInstalledManifest(
+      Buffer.from(JSON.stringify({ ...published, version: "9.9.9" })),
+      artifact,
+    ),
+  ).toThrow(expect.objectContaining({ classification: "package_manifest_invalid" }));
+  expect(() => parseInstalledManifest(Buffer.from("[]"), artifact)).toThrow();
+  expect(() => parseInstalledManifest(Buffer.from("not JSON"), artifact)).toThrow();
 });

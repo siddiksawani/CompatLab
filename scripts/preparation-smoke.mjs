@@ -77,7 +77,15 @@ try {
   await live.dispose();
   live = undefined;
 
-  for (const scenario of ["root", "traversal", "links", "expanded", "inodes", "integrity"]) {
+  for (const scenario of [
+    "root",
+    "traversal",
+    "links",
+    "compression",
+    "expanded",
+    "inodes",
+    "integrity",
+  ]) {
     const id = randomUUID();
     const volume = await WorkspaceVolume.create(
       join(base, id),
@@ -135,38 +143,47 @@ try {
       await writeFile(join(workspace, "package-lock.json"), lockBytes);
       if (scenario !== "integrity") {
         const archives = scenario === "root" ? [root, fixtures.dep, fixtures.optional] : [root];
-        await docker(
-          [
-            "run",
-            "--rm",
-            "--runtime=runsc",
-            "--network=none",
-            "--read-only",
-            "--user=65534:65534",
-            "--cap-drop=ALL",
-            "--security-opt=no-new-privileges",
-            "--memory=2g",
-            "--memory-swap=2g",
-            "--cpus=1",
-            "--pids-limit=128",
-            "--workdir=/workspace",
-            "--mount",
-            `type=bind,src=${workspace},dst=/workspace`,
-            "--mount",
-            `type=bind,src=${state},dst=/state`,
-            "--mount",
-            `type=bind,src=${fixtureDirectory},dst=/fixtures,readonly`,
-            "--tmpfs=/tmp:size=64m",
-            "--env=HOME=/state/home",
-            INSTALLER_IMAGE,
-            "npm",
-            "cache",
-            "add",
-            ...archives.map((entry) => `/fixtures/${basename(entry.file)}`),
-            ...NPM_FLAGS,
-          ],
-          30_000,
-        );
+        try {
+          await docker(
+            [
+              "run",
+              "--rm",
+              "--runtime=runsc",
+              "--network=none",
+              "--read-only",
+              "--user=65534:65534",
+              "--cap-drop=ALL",
+              "--security-opt=no-new-privileges",
+              "--memory=2g",
+              "--memory-swap=2g",
+              "--cpus=1",
+              "--pids-limit=128",
+              "--workdir=/workspace",
+              "--mount",
+              `type=bind,src=${workspace},dst=/workspace`,
+              "--mount",
+              `type=bind,src=${state},dst=/state`,
+              "--mount",
+              `type=bind,src=${fixtureDirectory},dst=/fixtures,readonly`,
+              "--tmpfs=/tmp:size=64m",
+              "--env=HOME=/state/home",
+              INSTALLER_IMAGE,
+              "npm",
+              "cache",
+              "add",
+              ...archives.map((entry) => `/fixtures/${basename(entry.file)}`),
+              ...NPM_FLAGS,
+            ],
+            30_000,
+          );
+        } catch (error) {
+          if (scenario !== "compression") throw error;
+          assert.match(error.stderr, /TAR_ABORT/);
+          assert.match(error.stderr, /max decompression ratio exceeded/);
+          process.stdout.write("compression: npm rejected the pathological archive\n");
+          continue;
+        }
+        assert.notEqual(scenario, "compression", "The decompression-ratio guard did not fire.");
       }
       network = await createPreparationNetwork(id, volume.directory);
       const result = await runInstaller({

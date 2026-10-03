@@ -12,6 +12,8 @@ describe("bounded command output", () => {
     expect(result.stdout.length).toBe(128 * 1024);
     expect(result.stderr.length).toBe(128 * 1024);
     expect(result.emittedBytes).toBe(500000);
+    expect(result.stdoutTruncated).toBe(true);
+    expect(result.stderrTruncated).toBe(true);
     expect(result.termination).toBe("completed");
   });
   it("terminates an output flood and a cancelled command", async () => {

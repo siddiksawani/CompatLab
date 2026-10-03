@@ -13,6 +13,8 @@ export type CommandResult = {
   stdout: string;
   stderr: string;
   emittedBytes: number;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
   termination: "completed" | "cancelled" | "output_limit_exceeded";
 };
 export function streamCommand(
@@ -25,6 +27,7 @@ export function streamCommand(
     const child = spawn(file, args, { stdio: ["ignore", "pipe", "pipe"] });
     const logs = { stdout: [] as Buffer[], stderr: [] as Buffer[] };
     const retained = { stdout: 0, stderr: 0 };
+    const truncated = { stdout: false, stderr: false };
     let emittedBytes = 0;
     let termination: CommandResult["termination"] = "completed";
     const abort = () => {
@@ -36,6 +39,7 @@ export function streamCommand(
       child[stream].on("data", (buffer: Buffer) => {
         emittedBytes += buffer.length;
         const available = 128 * 1024 - retained[stream];
+        if (buffer.length > available) truncated[stream] = true;
         if (available > 0) {
           const bytes = buffer.subarray(0, available);
           logs[stream].push(bytes);
@@ -57,6 +61,8 @@ export function streamCommand(
         exitCode,
         termination,
         emittedBytes,
+        stdoutTruncated: truncated.stdout,
+        stderrTruncated: truncated.stderr,
         stdout: Buffer.concat(logs.stdout).toString("utf8"),
         stderr: Buffer.concat(logs.stderr).toString("utf8"),
       });
