@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The project has a TypeScript workspace, bounded npm registry discovery and artifact resolution, a prerequisite-checking CLI, a versioned harness completion contract, and fixed Linux/gVisor smoke fixtures. The worker also prepares artifacts through pinned npm inside runsc and seals the resulting workspace for verified local reuse. Runtime scanning, the website, and full worker qualification are still in progress. See [registry resolution](docs/registry-resolution.md) and [preparation](docs/preparation.md) for supported inputs and limits.
+The project resolves public npm artifacts, prepares them with scripts disabled inside runsc, seals the workspace for verified local reuse, and plans runtime probes from ordered package exports. Pinned Node, Bun, and Deno profiles share the same read-only workspace. Probe execution and CLI reporting, the website, and full worker qualification are still in progress. See [registry resolution](docs/registry-resolution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for supported inputs and limits.
 
 ## Development
 
@@ -34,9 +34,10 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 | Path | Implemented responsibility |
 |---|---|
 | `apps/cli` | CLI argument handling and prerequisite reporting |
-| `packages/engine` | Bounded public registry discovery and exact artifact resolution |
+| `packages/engine` | Registry resolution, static manifest analysis, export planning and runtime profiles |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
-| `services/worker` | Docker prerequisites, sandboxed npm preparation, bounded storage and sealed snapshot reuse |
+| `services/worker` | Docker prerequisites, sandboxed preparation, sealed storage and runtime image verification |
+| `runtime-images` | Digest-pinned minimal runtime image recipe |
 | `fixtures` | Authored module/protocol and preparation archive fixtures |
 | `scripts` | Linux smoke test and disposable-CI runsc setup |
 | `docs` | Architecture, delivery sequence, research, and decision records |

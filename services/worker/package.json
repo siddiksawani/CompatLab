@@ -10,6 +10,7 @@
     }
   },
   "dependencies": {
+    "@compatlab/contracts": "workspace:*",
     "@compatlab/engine": "workspace:*"
   }
 }

@@ -23,7 +23,7 @@ import { WorkspaceVolume } from "./volume.js";
 
 export const INSTALLER_IMAGE =
   "node:24.21.0-bookworm-slim@sha256:5cbc7caba8c2c0f0bca675d1b61b9f2857e1cf1853c6164ee9dd409501a936e7";
-export const PREPARATION_PROFILE = "npm_11_19_0_linux_amd64_v1";
+export const PREPARATION_PROFILE = "npm_11_19_0_linux_amd64_v2";
 export const NPM_FLAGS = [
   "--ignore-scripts",
   "--no-audit",
@@ -113,6 +113,7 @@ export async function prepareArtifact(
         "artifact_integrity_mismatch",
         "npm changed the validated lock during installation.",
       );
+    await mkdir(join(workspace, ".compatlab"), { mode: 0o755 });
     await network.dispose();
     network = undefined;
     deadline.throwIfAborted();
