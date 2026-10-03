@@ -220,14 +220,21 @@ export async function runInstaller(options: {
   name: string;
   workspace: string;
   state: string;
-  network: Pick<PreparationNetwork, "name" | "jobIp" | "proxyIp">;
+  network: Pick<PreparationNetwork, "name" | "jobIp" | "proxyIp" | "quotaExceeded">;
   args: string[];
   signal: AbortSignal;
-}): Promise<CommandResult & { failure?: PreparationClassification }> {
+}): Promise<
+  CommandResult & {
+    failure?: PreparationClassification;
+    oomKilled: boolean;
+    downloadLimitExceeded: boolean;
+  }
+> {
   const { name, workspace, state, network, args, signal } = options;
   const proxy = `http://${network.proxyIp}:3128`;
   const output = new NpmOutput();
   let result: CommandResult;
+  let oomKilled = false;
   try {
     result = await streamCommand(
       "docker",
@@ -281,16 +288,25 @@ export async function runInstaller(options: {
       signal,
       (bytes) => output.write(bytes),
     );
+    if (result.exitCode !== 125 && result.exitCode !== 126 && result.exitCode !== 127) {
+      const observed = await docker(["inspect", "--format", "{{.State.OOMKilled}}", name]);
+      if (observed !== "true" && observed !== "false")
+        throw new Error("Container memory evidence is unavailable.");
+      oomKilled = observed === "true";
+    }
   } finally {
     await removeContainer(name);
   }
   output.finish();
   const filesystem = await statfs(workspace);
+  const downloadLimitExceeded = await network.quotaExceeded();
   const failure = installerFailure(result.exitCode, output, {
     bytes: filesystem.bavail * filesystem.bsize,
     inodes: filesystem.ffree,
+    oomKilled,
+    downloadLimitExceeded,
   });
-  return { ...result, ...(failure ? { failure } : {}) };
+  return { ...result, oomKilled, downloadLimitExceeded, ...(failure ? { failure } : {}) };
 }
 
 export async function assertPreparationHost(): Promise<void> {

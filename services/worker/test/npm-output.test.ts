@@ -61,5 +61,15 @@ describe("npm failure evidence", () => {
       "preparation_limit_exceeded",
     );
     expect(installerFailure(0, observe("npm warn harmless"), available)).toBeUndefined();
+    expect(installerFailure(137, observe(""), { ...available, oomKilled: true })).toBe(
+      "preparation_limit_exceeded",
+    );
+    expect(
+      installerFailure(1, observe("npm error code ETIMEDOUT"), {
+        ...available,
+        downloadLimitExceeded: true,
+      }),
+    ).toBe("preparation_limit_exceeded");
+    expect(installerFailure(137, observe(""), available)).toBe("dependency_install_failed");
   });
 });

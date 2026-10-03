@@ -32,9 +32,15 @@ export class NpmOutput {
 export function installerFailure(
   exitCode: number | null,
   output: NpmOutput,
-  available: { bytes: number; inodes: number },
+  available: {
+    bytes: number;
+    inodes: number;
+    oomKilled?: boolean;
+    downloadLimitExceeded?: boolean;
+  },
 ): PreparationClassification | undefined {
   if (exitCode === 125 || exitCode === 126 || exitCode === 127) return "sandbox_start_failed";
+  if (available.oomKilled || available.downloadLimitExceeded) return "preparation_limit_exceeded";
   if (available.bytes < 1024 * 1024 || available.inodes < 32) return "preparation_limit_exceeded";
   if (output.tarEntryError) return "archive_rejected";
   if (exitCode === 0) return undefined;

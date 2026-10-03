@@ -33,4 +33,19 @@ describe("bounded command output", () => {
     expect(cancelled.termination).toBe("cancelled");
     expect(cancelled.exitCode).toBeNull();
   });
+  it("preserves an output limit when cancellation arrives before process close", async () => {
+    const controller = new AbortController();
+    let bytes = 0;
+    const result = await streamCommand(
+      process.execPath,
+      ["-e", "const b='x'.repeat(65536);setInterval(()=>process.stderr.write(b),0);"],
+      AbortSignal.any([controller.signal, AbortSignal.timeout(4000)]),
+      (chunk) => {
+        bytes += chunk.length;
+        if (bytes > 8 * 1024 * 1024) queueMicrotask(() => controller.abort());
+      },
+    );
+    expect(controller.signal.aborted).toBe(true);
+    expect(result.termination).toBe("output_limit_exceeded");
+  });
 });

@@ -74,7 +74,12 @@ try {
     name: `compatlab-missing-network-${randomUUID()}`,
     workspace: live.workspace,
     state: live.workspace,
-    network: { name: `compatlab-absent-${randomUUID()}`, jobIp: "192.0.2.3", proxyIp: "192.0.2.2" },
+    network: {
+      name: `compatlab-absent-${randomUUID()}`,
+      jobIp: "192.0.2.3",
+      proxyIp: "192.0.2.2",
+      quotaExceeded: async () => false,
+    },
     args: ["--version"],
     signal: AbortSignal.timeout(10_000),
   });
@@ -121,6 +126,8 @@ try {
     "expanded",
     "inodes",
     "integrity",
+    "quota",
+    "memory",
   ]) {
     const id = randomUUID();
     const volume = await WorkspaceVolume.create(
@@ -137,9 +144,11 @@ try {
         await chown(path, 65534, 65534);
       }
       const root =
-        scenario === "integrity"
-          ? { ...artifact, integrity: `sha512-${Buffer.alloc(64).toString("base64")}` }
-          : fixtures[scenario];
+        scenario === "quota" || scenario === "memory"
+          ? artifact
+          : scenario === "integrity"
+            ? { ...artifact, integrity: `sha512-${Buffer.alloc(64).toString("base64")}` }
+            : fixtures[scenario];
       const manifest = {
         name: "compatlab-consumer",
         version: "1.0.0",
@@ -177,7 +186,7 @@ try {
       const lockBytes = Buffer.from(JSON.stringify(lock));
       validateLock(lockBytes, root);
       await writeFile(join(workspace, "package-lock.json"), lockBytes);
-      if (scenario !== "integrity") {
+      if (!["integrity", "quota", "memory"].includes(scenario)) {
         const archives = scenario === "root" ? [root, fixtures.dep, fixtures.optional] : [root];
         try {
           await docker(
@@ -221,19 +230,34 @@ try {
         }
         assert.notEqual(scenario, "compression", "The decompression-ratio guard did not fire.");
       }
-      network = await createPreparationNetwork(id, volume.directory);
+      network = await createPreparationNetwork(
+        id,
+        volume.directory,
+        scenario === "quota" ? 1024 : undefined,
+      );
       const result = await runInstaller({
         name: `compatlab-fixture-${id}`,
         workspace,
         state,
         network,
-        args: ["ci", ...NPM_FLAGS],
+        args:
+          scenario === "memory"
+            ? [
+                "exec",
+                "--offline",
+                "--call=node -e 'const buffers=[];setInterval(()=>buffers.push(Buffer.alloc(64*1024*1024,1)),25)'",
+                ...NPM_FLAGS,
+              ]
+            : ["ci", ...NPM_FLAGS, ...(scenario === "quota" ? ["--fetch-timeout=2000"] : [])],
         signal: AbortSignal.timeout(60_000),
       });
       assert.equal(await exists(join(volume.path, "escape")), false);
       assert.equal(await exists(join(base, "escape")), false);
       assert.equal(await exists("/tmp/compatlab-archive-escape"), false);
-      if (scenario === "integrity") {
+      if (scenario === "quota" || scenario === "memory") {
+        assert.equal(result.failure, "preparation_limit_exceeded", JSON.stringify(result));
+        assert.equal(scenario === "quota" ? result.downloadLimitExceeded : result.oomKilled, true);
+      } else if (scenario === "integrity") {
         assert.notEqual(result.exitCode, 0);
         assert.equal(result.failure, "artifact_integrity_mismatch");
         assert.match(result.stderrTail, /EINTEGRITY/);

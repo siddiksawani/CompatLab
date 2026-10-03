@@ -34,7 +34,7 @@ export function streamCommand(
     let stderrTail = Buffer.alloc(0);
     let termination: CommandResult["termination"] = "completed";
     const abort = () => {
-      termination = "cancelled";
+      if (termination === "completed") termination = "cancelled";
       child.kill("SIGKILL");
     };
     signal.addEventListener("abort", abort, { once: true });
@@ -53,7 +53,7 @@ export function streamCommand(
           retained[stream] += bytes.length;
         }
         if (emittedBytes > 8 * 1024 * 1024) {
-          termination = "output_limit_exceeded";
+          if (termination === "completed") termination = "output_limit_exceeded";
           child.kill("SIGKILL");
         }
       });

@@ -43,6 +43,7 @@ export type PreparationNetwork = {
   name: string;
   jobIp: string;
   proxyIp: string;
+  quotaExceeded(): Promise<boolean>;
   diagnostics(): Promise<string>;
   dispose(): Promise<void>;
 };
@@ -154,6 +155,21 @@ export async function createPreparationNetwork(
       "-A",
       chain,
       "-s",
+      proxyIp,
+      "-d",
+      jobIp,
+      "-p",
+      "tcp",
+      "--sport",
+      "3128",
+      "-j",
+      "DROP",
+    ]);
+    await command("iptables", [
+      "-w",
+      "-A",
+      chain,
+      "-s",
       jobIp,
       "-d",
       proxyIp,
@@ -226,6 +242,22 @@ export async function createPreparationNetwork(
       jobIp,
       proxyIp,
       dispose,
+      quotaExceeded: async () => {
+        const counters = await command("iptables", [
+          "-w",
+          "-L",
+          chain,
+          "-n",
+          "-v",
+          "-x",
+          "--line-numbers",
+        ]);
+        const rule = counters.split("\n").find((line) => /^\s*2\s/.test(line));
+        const count = rule?.trim().split(/\s+/)[1];
+        if (!count || !/^\d+$/.test(count))
+          throw new Error("Preparation quota counters are unavailable.");
+        return BigInt(count) > 0n;
+      },
       diagnostics: async () => {
         const logs = await streamCommand(
           "docker",
