@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { corpus, createCorpus, liveCorpus, protocolCases } from "../fixtures/engine/corpus.mjs";
@@ -155,7 +155,26 @@ try {
     const reused = await invoke(["reproduce", file]);
     assert.equal(reused.reproduction.method, "verified_reuse");
     assert.equal(reused.snapshot.generation, first.snapshot.generation);
-    const rebuilt = await invoke(["reproduce", file, "--rebuild"]);
+    const inputsFile = join(base, "reproduction.json");
+    await writeFile(
+      inputsFile,
+      JSON.stringify({
+        schemaVersion: 1,
+        kind: "reproduction_inputs",
+        reportId: first.id,
+        artifact: first.artifact,
+        snapshot: first.snapshot,
+        images: first.images,
+        harnessRevision: first.harnessRevision,
+        policyRevision: first.policyRevision,
+      }),
+    );
+    const lockFile = join(base, "package-lock.json");
+    await writeFile(
+      lockFile,
+      await readFile(join(cliState, "locks", `${first.snapshot.lockDigest}.json`)),
+    );
+    const rebuilt = await invoke(["reproduce", inputsFile, "--rebuild", "--lockfile", lockFile]);
     assert.equal(rebuilt.reproduction.method, "rebuilt_from_lock");
     assert.notEqual(rebuilt.snapshot.generation, first.snapshot.generation);
     assert.equal(rebuilt.snapshot.lockDigest, first.snapshot.lockDigest);

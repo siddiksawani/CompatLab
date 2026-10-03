@@ -73,6 +73,7 @@ describe("CLI", () => {
     ["check", "package@1.0.0", "--rebuild"],
     ["reproduce", "https://example.com/report.json"],
     ["reproduce", "report.json", "--json", "--json"],
+    ["reproduce", "report.json", "--lockfile", "package-lock.json"],
   ])("rejects unsupported execution choices before host checks: %j", async (...args) => {
     const doctor = vi.fn(async () => report);
     expect(await runCli(args, setup(), doctor)).toBe(2);

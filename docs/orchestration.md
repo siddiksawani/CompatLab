@@ -1,6 +1,6 @@
 # Private orchestration
 
-The control service claims durable PostgreSQL jobs and accepts bounded evidence from authenticated workers. It never loads package code. The worker agent connects through the private API and uses the existing runsc supervisor. Classification and public report endpoints arrive in slice 09.
+The control service claims durable PostgreSQL jobs and accepts bounded evidence from authenticated workers. It never loads package code. The worker agent connects through the private API and uses the existing runsc supervisor. The reconciler also classifies finalized evidence and stores immutable [reports](reports.md).
 
 ## Identity and transport
 
@@ -43,7 +43,7 @@ Each accepted attempt stores a digest of its canonical submitted result. Identic
 
 Startup requests include an inventory of sealed local snapshots. Missing snapshots become unavailable before the new session can claim work; their active scans fail explicitly instead of waiting indefinitely. The agent refreshes server-owned snapshot pins on every claim response. Those reservations span gaps between runtime jobs and retries. Executing jobs hold independent pins, so refreshing the remote set cannot evict a workspace still in use. Before eviction, the catalog atomically removes availability and refuses deletion for snapshots reserved by active scans or uncleared attempts. New admissions therefore cannot race collection into stale reuse. Inventory is taken before preparation starts, so a partial inventory cannot clear a concurrently sealed snapshot. Losing control contact aborts and drains active work before releasing reservations.
 
-`scanProgress` reads state, revision, timestamps, and job counts in one database snapshot. It excludes logs and does not invent a completion percentage. Public conditional polling is added with the report API.
+`scanProgress` reads state, revision, timestamps, and job counts in one database snapshot. It excludes logs and does not invent a completion percentage. The report API exposes conditional polling with ETags and the final report ID.
 
 ## Running and qualification
 

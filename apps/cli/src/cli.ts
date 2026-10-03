@@ -8,7 +8,7 @@ import {
 
 const usage = `Usage: compatlab doctor [--json]
        compatlab check package@exact-version [--matrix initial_v1] [--state-dir PATH] [--json]
-       compatlab reproduce report.json [--rebuild] [--state-dir PATH] [--json]
+       compatlab reproduce report.json [--rebuild] [--lockfile PATH] [--state-dir PATH] [--json]
        compatlab --help
 
 Execution requires a local Linux amd64/runsc host with root privileges.
@@ -44,7 +44,7 @@ export async function runCli(
     }
     return report.prerequisitesAvailable ? 0 : 1;
   }
-  let options: { stateDirectory: string; json: boolean; rebuild: boolean };
+  let options: { stateDirectory: string; json: boolean; rebuild: boolean; lockFile?: string };
   try {
     options = argumentsForScan(args);
   } catch {
@@ -62,7 +62,11 @@ export async function runCli(
     const report =
       args[0] === "check"
         ? await operations.check(input, execution)
-        : await operations.reproduce(input, { ...execution, rebuild: options.rebuild });
+        : await operations.reproduce(input, {
+            ...execution,
+            rebuild: options.rebuild,
+            ...(options.lockFile ? { lockFile: options.lockFile } : {}),
+          });
     if (options.json) io.stdout(`${JSON.stringify(report, null, 2)}\n`);
     else {
       io.stdout(
@@ -95,7 +99,11 @@ function argumentsForScan(args: readonly string[]) {
     throw new TypeError();
   if (args[0] === "check") parsePackageSpec(args[1]);
   else if (/^https?:/i.test(args[1])) throw new TypeError();
-  const options = { stateDirectory: "/var/lib/compatlab", json: false, rebuild: false };
+  const options: { stateDirectory: string; json: boolean; rebuild: boolean; lockFile?: string } = {
+    stateDirectory: "/var/lib/compatlab",
+    json: false,
+    rebuild: false,
+  };
   const seen = new Set<string>();
   for (let index = 2; index < args.length; index++) {
     const key = args[index];
@@ -103,12 +111,18 @@ function argumentsForScan(args: readonly string[]) {
     seen.add(key);
     if (key === "--json") options.json = true;
     else if (key === "--rebuild" && args[0] === "reproduce") options.rebuild = true;
-    else if (key === "--state-dir" || (key === "--matrix" && args[0] === "check")) {
+    else if (
+      key === "--state-dir" ||
+      (key === "--matrix" && args[0] === "check") ||
+      (key === "--lockfile" && args[0] === "reproduce")
+    ) {
       const value = args[++index];
       if (!value || value.startsWith("-")) throw new TypeError();
       if (key === "--matrix" && value !== "initial_v1") throw new TypeError();
       if (key === "--state-dir") options.stateDirectory = value;
+      if (key === "--lockfile") options.lockFile = value;
     } else throw new TypeError();
   }
+  if (options.lockFile && !options.rebuild) throw new TypeError();
   return options;
 }

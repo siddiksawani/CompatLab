@@ -9,6 +9,7 @@ import {
   PROBE_LIMITS,
   PROBE_POLICY_REVISION,
   parseBoundedJson,
+  parseReproductionInputs,
   type RuntimeImage,
   runtimeMatrixSchema,
 } from "@compatlab/contracts";
@@ -75,9 +76,11 @@ export async function checkPackage(spec: string, options: LocalOptions): Promise
 
 export async function reproduceReport(
   file: string,
-  options: LocalOptions & { rebuild: boolean },
+  options: LocalOptions & { rebuild: boolean; lockFile?: string },
 ): Promise<LocalReport> {
-  const report = localReportSchema.parse(
+  if (options.lockFile && !options.rebuild)
+    throw new TypeError("An external lock requires --rebuild.");
+  const report = parseReproductionInputs(
     parseBoundedJson(await readBoundedFile(resolve(file), MAX_REPORT_BYTES), MAX_REPORT_BYTES),
   );
   const state = await localState(options.stateDirectory);
@@ -100,7 +103,9 @@ export async function reproduceReport(
       let snapshot: PreparedSnapshot;
       if (options.rebuild) {
         const lockBytes = await readBoundedFile(
-          join(state, "locks", `${report.snapshot.lockDigest}.json`),
+          options.lockFile
+            ? resolve(options.lockFile)
+            : join(state, "locks", `${report.snapshot.lockDigest}.json`),
           MAX_LOCK_BYTES,
         );
         if (validateLock(lockBytes, artifact).digest !== report.snapshot.lockDigest)
