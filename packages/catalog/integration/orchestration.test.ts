@@ -192,6 +192,45 @@ async function finishPreparation() {
 }
 
 describe("durable worker scheduling", () => {
+  it("retains the source manifest when omitted export labels contain NUL", async () => {
+    await reserve();
+    const job = await next();
+    const result = prepared(job);
+    const manifest = JSON.parse(result.manifestJson);
+    manifest.exports["./invalid\u0000path"] = "./index.js";
+    result.manifestJson = JSON.stringify(manifest);
+    await submitJobResult(catalog.db, worker.token, { ...attempt(job), result });
+    const stored = (await catalog.db.select().from(schema.preparations))[0];
+    expect(stored?.installedManifest).toEqual(manifest);
+    const scan = (await catalog.db.select().from(schema.scans))[0];
+    expect(scan?.plan?.omissions.samples).toContainEqual({
+      subpath: "./invalid?path",
+      reason: "invalid_subpath",
+    });
+    expect(scan?.state).toBe("running");
+  });
+  it("records oversized plans for aggregation without blocking reconciliation", async () => {
+    await reserve();
+    const job = await next();
+    const result = prepared(job);
+    result.manifestJson = JSON.stringify({
+      name: job.artifact.name,
+      version: job.artifact.version,
+      exports: Object.fromEntries(
+        Array.from({ length: 512 }, (_, index) => [
+          `./entry-${index}-${"a".repeat(1700)}`,
+          `./${"b".repeat(1700)}.js`,
+        ]),
+      ),
+    });
+    await submitJobResult(catalog.db, worker.token, { ...attempt(job), result });
+    await reconcileCatalog(catalog.db);
+    expect((await catalog.db.select().from(schema.scans))[0]?.state).toBe("aggregating");
+    expect(
+      (await catalog.db.select().from(schema.jobs)).find((job) => job.kind === "aggregation")
+        ?.attemptSummary,
+    ).toMatchObject({ classification: "preparation_limit_exceeded", phase: "static_analysis" });
+  });
   it("keeps queued scan snapshots pinned until the scan finishes", async () => {
     const fixture = await finishPreparation();
     expect(

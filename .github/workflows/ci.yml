@@ -217,4 +217,16 @@ jobs:
       - run: |
           sudo modprobe br_netfilter
           sudo sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1
+      - name: Restore PostgreSQL after Docker restart
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker start "$POSTGRES_CONTAINER"
+          for attempt in {1..30}; do
+            if docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d compatlab_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
       - run: sudo env COMPATLAB_TEST_DATABASE_URL=postgres://postgres:compatlab-test@127.0.0.1:5432/compatlab_test "$(command -v node)" scripts/orchestration-smoke.mjs

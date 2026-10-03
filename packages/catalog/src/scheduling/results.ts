@@ -27,6 +27,7 @@ import {
 } from "../schema.js";
 import { currentAttempt } from "./claims.js";
 import { advanceScan } from "./reconcile.js";
+import { storableText } from "./storage.js";
 import { activeWorker, authenticatedWorker, databaseNow, SchedulingError } from "./workers.js";
 
 export async function submitJobResult(db: CatalogDatabase, token: string, rawSubmission: unknown) {
@@ -301,13 +302,4 @@ function canonical(value: unknown): unknown {
         .map(([key, item]) => [key, canonical(item)]),
     );
   return value;
-}
-
-function storableText<T>(value: T): T {
-  // PostgreSQL jsonb cannot represent U+0000.
-  return JSON.parse(
-    JSON.stringify(value, (_key, item: unknown) =>
-      typeof item === "string" ? item.replaceAll("\u0000", "?") : item,
-    ),
-  ) as T;
 }

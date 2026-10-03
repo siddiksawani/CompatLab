@@ -1,4 +1,5 @@
-import { planProbes, runtimeProfile } from "@compatlab/engine";
+import type { ProbePlan } from "@compatlab/contracts";
+import { PreparationError, planProbes, runtimeProfile } from "@compatlab/engine";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
@@ -11,6 +12,7 @@ import {
   scans,
   workers,
 } from "../schema.js";
+import { storableText } from "./storage.js";
 import { databaseNow } from "./workers.js";
 
 export async function advanceScan(
@@ -109,10 +111,36 @@ export async function advanceScan(
       .innerJoin(runtimeImages, eq(runtimeImages.id, matrixMembers.imageId))
       .where(eq(matrixMembers.matrixId, scan.matrixId))
       .orderBy(matrixMembers.position);
-    const plan = planProbes(
-      Buffer.from(JSON.stringify(prep.installedManifest)),
-      images.map((image) => runtimeProfile(image.profileId)),
-    );
+    let plan: ProbePlan;
+    try {
+      plan = storableText(
+        planProbes(
+          Buffer.from(JSON.stringify(prep.installedManifest)),
+          images.map((image) => runtimeProfile(image.profileId)),
+        ),
+      );
+    } catch (error) {
+      if (!(error instanceof PreparationError)) throw error;
+      await tx
+        .update(scans)
+        .set({ state: "aggregating", progressRevision: sql`${scans.progressRevision}+1` })
+        .where(eq(scans.id, scan.id));
+      await tx
+        .insert(jobs)
+        .values({
+          kind: "aggregation",
+          scanId: scan.id,
+          attemptSummary: {
+            kind: "failure",
+            origin: "preparation",
+            phase: "static_analysis",
+            classification: error.classification,
+            message: error.message.slice(0, 2048),
+          },
+        })
+        .onConflictDoNothing();
+      return;
+    }
     await tx
       .update(scans)
       .set({ plan, state: "running", progressRevision: sql`${scans.progressRevision}+1` })

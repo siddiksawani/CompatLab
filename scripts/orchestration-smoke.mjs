@@ -42,6 +42,7 @@ let child;
 let exit;
 let output = "";
 let failure;
+let shutdownFailure;
 try {
   await mkdir(state, { mode: 0o700 });
   await migrateCatalog(catalog.pool);
@@ -86,24 +87,31 @@ try {
     classifierRevision: "classifier_v1",
   });
   assert.equal(scan.kind, "admitted");
-  child = spawn(process.execPath, [resolve("services/worker/dist/remote/bin.js")], {
-    env: {
-      PATH: process.env.PATH,
-      HOME: join(base, "home"),
-      CONTROL_URL: controlUrl,
-      WORKER_TOKEN_FILE: tokenFile,
-      WORKER_STATE_DIRECTORY: state,
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  for (const stream of [child.stdout, child.stderr])
-    stream.on("data", (bytes) => {
-      output = (output + bytes.toString()).slice(-16_384);
+  function startWorker() {
+    child = spawn(process.execPath, [resolve("services/worker/dist/remote/bin.js")], {
+      env: {
+        PATH: process.env.PATH,
+        HOME: join(base, "home"),
+        CONTROL_URL: controlUrl,
+        WORKER_TOKEN_FILE: tokenFile,
+        WORKER_STATE_DIRECTORY: state,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
     });
-  exit = new Promise((resolve) => child.once("exit", (code, signal) => resolve({ code, signal })));
-  child.once("error", (error) => {
-    failure = error;
-  });
+    for (const stream of [child.stdout, child.stderr])
+      stream.on("data", (bytes) => {
+        output = (output + bytes.toString()).slice(-16_384);
+      });
+    exit = new Promise((resolve) =>
+      child.once("exit", (code, signal) => resolve({ code, signal })),
+    );
+    child.once("error", (error) => {
+      failure = error;
+    });
+  }
+  startWorker();
+  let restarted = false;
+  let retainedSnapshot;
   const deadline = Date.now() + 600_000;
   for (;;) {
     if (failure) throw failure;
@@ -112,6 +120,34 @@ try {
     await reconcileCatalog(catalog.db);
     const progress = await scanProgress(catalog.db, scan.scanId);
     if (progress?.state === "aggregating") break;
+    if (!restarted && progress?.state === "running") {
+      const active = (
+        await catalog.pool.query(
+          "SELECT count(*)::int AS count FROM jobs WHERE scan_id=$1 AND kind='run' AND state IN ('leased','running')",
+          [scan.scanId],
+        )
+      ).rows[0].count;
+      if (active > 0) {
+        retainedSnapshot = (
+          await catalog.pool.query("SELECT snapshot_id FROM preparations WHERE id=$1", [
+            scan.preparationId,
+          ])
+        ).rows[0].snapshot_id;
+        child.kill("SIGKILL");
+        await exit;
+        await sleep(31_000);
+        await reconcileCatalog(catalog.db);
+        const reserved = (
+          await catalog.pool.query(
+            "SELECT count(*)::int AS count FROM jobs WHERE scan_id=$1 AND state IN ('leased','running') AND cleanup_required",
+            [scan.scanId],
+          )
+        ).rows[0].count;
+        assert.ok(reserved > 0, "Worker death must hold expired capacity until startup cleanup.");
+        startWorker();
+        restarted = true;
+      }
+    }
     assert.ok(
       progress &&
         !["failed_infrastructure", "rejected", "cancelled", "inconclusive"].includes(
@@ -139,6 +175,8 @@ try {
   assert.equal(preparation.owner_worker_id, worker.workerId);
   assert.match(preparation.lock_digest, /^[a-f0-9]{64}$/);
   assert.ok(preparation.snapshot_id);
+  assert.ok(restarted, "The qualification must interrupt and replace a live worker.");
+  assert.equal(preparation.snapshot_id, retainedSnapshot);
   const aggregation = (
     await catalog.pool.query(
       "SELECT count(*)::int AS count FROM jobs WHERE scan_id=$1 AND kind='aggregation'",
@@ -147,7 +185,7 @@ try {
   ).rows[0];
   assert.equal(aggregation.count, 1);
   process.stdout.write(
-    "Private API -> authenticated worker -> sealed preparation -> 16 accepted runtime groups -> aggregation: qualified\n",
+    "Private API -> authenticated worker -> sealed preparation -> worker death and recovery -> 16 accepted runtime groups -> aggregation: qualified\n",
   );
 } finally {
   if (child && child.exitCode === null && child.signalCode === null) {
@@ -156,7 +194,7 @@ try {
     const status = await exit;
     clearTimeout(timer);
     if (status.code !== 0)
-      process.stderr.write(`Worker shutdown: ${JSON.stringify(status)} ${output}\n`);
+      shutdownFailure = new Error(`Worker shutdown: ${JSON.stringify(status)} ${output}`);
   }
   if (server) {
     server.closeAllConnections();
@@ -169,3 +207,4 @@ try {
   await admin.pool.query(`DROP DATABASE "${database}"`);
   await admin.close();
 }
+if (shutdownFailure) throw shutdownFailure;
