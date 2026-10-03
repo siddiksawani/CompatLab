@@ -500,3 +500,23 @@ it("bounds discovery batches and fences a stale polling lease before scan admiss
   expect(await catalog.db.select().from(monitorReleases)).toHaveLength(26);
   expect((await catalog.pool.query("SELECT id FROM scans")).rowCount).toBe(0);
 });
+
+it("allows pausing when email delivery has been disabled by the operator", async () => {
+  const id = await create();
+  await catalog.db.update(monitors).set({ emailEnabled: true }).where(eq(monitors.id, id));
+  const denied = vi.fn(async () => {
+    throw new Error("GitHub unavailable");
+  });
+  await monitoringMutation(
+    catalog.db,
+    config(),
+    user,
+    request("monitors/update"),
+    { id, enabled: false, emailEnabled: true },
+    denied,
+    registry,
+    false,
+  );
+  expect(denied).not.toHaveBeenCalled();
+  expect((await catalog.db.select().from(monitors))[0]?.enabled).toBe(false);
+});

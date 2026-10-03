@@ -145,13 +145,20 @@ export async function monitoringMutation(
     const settings = z
       .strictObject({ id: z.uuid(), enabled: z.boolean(), emailEnabled: z.boolean() })
       .parse(body);
-    if (settings.emailEnabled && !emailAvailable)
+    if (settings.emailEnabled && !monitor.emailEnabled && !emailAvailable)
       throw new PublicRequestError(409, "email_not_configured");
     const increasing =
       (settings.enabled && !monitor.enabled) || (settings.emailEnabled && !monitor.emailEnabled);
     const authority = increasing ? await authorize(monitor.repositoryLinkId) : null;
     await catalogTransaction(db, async (tx) => {
       if (authority) await assertLinkedAuthority(tx, authority);
+      const [fresh] = await tx.select().from(monitors).where(eq(monitors.id, monitor.id));
+      if (!fresh) throw new PublicRequestError(404, "not_found");
+      if (
+        !authority &&
+        ((settings.enabled && !fresh.enabled) || (settings.emailEnabled && !fresh.emailEnabled))
+      )
+        throw new PublicRequestError(409, "monitor_changed_retry");
       await tx
         .update(monitors)
         .set({

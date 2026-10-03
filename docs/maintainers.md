@@ -42,7 +42,7 @@ Each account can retain at most ten repository links, including links revoked by
 
 ## Quotas and retention
 
-`admission_v3` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.
+`admission_v4` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.
 
 Account and anonymous requester keys expire after seven days. Deleting/recreating an account does not reset this short abuse-prevention window. The bounded maintenance job removes expired sessions/OAuth state, twenty-minute ingress buckets and seven-day webhook IDs. Account configuration stays until deletion; encrypted backups expire after seven days. The public privacy page describes these records.
 
