@@ -95,10 +95,9 @@ export function createControlServer(db: CatalogDatabase) {
           result = await authorizeSnapshotEviction(db, token, body);
           break;
         case "/v1/jobs/claim": {
-          const inventory = workerInventorySchema.parse(body);
           result = {
-            job: await claimJob(db, token, inventory),
-            snapshotIds: await workerSnapshotPins(db, token, { sessionId: inventory.sessionId }),
+            job: await claimJob(db, token, body),
+            snapshotIds: await workerSnapshotPins(db, token, body),
           };
           break;
         }

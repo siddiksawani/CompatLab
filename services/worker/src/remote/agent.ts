@@ -47,11 +47,7 @@ export async function runWorker(options: {
             continue;
           }
           const started = performance.now();
-          const raw = await client.post(
-            "/v1/jobs/claim",
-            { sessionId, snapshotIds: await supervisor.snapshotInventory() },
-            signal,
-          );
+          const raw = await client.post("/v1/jobs/claim", { sessionId }, signal);
           const response = claimResponseSchema.parse(raw);
           supervisor.replaceSnapshotPins(response.snapshotIds, reservation);
           if (response.job === null) {

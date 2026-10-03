@@ -215,9 +215,13 @@ describe("durable worker scheduling", () => {
   });
   it("reconciles a missing local snapshot before accepting new claims", async () => {
     const fixture = await finishPreparation();
-    expect(
-      await claimJob(catalog.db, worker.token, { sessionId: worker.sessionId, snapshotIds: [] }),
-    ).toBeNull();
+    await catalog.pool.query(
+      "UPDATE workers SET last_seen_at=now()-interval '31 seconds' WHERE id=$1",
+      [worker.workerId],
+    );
+    const sessionId = randomUUID();
+    await readyWorker(catalog.db, worker.token, { sessionId, snapshotIds: [] });
+    expect(await claimJob(catalog.db, worker.token, { sessionId })).toBeNull();
     await reconcileCatalog(catalog.db);
     expect(await scanProgress(catalog.db, fixture.scan.scanId)).toMatchObject({
       state: "failed_infrastructure",
@@ -607,18 +611,14 @@ it("authenticates and validates private HTTP requests without exposing request c
     expect(origin.status).toBe(400);
     const client = new ControlClient(address, worker.token);
     await expect(
-      client.post("/v1/jobs/claim", { sessionId: worker.sessionId }),
+      client.post("/v1/workers/ready", { sessionId: worker.sessionId }),
     ).rejects.toMatchObject({ status: 400 });
-    expect(
-      await client.post("/v1/jobs/claim", { sessionId: worker.sessionId, snapshotIds: [] }),
-    ).toEqual({
+    expect(await client.post("/v1/jobs/claim", { sessionId: worker.sessionId })).toEqual({
       job: null,
       snapshotIds: [],
     });
     await reserve();
-    expect(
-      await client.post("/v1/jobs/claim", { sessionId: worker.sessionId, snapshotIds: [] }),
-    ).toMatchObject({
+    expect(await client.post("/v1/jobs/claim", { sessionId: worker.sessionId })).toMatchObject({
       job: { kind: "preparation", schemaVersion: 1 },
     });
     await expect(

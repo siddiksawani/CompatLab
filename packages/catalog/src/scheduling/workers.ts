@@ -161,7 +161,7 @@ export async function readyWorker(db: CatalogDatabase, token: string, rawSession
   });
 }
 
-export async function reconcileSnapshotInventory(
+async function reconcileSnapshotInventory(
   tx: CatalogTransaction,
   workerId: string,
   snapshotIds: readonly string[],
