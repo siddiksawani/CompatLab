@@ -1,8 +1,9 @@
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { lstat, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readdir, rm, statfs } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { promisify } from "node:util";
 import { encryptBackup } from "../apps/cli/dist/backup.js";
@@ -33,6 +34,22 @@ const destination = join(directory, file),
 const sshOptions = ["-oBatchMode=yes", "-oStrictHostKeyChecking=yes", "-oConnectTimeout=10"];
 try {
   const dump = join(temporary, "database.dump");
+  const disk = await statfs(directory);
+  const maximumDump = Math.min(
+    64 * 1024 ** 3,
+    Math.floor((disk.bavail * disk.bsize - 1024 ** 3) / 2),
+  );
+  if (maximumDump < 1024 ** 2) throw new Error("Insufficient backup storage headroom.");
+  let dumped = 0;
+  const bounded = new Transform({
+    transform(chunk, _encoding, done) {
+      dumped += chunk.length;
+      done(
+        dumped > maximumDump ? new Error("Database dump exceeds available backup storage.") : null,
+        chunk,
+      );
+    },
+  });
   const child = spawn(
     "docker",
     [
@@ -57,7 +74,7 @@ try {
   try {
     await Promise.all([
       complete,
-      pipeline(child.stdout, createWriteStream(dump, { flags: "wx", mode: 0o600 })),
+      pipeline(child.stdout, bounded, createWriteStream(dump, { flags: "wx", mode: 0o600 })),
     ]);
   } finally {
     if (child.exitCode === null && child.signalCode === null) {

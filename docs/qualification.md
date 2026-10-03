@@ -30,9 +30,25 @@ The off-host backup drill transferred a 64,666-byte encrypted synthetic catalog 
 
 ## Corpus review
 
+The fresh-host recipe completed on the disposable Ubuntu runner, followed by the sandbox and hostile-worker suites. The snapshot-loss drill at commit `3d3fe71` completed in 14,535 ms: retained lock restored, 16 group records with complete coverage and all observed loads passing, original image definitions preserved, and a new snapshot generation recorded. [Execution rebuild evidence](https://github.com/siddiksawani/CompatLab/actions/runs/37156014403) accompanies the workflow.
+
 `fixtures/corpus/public-v1.json` pins 100 unique public npm package versions and published integrities, spanning utility libraries, parsers, HTTP clients/servers, UI libraries, WebAssembly, native addons and packages with prerequisites. Ten independent Linux/runsc shards run the actual hosted control/worker/report path. Every report must contain four runtime profiles and sixteen independent cells, the pinned integrity and an observation timestamp. Infrastructure outcomes fail the gate and require investigation; package/prerequisite outcomes remain evidence rather than being rewritten as passes.
 
-Each shard uploads full report envelopes plus per-package timing, queue wait, coverage, outcome and cell duration/failure summaries. Review representative differences, native/script prerequisites, incomplete coverage and failures before declaring the gate complete. CI artifact retention is 14 days; retain the reviewed summary with the release record. A changing npm registry or unavailable tarball is an explicit failed qualification, not permission to substitute an unrecorded artifact.
+At commit `3d3fe71`, all 100 versions completed preparation and produced the expected 1,600 report cells with zero infrastructure failures. The aggregate report outcomes were 84 pass, 13 inconclusive and 3 partial. Median end-to-end scan time was 14,585 ms, p95 23,509 ms, and the slowest scan took 104,417 ms. These are smoke observations under the pinned Linux profile, not universal compatibility scores. The [per-version record](qualification/public-corpus-v1.csv) retains outcomes, coverage, report IDs, lock digests and snapshot generations.
+
+Representative reports were inspected alongside every package's summary:
+
+| Package | Observation and interpretation |
+|---|---|
+| `zod@4.6.5` | Enumerated entries load, but `./v4/locales/*` remains omitted by policy. The aggregate stays inconclusive instead of implying complete export coverage |
+| `hono@4.13.12` | Runtime-specific adapters reference their runtime globals: Node fails Deno/Bun adapters, while each native runtime loads its own adapter. Independent subpath results preserve the differences; wildcard omission also remains visible |
+| `react-dom` | Root cells pass. Subpath loading reaches the process time limit after recorded observations, leaving inconclusive completion rather than converting a timeout to a successful batch |
+| `preact` | Server subpaths require an absent `preact-render-to-string` dependency. Root success does not hide those subpath failures |
+| `yargs`, `svelte` | Inspectable subpath failures produce partial reports while independently successful root loading remains visible |
+| `sharp@0.35.5`, `bcrypt@6.0.0`, `better-sqlite3@13.0.3` | Shipped native artifacts are recorded and roots load under all four profiles without running installer scripts. Loading alone does not prove native API behavior or another platform's support |
+| `hash-wasm@4.12.0`, `xxhash-wasm@1.1.0` | Roots load across the selected profiles; no claim is made that their hashing APIs were behaviorally asserted |
+
+Each shard uploads full report envelopes plus per-package timing, queue wait, coverage, outcome and cell duration/failure summaries. [The corpus workflow](https://github.com/siddiksawani/CompatLab/actions/runs/37156014403) passed all ten shards. CI artifact retention is 14 days; the reviewed summary remains in Git. A changing npm registry or unavailable tarball is an explicit failed qualification, not permission to substitute an unrecorded artifact.
 
 ## Release boundary
 

@@ -1,4 +1,5 @@
-import { lstat, open, statfs } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, statfs } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { parseArgs } from "node:util";
 import {
@@ -20,6 +21,7 @@ import {
   retireWorker,
   retryInfrastructure,
   revokeBlock,
+  schema,
   setAdmissionPaused,
   setMatrixEnabled,
   setWorkerState,
@@ -104,7 +106,7 @@ export async function runAdmin(
     io.stderr(adminUsage);
     return 2;
   }
-  const actor = { actor: `ssh:${userInfo().username}`, reason };
+  const actor = { actor: `ssh:${operatorIdentity()}`, reason };
   let catalog: ReturnType<typeof openCatalog> | undefined;
   try {
     if (command === "host-status") {
@@ -116,10 +118,7 @@ export async function runAdmin(
     }
     const credential = process.env.ADMIN_DATABASE_URL_FILE;
     if (!credential) throw new TypeError("ADMIN_DATABASE_URL_FILE is required.");
-    const info = await lstat(credential);
-    if (!info.isFile() || ![0, process.getuid?.()].includes(info.uid) || (info.mode & 0o077) !== 0)
-      throw new TypeError("The operator credential must be a private, owned regular file.");
-    const url = z.url().parse((await readSmallFile(credential, 4096)).trim());
+    const url = z.url().parse((await readSmallFile(credential, 4096, true)).trim());
     if (!["postgres:", "postgresql:"].includes(new URL(url).protocol))
       throw new TypeError("Invalid database protocol.");
     catalog = openCatalog(url);
@@ -132,6 +131,9 @@ export async function runAdmin(
         break;
       case "migrate":
         await migrateCatalog(catalog.pool);
+        await db
+          .insert(schema.auditEvents)
+          .values({ ...actor, action: "schema_migrated", details: {} });
         break;
       case "pause":
       case "resume":
@@ -224,9 +226,24 @@ export async function runAdmin(
     await catalog?.close();
   }
 }
-export async function readSmallFile(path: string, limit: number) {
-  const file = await open(path, "r");
+function operatorIdentity() {
   try {
+    return userInfo().username;
+  } catch {
+    const uid = process.getuid?.();
+    if (uid === undefined) throw new TypeError("Operator identity is unavailable.");
+    return `uid:${uid}`;
+  }
+}
+export async function readSmallFile(path: string, limit: number, privateFile = false) {
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const info = await file.stat();
+    if (
+      !info.isFile() ||
+      (privateFile && (![0, process.getuid?.()].includes(info.uid) || (info.mode & 0o077) !== 0))
+    )
+      throw new TypeError("The operator credential must be a private, owned regular file.");
     const bytes = Buffer.alloc(limit + 1);
     const result = await file.read(bytes, 0, bytes.length, 0);
     if (result.bytesRead > limit) throw new TypeError("Operator input exceeds its size limit.");

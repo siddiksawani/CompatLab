@@ -52,6 +52,9 @@ try {
   assert.notEqual(restored.snapshot.generation, report.snapshot.generation);
   assert.equal(restored.snapshot.lockDigest, report.snapshot.lockDigest);
   assert.deepEqual(restored.images, report.images);
+  const roots = restored.groups.filter((group) => group.group === "root");
+  assert.equal(roots.length, 8);
+  assert.ok(roots.every((group) => group.observations.length === 1));
   assert.ok(
     restored.groups.every(
       (group) =>
