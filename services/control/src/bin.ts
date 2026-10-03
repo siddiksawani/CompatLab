@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { networkInterfaces } from "node:os";
 import { promisify } from "node:util";
-import { openCatalog, reconcileCatalog } from "@compatlab/catalog";
+import { aggregatePendingReports, openCatalog, reconcileCatalog } from "@compatlab/catalog";
 import { createControlServer } from "./server.js";
 
 const address = process.env.CONTROL_BIND_ADDRESS;
@@ -38,7 +38,10 @@ let maintenance: Promise<void> = Promise.resolve();
 function schedule() {
   timer = setTimeout(() => {
     maintenance = reconcileCatalog(catalog.db)
-      .then(() => undefined)
+      .then(async () => {
+        const result = await aggregatePendingReports(catalog.db);
+        if (result.failed) process.stderr.write('{"level":"error","event":"aggregation_failed"}\n');
+      })
       .catch(() => {
         process.stderr.write('{"level":"error","event":"reconciliation_failed"}\n');
       })
@@ -48,6 +51,7 @@ function schedule() {
   }, 5000);
 }
 await reconcileCatalog(catalog.db);
+await aggregatePendingReports(catalog.db);
 server.listen(port, address);
 schedule();
 async function stop() {

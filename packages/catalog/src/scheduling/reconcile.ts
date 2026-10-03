@@ -3,6 +3,7 @@ import { PreparationError, planProbes, runtimeProfile } from "@compatlab/engine"
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
+import { queueFinalReports } from "../reports/aggregate.js";
 import {
   jobs,
   matrixMembers,
@@ -135,7 +136,17 @@ export async function advanceScan(
       if (!(error instanceof PreparationError)) throw error;
       await tx
         .update(scans)
-        .set({ state: "aggregating", progressRevision: sql`${scans.progressRevision}+1` })
+        .set({
+          state: "aggregating",
+          progressRevision: sql`${scans.progressRevision}+1`,
+          diagnostics: {
+            kind: "failure",
+            origin: "preparation",
+            phase: "static_analysis",
+            classification: error.classification,
+            message: error.message.slice(0, 2048),
+          },
+        })
         .where(eq(scans.id, scan.id));
       await tx
         .insert(jobs)
@@ -231,6 +242,7 @@ export async function reconcileCatalog(db: CatalogDatabase) {
       .orderBy(scans.requestedAt)
       .limit(100);
     for (const scan of active) await advanceScan(tx, scan.id, now);
+    await queueFinalReports(tx);
     return { expiredAttempts: expired.length, inspectedScans: active.length };
   });
 }
@@ -244,6 +256,9 @@ export async function scanProgress(db: CatalogDatabase, scanId: string) {
       startedAt: scans.startedAt,
       deadlineAt: scans.deadlineAt,
       finishedAt: scans.finishedAt,
+      reportId: sql<
+        string | null
+      >`(SELECT r.id FROM reports r WHERE r.scan_id=scans.id ORDER BY r.created_at DESC,r.id LIMIT 1)`,
       jobs: sql<{ queued: number; active: number; finished: number }>`(SELECT json_build_object(
         'queued',count(*) FILTER (WHERE j.state='queued'),
         'active',count(*) FILTER (WHERE j.state IN ('leased','running')),

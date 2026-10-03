@@ -106,6 +106,7 @@ export const scans = pgTable("scans", {
   admissionPolicy: text("admission_policy").notNull(),
   progressRevision: integer("progress_revision").notNull().default(0),
   plan: jsonb("plan").$type<ProbePlan>(),
+  diagnostics: jsonb("diagnostics").$type<Record<string, unknown>>(),
   requestedAt: time("requested_at").notNull().defaultNow(),
   startedAt: time("started_at"),
   deadlineAt: time("deadline_at"),

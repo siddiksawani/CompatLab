@@ -3,6 +3,8 @@ export * from "./admission.js";
 export * from "./database.js";
 export * from "./migrate.js";
 export { findCachedReport } from "./policy.js";
+export * from "./reports/aggregate.js";
+export * from "./reports/read.js";
 export * from "./scheduling/claims.js";
 export * from "./scheduling/reconcile.js";
 export * from "./scheduling/results.js";

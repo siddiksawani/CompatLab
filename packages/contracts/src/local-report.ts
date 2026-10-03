@@ -36,3 +36,17 @@ export const localReportSchema = z.strictObject({
   cancelled: z.boolean(),
 });
 export type LocalReport = z.infer<typeof localReportSchema>;
+
+export const reproductionInputsSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  kind: z.literal("reproduction_inputs"),
+  reportId: z.uuid(),
+  artifact: localReportSchema.shape.artifact,
+  snapshot: localReportSchema.shape.snapshot,
+  images: runtimeMatrixSchema,
+  harnessRevision: z.literal(PROBE_HARNESS_REVISION),
+  policyRevision: z.literal(PROBE_POLICY_REVISION),
+});
+export function parseReproductionInputs(value: unknown) {
+  return z.union([localReportSchema, reproductionInputsSchema]).parse(value);
+}

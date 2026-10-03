@@ -7,6 +7,8 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
   admitScan,
+  aggregatePendingReports,
+  createReportApi,
   migrateCatalog,
   openCatalog,
   reconcileCatalog,
@@ -184,8 +186,25 @@ try {
     )
   ).rows[0];
   assert.equal(aggregation.count, 1);
+  assert.deepEqual(await aggregatePendingReports(catalog.db), { completed: 1, failed: 0 });
+  const completed = await scanProgress(catalog.db, scan.scanId);
+  assert.equal(completed.state, "completed");
+  const api = createReportApi(catalog.db);
+  const reportUrl = `http://localhost/api/v1/reports/${completed.reportId}`;
+  const { report, status } = await (await api(new Request(reportUrl))).json();
+  assert.equal(status.current, true);
+  assert.equal(report.outcome, "pass");
+  assert.equal(report.cells.length, images.length * 4);
+  assert.equal(report.preparation.snapshot.id, retainedSnapshot);
+  assert.equal(report.evidenceLevel, "smoke_tested");
+  const lock = await api(new Request(`${reportUrl}/lock`));
+  assert.equal(lock.status, 200);
+  assert.equal(lock.headers.get("x-content-sha256"), preparation.lock_digest);
+  const inputs = await (await api(new Request(`${reportUrl}/reproduction`))).json();
+  assert.equal(inputs.kind, "reproduction_inputs");
+  assert.equal(inputs.snapshot.id, retainedSnapshot);
   process.stdout.write(
-    "Private API -> authenticated worker -> sealed preparation -> worker death and recovery -> 16 accepted runtime groups -> aggregation: qualified\n",
+    "Private API -> authenticated worker -> sealed preparation -> worker death and recovery -> 16 accepted runtime groups -> stored report and reproduction downloads: qualified\n",
   );
 } finally {
   if (child && child.exitCode === null && child.signalCode === null) {

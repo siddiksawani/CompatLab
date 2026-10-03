@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import {
-  type JobAssignment,
-  type JobResult,
-  PREPARATION_INSTALLER_IMAGE,
-  PREPARATION_PROFILE_REVISION,
-  type ProbeGroupResult,
-} from "@compatlab/contracts";
+import { type JobAssignment, PREPARATION_PROFILE_REVISION } from "@compatlab/contracts";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createControlServer } from "../../../services/control/src/server.js";
@@ -27,6 +21,7 @@ import {
   submitJobResult,
   workerSnapshotPins,
 } from "../src/index.js";
+import { prepared, runEvidence } from "./execution-fixtures.js";
 import {
   actor,
   admitted,
@@ -88,100 +83,6 @@ async function reserve() {
   const source = artifact();
   const scan = admitted(await admitScan(catalog.db, source, options(selection.matrixId)));
   return { source, scan };
-}
-function prepared(job: JobAssignment): Extract<JobResult, { kind: "preparation" }> {
-  const artifact = job.artifact;
-  const lock = JSON.stringify({
-    lockfileVersion: 3,
-    packages: {
-      "": { dependencies: { [artifact.name]: artifact.version } },
-      [`node_modules/${artifact.name}`]: {
-        version: artifact.version,
-        resolved: artifact.tarballUrl,
-        integrity: artifact.integrity,
-      },
-    },
-  });
-  return {
-    kind: "preparation",
-    snapshot: {
-      id: randomUUID(),
-      generation: randomUUID(),
-      lockDigest: hash(lock),
-      treeDigest: hash("tree"),
-      profileRevision: PREPARATION_PROFILE_REVISION,
-      installerImage: PREPARATION_INSTALLER_IMAGE,
-    },
-    lockBase64: Buffer.from(lock).toString("base64"),
-    manifestJson: JSON.stringify({
-      name: artifact.name,
-      version: artifact.version,
-      exports: { ".": "./index.js", "./util": "./util.js" },
-    }),
-    staticObservations: { evidenceLevel: "static_only" },
-    installed: [`node_modules/${artifact.name}`],
-    omittedOptional: [],
-  };
-}
-function runEvidence(job: JobAssignment): ProbeGroupResult {
-  if (job.kind !== "run") throw new Error("Expected run job.");
-  const runtime = job.plan.runtimes.find((runtime) => runtime.profileId === job.image.profileId);
-  if (!runtime) throw new Error("Fixture runtime missing.");
-  const entries = (job.group === "root" ? [runtime.root] : runtime.entries)
-    .filter((entry) => entry[job.mode].applicable)
-    .map((entry) => entry.specifier);
-  const probeId = randomUUID();
-  const observations = entries.map((_entry, index) => ({
-    index,
-    outcome: "pass" as const,
-    resolvedTo: null,
-    durationMs: 1,
-    valueType: "function" as const,
-  }));
-  return {
-    profileId: job.image.profileId,
-    group: job.group,
-    mode: job.mode,
-    method: job.group === "root" ? "fresh_root_v2" : "sequential_batch_v2",
-    entries,
-    observations,
-    interruptions: [],
-    sessions: entries.length
-      ? [
-          {
-            probeId,
-            startIndex: 0,
-            stopReason: "completed",
-            exitCode: 0,
-            oomKilled: false,
-            durationMs: 1,
-            checkpoint: {
-              schemaVersion: 2,
-              probeId,
-              mode: job.mode,
-              group: job.group,
-              completed: true,
-              activeIndex: null,
-              observations,
-            },
-            logs: {
-              stdout: "fixture output",
-              stderr: "",
-              stdoutTruncated: false,
-              stderrTruncated: false,
-              emittedBytes: 14,
-            },
-          },
-        ]
-      : [],
-    coverage: {
-      planned: entries.length,
-      observed: entries.length,
-      interrupted: 0,
-      untested: 0,
-      complete: true,
-    },
-  };
 }
 async function finishPreparation() {
   const fixture = await reserve();
@@ -318,7 +219,9 @@ describe("durable worker scheduling", () => {
       state: "inconclusive",
     });
     expect(
-      (await catalog.db.select().from(schema.jobs)).every((job) => job.state === "finished"),
+      (await catalog.db.select().from(schema.jobs))
+        .filter((job) => job.kind !== "aggregation")
+        .every((job) => job.state === "finished"),
     ).toBe(true);
   });
   it("stores only token hashes and rejects revoked or incorrectly scoped workers", async () => {
@@ -497,7 +400,10 @@ describe("durable worker scheduling", () => {
         },
       });
       expect(await claimJob(catalog.db, worker.token, { sessionId: worker.sessionId })).toBeNull();
-      await catalog.pool.query("UPDATE jobs SET available_at=now() WHERE id=$1", [job.jobId]);
+      await catalog.pool.query(
+        "UPDATE jobs SET available_at=now()-interval '1 second' WHERE id=$1",
+        [job.jobId],
+      );
     }
     expect(await scanProgress(catalog.db, fixture.scan.scanId)).toMatchObject({
       state: "aggregating",
