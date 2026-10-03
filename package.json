@@ -18,7 +18,8 @@
     "cli": "node apps/cli/dist/bin.js",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
     "test:preparation": "node scripts/preparation-smoke.mjs",
-    "test:runtimes": "node scripts/runtime-smoke.mjs"
+    "test:runtimes": "node scripts/runtime-smoke.mjs",
+    "test:engine": "node scripts/engine-smoke.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
