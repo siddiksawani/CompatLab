@@ -1,0 +1,51 @@
+import { describe, expect, it } from "vitest";
+import { streamCommand } from "../src/command.js";
+
+describe("bounded command output", () => {
+  it("retains stream prefixes while counting discarded bytes", async () => {
+    const result = await streamCommand(
+      process.execPath,
+      ["-e", "process.stdout.write('a'.repeat(300000));process.stderr.write('b'.repeat(200000));"],
+      AbortSignal.timeout(2000),
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.length).toBe(128 * 1024);
+    expect(result.stderr.length).toBe(112 * 1024);
+    expect(result.stderrTail.length).toBe(16 * 1024);
+    expect(result.emittedBytes).toBe(500000);
+    expect(result.stdoutTruncated).toBe(true);
+    expect(result.stderrTruncated).toBe(true);
+    expect(result.termination).toBe("completed");
+  });
+  it("terminates an output flood and a cancelled command", async () => {
+    const flood = await streamCommand(
+      process.execPath,
+      ["-e", "const b='x'.repeat(65536);setInterval(()=>process.stdout.write(b),0);"],
+      AbortSignal.timeout(4000),
+    );
+    expect(flood.termination).toBe("output_limit_exceeded");
+    expect(flood.stdout.length).toBe(128 * 1024);
+    const cancelled = await streamCommand(
+      process.execPath,
+      ["-e", "setInterval(()=>{},1000)"],
+      AbortSignal.timeout(100),
+    );
+    expect(cancelled.termination).toBe("cancelled");
+    expect(cancelled.exitCode).toBeNull();
+  });
+  it("preserves an output limit when cancellation arrives before process close", async () => {
+    const controller = new AbortController();
+    let bytes = 0;
+    const result = await streamCommand(
+      process.execPath,
+      ["-e", "const b='x'.repeat(65536);setInterval(()=>process.stderr.write(b),0);"],
+      AbortSignal.any([controller.signal, AbortSignal.timeout(4000)]),
+      (chunk) => {
+        bytes += chunk.length;
+        if (bytes > 8 * 1024 * 1024) queueMicrotask(() => controller.abort());
+      },
+    );
+    expect(controller.signal.aborted).toBe(true);
+    expect(result.termination).toBe("output_limit_exceeded");
+  });
+});

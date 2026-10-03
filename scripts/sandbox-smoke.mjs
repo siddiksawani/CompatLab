@@ -10,7 +10,7 @@ import { inspectDocker } from "../services/worker/dist/index.js";
 const environment = await inspectDocker();
 assert.ok(
   environment.prerequisitesAvailable,
-  "The smoke test requires Linux amd64 Docker with runsc.",
+  `The smoke test requires Linux amd64 Docker with runsc: ${JSON.stringify(environment)}`,
 );
 
 const docker = (args, timeout = 45_000) =>
