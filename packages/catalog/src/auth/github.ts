@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { PublicRequestError } from "../public/security.js";
@@ -170,7 +170,7 @@ export async function saveRepositoryLink(
     const links = await tx
       .select()
       .from(repositoryLinks)
-      .where(and(eq(repositoryLinks.userId, principal.userId), isNull(repositoryLinks.revokedAt)));
+      .where(eq(repositoryLinks.userId, principal.userId));
     if (links.length >= 10 && !links.some((link) => link.repositoryId === authority.repositoryId))
       throw new PublicRequestError(429, "repository_limit");
     const [link] = await tx

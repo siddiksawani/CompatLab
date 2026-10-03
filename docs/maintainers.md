@@ -38,6 +38,8 @@ The label is `repository_authorized`, not npm publisher or artifact ownership. A
 
 Signed user revocations clear credentials, sessions and repository authority. Installation deletion/suspension and repository removal revoke affected links. Delivery IDs are deduplicated for seven days; later replayed revocations remain safe and conservative. Authority checks carry a database revision so revocation racing a link operation cannot restore access. Account deletion cascades to credentials, sessions and repository configuration while retaining public reports. Local revocation does not uninstall the App from GitHub.
 
+Each account can retain at most ten repository links, including links revoked by GitHub. Remove an old link in account settings to free a slot; linking that same repository again reuses its row. Removing an unknown or already removed link does not change any authorization proof. Token refresh writes compare the stored credentials before updating, so a delayed provider response cannot restore locally revoked credentials. Unexpected account/webhook failures emit only the fixed `maintainer_request_failed` event.
+
 ## Quotas and retention
 
 `admission_v3` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.

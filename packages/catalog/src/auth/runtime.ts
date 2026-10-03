@@ -10,6 +10,7 @@ import {
   readAdmissionBody,
   requesterKey,
 } from "../public/security.js";
+import { reportControlError } from "../telemetry.js";
 import { fenceTokenRefresh, refreshFence } from "./adapter.js";
 import {
   checkRepositoryAuthority,
@@ -185,7 +186,12 @@ export function createMaintainerService(
           user: user ? { name: user.name, email: user.email } : null,
           installationUrl: `https://github.com/apps/${config.githubAppSlug}/installations/new`,
           repositories: user
-            ? await db.select().from(repositoryLinks).where(eq(repositoryLinks.userId, user.userId))
+            ? await db
+                .select()
+                .from(repositoryLinks)
+                .where(eq(repositoryLinks.userId, user.userId))
+                .orderBy(repositoryLinks.createdAt)
+                .limit(10)
             : [],
         });
       }
@@ -199,13 +205,14 @@ export function createMaintainerService(
       if (path === "/api/maintainer/repositories/revoke") {
         const { id } = z.strictObject({ id: z.uuid() }).parse(body);
         await catalogTransaction(db, async (tx) => {
-          await tx
-            .update(repositoryLinks)
-            .set({ revokedAt: new Date() })
-            .where(and(eq(repositoryLinks.id, id), eq(repositoryLinks.userId, user.userId)));
-          await tx.execute(
-            sql`UPDATE auth_authority_state SET revision=revision+1 WHERE singleton`,
-          );
+          const removed = await tx
+            .delete(repositoryLinks)
+            .where(and(eq(repositoryLinks.id, id), eq(repositoryLinks.userId, user.userId)))
+            .returning({ id: repositoryLinks.id });
+          if (removed.length)
+            await tx.execute(
+              sql`UPDATE auth_authority_state SET revision=revision+1 WHERE singleton`,
+            );
         });
         return privateJson({ revoked: true });
       }
@@ -220,6 +227,7 @@ export function createMaintainerService(
         return privateJson({ error: error.code }, error.status);
       if (error instanceof z.ZodError || error instanceof SyntaxError)
         return privateJson({ error: "invalid_request" }, 400);
+      reportControlError("maintainer_request_failed");
       return privateJson({ error: "temporarily_unavailable" }, 503);
     } finally {
       inFlight--;

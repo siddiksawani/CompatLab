@@ -9,6 +9,7 @@ type AccountState = {
   repositories?: { id: string; fullName: string; revokedAt: string | null; verifiedAt: string }[];
 };
 const messages: Record<string, string> = {
+  repository_limit: "Remove an old repository link before adding another (limit ten).",
   fresh_sign_in_required: "Please sign out and sign in again before changing account settings.",
   github_sign_in_required: "GitHub access has expired or was revoked. Please sign in again.",
   repository_authority_required:
@@ -138,7 +139,7 @@ export function Account() {
                   {link.fullName}
                 </a>{" "}
                 — {link.revokedAt ? "Access revoked" : "Repository authorized"}
-                {!link.revokedAt && (
+                {
                   <button
                     disabled={busy}
                     type="button"
@@ -146,9 +147,9 @@ export function Account() {
                       void action("/api/maintainer/repositories/revoke", { id: link.id })
                     }
                   >
-                    Revoke {link.fullName}
+                    {link.revokedAt ? "Remove" : "Revoke"} {link.fullName}
                   </button>
-                )}
+                }
               </li>
             ))}
           </ul>

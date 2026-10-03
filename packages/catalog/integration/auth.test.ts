@@ -444,3 +444,69 @@ it("cannot restore credentials when revocation races an OAuth refresh", async ()
     )[0],
   ).toMatchObject({ accessToken: null, refreshToken: null });
 });
+
+it("bounds repository history and does not invalidate proofs for no-op revocation", async () => {
+  const fixture = await signedIn();
+  const proof = await checkRepositoryAuthority(
+    catalog.db,
+    config,
+    fixture.user,
+    { repository: "owner/package", installationId: "91" },
+    fixture.token,
+    fixture.fetched,
+  );
+  const first = await saveRepositoryLink(catalog.db, fixture.user, proof);
+  if (!first) throw new Error("Expected a repository link.");
+  const revision = async () =>
+    (await catalog.pool.query("SELECT revision::text FROM auth_authority_state WHERE singleton"))
+      .rows[0].revision;
+  const before = await revision();
+  expect(
+    (
+      await fixture.service.handler(
+        request("/api/maintainer/repositories/revoke", { id: randomUUID() }, fixture.cookie),
+      )
+    ).status,
+  ).toBe(200);
+  expect(await revision()).toBe(before);
+  for (let index = 1; index < 10; index++)
+    await saveRepositoryLink(catalog.db, fixture.user, {
+      ...proof,
+      repositoryId: String(510 + index),
+      fullName: `owner/package-${index}`,
+    });
+  await catalog.db
+    .update(repositoryLinks)
+    .set({ revokedAt: new Date() })
+    .where(eq(repositoryLinks.userId, fixture.user.userId));
+  await expect(
+    saveRepositoryLink(catalog.db, fixture.user, {
+      ...proof,
+      repositoryId: "999",
+      fullName: "owner/overflow",
+    }),
+  ).rejects.toThrow("repository_limit");
+  expect(
+    (
+      await fixture.service.handler(
+        request("/api/maintainer/repositories/revoke", { id: first.id }, fixture.cookie),
+      )
+    ).status,
+  ).toBe(200);
+  const changed = await revision();
+  expect(changed).not.toBe(before);
+  expect(
+    (
+      await fixture.service.handler(
+        request("/api/maintainer/repositories/revoke", { id: first.id }, fixture.cookie),
+      )
+    ).status,
+  ).toBe(200);
+  expect(await revision()).toBe(changed);
+  expect(
+    await catalog.db
+      .select()
+      .from(repositoryLinks)
+      .where(eq(repositoryLinks.userId, fixture.user.userId)),
+  ).toHaveLength(9);
+});
