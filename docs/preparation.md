@@ -35,7 +35,7 @@ A successful npm exit is insufficient when extraction reports an entry error or 
 
 The ext4 backing file is sparse, so the supervisor must reserve its maximum growth and maintain disk headroom. Host-wide reservation and low-disk admission arrive in slice 06. Cleanup removes containers before unmounting. A failed cleanup or unmount leaves resources for investigation instead of deleting an active mount.
 
-Preparation has a private internal bridge. The job can reach only its Squid proxy on TCP 3128, with host-input and forwarding rules blocking bypass. The proxy allows CONNECT to exactly `registry.npmjs.org:443`, rejects private IPv4/IPv6 destinations, and has bounded memory, requests, timeouts, and logs. The proxy uses explicit public DNS resolvers (1.1.1.1 and 1.0.0.1), with ICMP/ARP discovery helpers disabled. TLS verification remains npm's responsibility; there is no interception certificate or custom registry gateway. Runtime networking is separate and disabled.
+Preparation has a private internal bridge. The job can reach only its Squid proxy on TCP 3128, with host-input and forwarding rules blocking bypass. The listener binds only to its private job interface and accepts requests only from that job's IP. The proxy allows CONNECT to exactly `registry.npmjs.org:443`, rejects private IPv4/IPv6 destinations, and has bounded memory, requests, timeouts, and logs. The proxy uses explicit public DNS resolvers (1.1.1.1 and 1.0.0.1), with ICMP/ARP discovery helpers disabled. TLS verification remains npm's responsibility; there is no interception certificate or custom registry gateway. Runtime networking is separate and disabled.
 
 ## Snapshot identity and reuse
 
@@ -53,7 +53,7 @@ On a disposable Linux amd64 execution host with runsc, after `pnpm build`:
 sudo "$(command -v node)" scripts/preparation-smoke.mjs
 ```
 
-The suite pulls the pinned installer and proxy, verifies npm's version, prepares a small public artifact without loading it, reopens its actual snapshot, and attempts writes through two independent read-only mounts. Authored archives exercise root/transitive/bundled lifecycle sentinels, aliases, platform-omitted optional dependencies, traversal and symlink handling, compression-ratio rejection, expanded bytes, inode exhaustion, and npm integrity rejection. Fixture tarballs are seeded into a private cache by npm inside runsc; no archive is extracted on the developer host.
+The suite pulls the pinned installer and proxy, verifies npm's version, prepares a small public artifact without loading it, reopens its actual snapshot, and attempts writes through two independent read-only mounts. Authored archives exercise root/transitive/bundled lifecycle sentinels, aliases, platform-omitted optional dependencies, traversal and symlink handling, compression-ratio rejection, expanded bytes, inode exhaustion, traffic quota exhaustion, a container OOM kill, proxy source isolation, and npm integrity rejection. Fixture tarballs are seeded into a private cache by npm inside runsc; no archive is extracted on the developer host.
 
 Unit tests separately cover lock policy, safe file reads, tree inspection, stream limits, and cancellation. These tests supplement the Linux suite; they do not replace it or certify the full worker boundary.
 

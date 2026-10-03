@@ -5,7 +5,13 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { PreparationError } from "@compatlab/engine";
 
 export async function readBoundedFile(path: string, maxBytes: number): Promise<Buffer> {
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  const file = await open(
+    path,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+  ).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ELOOP") reject("A protocol file must not be a symlink.");
+    throw error;
+  });
   try {
     const stat = await file.stat();
     if (!stat.isFile() || stat.size > maxBytes)

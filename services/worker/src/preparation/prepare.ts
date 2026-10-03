@@ -63,6 +63,7 @@ export async function prepareArtifact(
   stateDirectory: string,
   signal?: AbortSignal,
 ): Promise<PreparedSnapshot> {
+  signal?.throwIfAborted();
   assertPackageName(artifact.name);
   if (!isExactVersion(artifact.version))
     throw new TypeError("Preparation requires an exact version.");
@@ -79,6 +80,7 @@ export async function prepareArtifact(
       "Snapshot storage must be owned by root and not writable by other users.",
     );
   const deadline = AbortSignal.any([AbortSignal.timeout(180_000), ...(signal ? [signal] : [])]);
+  deadline.throwIfAborted();
   const volume = await WorkspaceVolume.create(directory);
   let network: PreparationNetwork | undefined;
   const logs: CommandResult[] = [];

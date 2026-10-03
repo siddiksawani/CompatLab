@@ -75,6 +75,8 @@ describe("stopped workspace validation", () => {
     await expect(readBoundedFile(join(root, "large"), 99)).rejects.toThrow();
     expect((await readBoundedFile(join(root, "large"), 100)).length).toBe(100);
     await symlink("large", join(root, "alias"));
-    await expect(readBoundedFile(join(root, "alias"), 100)).rejects.toThrow();
+    await expect(readBoundedFile(join(root, "alias"), 100)).rejects.toMatchObject({
+      classification: "archive_rejected",
+    });
   });
 });

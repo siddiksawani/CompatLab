@@ -6,8 +6,7 @@ import { command, docker, removeContainer, streamCommand } from "../command.js";
 
 export const PROXY_IMAGE =
   "ubuntu/squid:6.6-24.04_beta@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce";
-export const SQUID_POLICY = `http_port 3128
-pinger_enable off
+export const SQUID_POLICY = `pinger_enable off
 eui_lookup off
 dns_nameservers 1.1.1.1 1.0.0.1
 acl CONNECT method CONNECT
@@ -190,7 +189,11 @@ export async function createPreparationNetwork(
       rules.push(rule);
     }
     const config = join(directory, "squid.conf");
-    await writeFile(config, SQUID_POLICY, { mode: 0o644, flag: "wx" });
+    await writeFile(
+      config,
+      `http_port ${proxyIp}:3128\nacl job src ${jobIp}/32\nhttp_access deny !job\n${SQUID_POLICY}`,
+      { mode: 0o644, flag: "wx" },
+    );
     await docker([
       "create",
       "--name",

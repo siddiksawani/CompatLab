@@ -11,6 +11,7 @@ import {
   statfs,
   writeFile,
 } from "node:fs/promises";
+import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { RegistryClient, validateLock } from "../packages/engine/dist/index.js";
@@ -51,6 +52,9 @@ const fixtures = JSON.parse(await readFile(join(fixtureDirectory, "fixtures.json
 let live;
 try {
   const artifact = await new RegistryClient().resolve("is-number", "7.0.0");
+  const cancelledPath = join(base, "cancelled");
+  await assert.rejects(() => prepareArtifact(artifact, cancelledPath, AbortSignal.abort()));
+  assert.equal(await exists(cancelledPath), false);
   live = await prepareArtifact(artifact, base);
   const reopened = await reuseSnapshot(live.id, base, artifact);
   assert.equal(reopened.workspace, live.workspace);
@@ -235,6 +239,21 @@ try {
         volume.directory,
         scenario === "quota" ? 1024 : undefined,
       );
+      if (scenario === "root") {
+        const externalIp = await docker([
+          "inspect",
+          `compatlab-prep-${id}-proxy`,
+          "--format",
+          '{{(index .NetworkSettings.Networks "bridge").IPAddress}}',
+        ]);
+        await assert.rejects(() => proxyConnection(externalIp));
+        const denied = await proxyConnection(
+          network.proxyIp,
+          "CONNECT registry.npmjs.org:443 HTTP/1.1\r\nHost: registry.npmjs.org:443\r\n\r\n",
+        );
+        assert.match(denied, /^HTTP\/1\.1 403/);
+        process.stdout.write("proxy: no listener on shared bridge; non-job sources denied\n");
+      }
       const result = await runInstaller({
         name: `compatlab-fixture-${id}`,
         workspace,
@@ -331,4 +350,26 @@ async function exists(path) {
       throw error;
     },
   );
+}
+function proxyConnection(host, request) {
+  return new Promise((resolve, reject) => {
+    const socket = createConnection({ host, port: 3128 });
+    socket.setTimeout(1000);
+    socket.once("error", reject);
+    socket.once("timeout", () => {
+      socket.destroy();
+      reject(new Error("Connection timed out."));
+    });
+    socket.once("connect", () => {
+      if (request) socket.write(request);
+      else {
+        socket.destroy();
+        resolve("connected");
+      }
+    });
+    socket.once("data", (bytes) => {
+      socket.destroy();
+      resolve(bytes.toString("utf8"));
+    });
+  });
 }
