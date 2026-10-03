@@ -6,6 +6,8 @@ The local engine resolves and prepares public npm artifacts with scripts disable
 
 ## Development
 
+Optional [maintainer accounts](docs/maintainers.md) use GitHub App login, encrypted OAuth tokens, live repository authority checks, revocation and account quotas. Configure the App before enabling sign-in; public reports remain anonymous.
+
 Use Node.js **24.21.0** from `.node-version` and pnpm **12.8.1** from `package.json`.
 
 ```sh

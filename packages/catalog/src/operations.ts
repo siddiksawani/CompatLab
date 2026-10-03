@@ -247,7 +247,7 @@ export async function applyRetention(db: CatalogDatabase, rawActor: AdminAction)
       sql`UPDATE runs SET logs=NULL WHERE id IN (SELECT id FROM runs WHERE logs IS NOT NULL AND logs_expire_at < clock_timestamp() ORDER BY logs_expire_at LIMIT 1000) RETURNING id`,
     );
     const requesters = await tx.execute(
-      sql`UPDATE scans SET requester_key=NULL WHERE id IN (SELECT id FROM scans WHERE requester_key IS NOT NULL AND requester_expires_at < clock_timestamp() ORDER BY requester_expires_at LIMIT 1000) RETURNING id`,
+      sql`UPDATE scans SET requester_key=NULL,account_key=NULL WHERE id IN (SELECT id FROM scans WHERE (requester_key IS NOT NULL OR account_key IS NOT NULL) AND requester_expires_at < clock_timestamp() ORDER BY requester_expires_at LIMIT 1000) RETURNING id`,
     );
     const audits = await tx.execute(
       sql`DELETE FROM audit_events WHERE id IN (SELECT id FROM audit_events WHERE created_at < clock_timestamp()-interval '180 days' ORDER BY created_at LIMIT 1000) RETURNING id`,
@@ -257,6 +257,18 @@ export async function applyRetention(db: CatalogDatabase, rawActor: AdminAction)
       requesters: requesters.rowCount ?? 0,
       audits: audits.rowCount ?? 0,
     };
+    await tx.execute(
+      sql`DELETE FROM auth_sessions WHERE id IN (SELECT id FROM auth_sessions WHERE expires_at<clock_timestamp() ORDER BY expires_at LIMIT 1000)`,
+    );
+    await tx.execute(
+      sql`DELETE FROM auth_verifications WHERE id IN (SELECT id FROM auth_verifications WHERE expires_at<clock_timestamp() ORDER BY expires_at LIMIT 1000)`,
+    );
+    await tx.execute(
+      sql`DELETE FROM request_buckets WHERE key IN (SELECT key FROM request_buckets WHERE expires_at<clock_timestamp() ORDER BY expires_at LIMIT 1000)`,
+    );
+    await tx.execute(
+      sql`DELETE FROM github_deliveries WHERE id IN (SELECT id FROM github_deliveries WHERE received_at<clock_timestamp()-interval '7 days' ORDER BY received_at LIMIT 1000)`,
+    );
     if (Object.values(counts).some(Boolean))
       await tx
         .insert(auditEvents)

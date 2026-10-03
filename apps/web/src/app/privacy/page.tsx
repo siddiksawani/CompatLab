@@ -41,6 +41,21 @@ export default function Privacy() {
       </ul>
       <h2>Service providers</h2>
       <p>
+        Optional GitHub sign-in stores your GitHub user ID, username, verified email and linked
+        repository identities. OAuth tokens are encrypted in the database and never sent to
+        execution workers. Essential HttpOnly cookies maintain a session for up to seven days;
+        sessions do not retain your network address or user agent.
+      </p>
+      <p>
+        Signed-in scans retain a keyed GitHub account identifier for quotas for seven days. Account
+        rate-limit buckets expire after twenty minutes; signed GitHub webhook delivery IDs after
+        seven days. Expired sessions and OAuth state are removed by maintenance. You can revoke
+        links or delete your account in <a href="/account">account settings</a>. Deletion removes
+        sessions, tokens and repository links immediately. Public reports remain available. Deleted
+        account data may remain in encrypted backups for seven days. GitHub also provides controls
+        to revoke your App authorization or installation.
+      </p>
+      <p>
         Discovery requests public npm registry metadata. The control service may send fixed
         operational error names to an operator-configured Sentry endpoint. It does not send package
         contents, request bodies, credentials, network addresses or user profiles to error tracking.

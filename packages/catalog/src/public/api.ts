@@ -24,6 +24,7 @@ export function createPublicApi(
   db: CatalogDatabase,
   rawConfig: PublicConfig,
   registry = new RegistryClient(),
+  accountQuota?: (request: Request) => Promise<string | undefined>,
 ) {
   const config = publicConfigSchema.parse(rawConfig);
   const discovery = publicDiscovery(db, config.matrixId, config.scansEnabled, registry);
@@ -43,6 +44,7 @@ export function createPublicApi(
       if (/^\/api\/v1\/(reports|scans)\//.test(url.pathname)) return await reports(request);
       if (url.pathname === "/api/v1/scans" && request.method === "POST") {
         const identity = requesterIdentity(request, config);
+        const accountKey = await accountQuota?.(request);
         const body = admissionRequestSchema.parse(await readAdmissionBody(request, config.origin));
         assertPackageName(body.name);
         if (!isExactVersion(body.version))
@@ -52,6 +54,7 @@ export function createPublicApi(
         const result = await admitScan(db, await discovery.resolve(body.name, body.version), {
           matrixId: config.matrixId,
           ...identity,
+          ...(accountKey ? { accountKey } : {}),
           classifierRevision: CLASSIFIER_REVISION,
         });
         return json(
