@@ -1,5 +1,6 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { RegistryError } from "./errors.js";
+import { JsonStructureLimit } from "./json-limits.js";
 import { REGISTRY_ORIGIN } from "./validation.js";
 
 export type RegistryHttpOptions = {
@@ -138,6 +139,7 @@ async function readJson(response: Response, maxBytes: number): Promise<unknown> 
     throw new RegistryError("package_manifest_invalid", "The registry response is empty.");
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
+  const structure = new JsonStructureLimit();
   let size = 0;
   try {
     while (true) {
@@ -149,6 +151,7 @@ async function readJson(response: Response, maxBytes: number): Promise<unknown> 
           "preparation_limit_exceeded",
           "Registry metadata exceeds its byte limit.",
         );
+      structure.write(value);
       chunks.push(value);
     }
     try {

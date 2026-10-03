@@ -5,6 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { RegistryClient } from "../src/registry/client.js";
 import { RegistryHttp } from "../src/registry/http.js";
 import {
+  JsonStructureLimit,
+  MAX_JSON_DEPTH,
+  MAX_JSON_STRING_BYTES,
+} from "../src/registry/json-limits.js";
+import {
   artifactIntegrity,
   assertPackageName,
   assertSelector,
@@ -313,6 +318,16 @@ describe("bounded HTTP over a real mock registry", () => {
     },
   );
 
+  it.each([
+    `${"[".repeat(MAX_JSON_DEPTH + 1)}0${"]".repeat(MAX_JSON_DEPTH + 1)}`,
+    JSON.stringify({ description: "a".repeat(MAX_JSON_STRING_BYTES + 1) }),
+  ])("rejects structural limits below the response byte cap", async (json) => {
+    serve = (_req, res) => res.writeHead(200, { "Content-Type": "application/json" }).end(json);
+    await expect(
+      request(new RegistryHttp({ fetch: fixtureFetch }), 1024 * 1024),
+    ).rejects.toMatchObject({ classification: "preparation_limit_exceeded" });
+  });
+
   it("includes stalled response bodies in the deadline", async () => {
     serve = (_req, res) => {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -339,5 +354,35 @@ describe("bounded HTTP over a real mock registry", () => {
       request(new RegistryHttp({ fetch: fixtureFetch }), 100, controller.signal),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(count).toBe(1);
+  });
+});
+
+describe("JSON token limits across stream chunks", () => {
+  it("handles escaped quotes, backslashes, and braces inside strings", () => {
+    const guard = new JsonStructureLimit();
+    const bytes = Buffer.from(
+      JSON.stringify({ value: `quoted " and backslash \\ ${"[{]}".repeat(100)}` }),
+    );
+    for (const byte of bytes) guard.write(Uint8Array.of(byte));
+  });
+
+  it("allows the exact string limit and rejects a later chunk", () => {
+    const guard = new JsonStructureLimit();
+    guard.write(Buffer.from(`"${"a".repeat(MAX_JSON_STRING_BYTES)}`));
+    expect(() => guard.write(Buffer.from("x"))).toThrow(
+      expect.objectContaining({ classification: "preparation_limit_exceeded" }),
+    );
+    const allowed = new JsonStructureLimit();
+    expect(() =>
+      allowed.write(Buffer.from(JSON.stringify("a".repeat(MAX_JSON_STRING_BYTES)))),
+    ).not.toThrow();
+  });
+
+  it("counts escaped source bytes and nested arrays without recursion", () => {
+    const guard = new JsonStructureLimit();
+    guard.write(Buffer.from("[".repeat(MAX_JSON_DEPTH)));
+    expect(() => guard.write(Buffer.from("["))).toThrow();
+    const escaped = new JsonStructureLimit();
+    expect(() => escaped.write(Buffer.from(`"${"\\u0061".repeat(12000)}"`))).toThrow();
   });
 });
