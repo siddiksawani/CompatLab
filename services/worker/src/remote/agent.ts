@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
-import { claimResponseSchema, type JobAssignment } from "@compatlab/contracts";
+import {
+  claimResponseSchema,
+  type JobAssignment,
+  workerInventorySchema,
+} from "@compatlab/contracts";
 import { ExecutionSupervisor } from "../lifecycle/supervisor.js";
 import { ControlClient } from "./client.js";
 import { JobLease } from "./lease.js";
@@ -13,14 +17,28 @@ export async function runWorker(options: {
   signal: AbortSignal;
 }) {
   const client = new ControlClient(options.controlUrl, options.token);
-  const supervisor = await ExecutionSupervisor.open(options.stateDirectory);
   const sessionId = randomUUID();
   const cancellation = new AbortController();
   const signal = AbortSignal.any([options.signal, cancellation.signal]);
+  const supervisor = await ExecutionSupervisor.open(options.stateDirectory, {
+    async authorizeEviction(snapshotIds) {
+      const response = await client.post(
+        "/v1/workers/evictions",
+        { sessionId, snapshotIds },
+        signal,
+      );
+      return workerInventorySchema.pick({ snapshotIds: true }).parse(response).snapshotIds;
+    },
+  });
   const active = new Set<Promise<void>>();
   let failure: unknown;
   try {
-    await client.post("/v1/workers/ready", { sessionId }, signal);
+    await client.post(
+      "/v1/workers/ready",
+      { sessionId, snapshotIds: await supervisor.snapshotInventory() },
+      signal,
+    );
+    await supervisor.collect();
     await supervisor.withScan(async (reservation) => {
       try {
         while (!signal.aborted) {
@@ -29,7 +47,11 @@ export async function runWorker(options: {
             continue;
           }
           const started = performance.now();
-          const raw = await client.post("/v1/jobs/claim", { sessionId }, signal);
+          const raw = await client.post(
+            "/v1/jobs/claim",
+            { sessionId, snapshotIds: await supervisor.snapshotInventory() },
+            signal,
+          );
           const response = claimResponseSchema.parse(raw);
           supervisor.replaceSnapshotPins(response.snapshotIds, reservation);
           if (response.job === null) {

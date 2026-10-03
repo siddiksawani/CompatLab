@@ -31,7 +31,9 @@ export class ControlClient {
       throw new TypeError("Use a private IPv4 control origin and a valid worker token.");
   }
   async post(path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
-    if (!/^\/v1\/(?:workers\/ready|jobs\/(?:claim|renew|results|abandon))$/.test(path))
+    if (
+      !/^\/v1\/(?:workers\/(?:ready|evictions)|jobs\/(?:claim|renew|results|abandon))$/.test(path)
+    )
       throw new TypeError("Unknown private endpoint.");
     const bytes = Buffer.from(JSON.stringify(body));
     if (bytes.length > 32 * 1024 ** 2) throw new TypeError("Worker request exceeds 32 MiB.");

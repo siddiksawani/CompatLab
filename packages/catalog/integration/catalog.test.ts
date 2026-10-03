@@ -615,6 +615,7 @@ describe("database constraints", () => {
         state,
         attempt: 1,
         attemptToken: randomUUID(),
+        sessionId: randomUUID(),
         workerId: preparation.ownerWorkerId,
         leaseExpiresAt: new Date(Date.now() + 30_000),
         deadlineAt: new Date(Date.now() + 900_000),
@@ -695,7 +696,30 @@ it("upgrades legacy snapshots without replacing their reports or treating them a
         [scan.id, payload],
       )
     ).rows[0];
+    const pendingPreparation = (
+      await upgrade.pool.query(
+        "INSERT INTO preparations(artifact_id,profile_revision,platform,state,owner_worker_id) VALUES ($1,'npm_11_19_0_linux_amd64_v2','linux_amd64_glibc','preparing',$2) RETURNING id",
+        [version.id, owner.id],
+      )
+    ).rows[0];
+    const pendingScan = (
+      await upgrade.pool.query(
+        "INSERT INTO scans(preparation_id,matrix_id,state,admission_policy,requested_at,started_at,deadline_at) VALUES ($1,$2,'preparing','admission_v1',now()-interval '10 minutes',now(),now()+interval '15 minutes') RETURNING id",
+        [pendingPreparation.id, selected.matrixId],
+      )
+    ).rows[0];
+    const pendingJob = (
+      await upgrade.pool.query(
+        "INSERT INTO jobs(kind,scan_id,preparation_id,state,attempt,attempt_token,worker_id,lease_expires_at,deadline_at) VALUES ('preparation',$1,$2,'leased',1,gen_random_uuid(),$3,now()+interval '30 seconds',now()+interval '15 minutes') RETURNING id",
+        [pendingScan.id, pendingPreparation.id, owner.id],
+      )
+    ).rows[0];
     await migrateCatalog(upgrade.pool);
+    const recovered = (
+      await upgrade.db.select().from(schema.jobs).where(eq(schema.jobs.id, pendingJob.id))
+    )[0];
+    expect(recovered).toMatchObject({ state: "leased", cleanupRequired: true });
+    expect(recovered?.sessionId).toMatch(/^[a-f0-9-]{36}$/);
     expect(
       await findCachedReport(upgrade.db, {
         artifactId: version.id,

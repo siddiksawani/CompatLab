@@ -13,6 +13,7 @@ The private HTTP API accepts versioned JSON contracts:
 | Endpoint | Operation |
 |---|---|
 | `POST /v1/workers/ready` | Confirm supervisor startup cleanup and establish a new session |
+| `POST /v1/workers/evictions` | Mark unreserved snapshots unavailable before removing local bytes |
 | `POST /v1/jobs/claim` | Claim one eligible operation and refresh active snapshot reservations |
 | `POST /v1/jobs/renew` | Mark an attempt running and renew its lease |
 | `POST /v1/jobs/results` | Accept preparation provenance, run evidence, or a structured failure |
@@ -40,7 +41,7 @@ Run acceptance checks the approved image/profile, group, mode, ordered entries, 
 
 Each accepted attempt stores a digest of its canonical submitted result. Identical resubmission is idempotent; different evidence for the same accepted attempt is rejected. Worker/session/attempt identity and lease validity reject stale submissions. These are at-least-once jobs with one accepted logical result, not exactly-once package execution.
 
-The agent refreshes server-owned snapshot pins on every claim response. Those reservations span gaps between runtime jobs and retries. Executing jobs hold independent pins, so refreshing the remote set cannot evict a workspace still in use. Losing control contact aborts and drains active work before releasing reservations.
+Startup and claim requests include an inventory of sealed local snapshots. Missing snapshots become unavailable before new claims; their active scans fail explicitly instead of waiting indefinitely. The agent refreshes server-owned snapshot pins on every claim response. Those reservations span gaps between runtime jobs and retries. Executing jobs hold independent pins, so refreshing the remote set cannot evict a workspace still in use. Before eviction, the catalog atomically removes availability and refuses deletion for snapshots reserved by active scans or uncleared attempts. New admissions therefore cannot race collection into stale reuse. Losing control contact aborts and drains active work before releasing reservations.
 
 `scanProgress` reads state, revision, timestamps, and job counts in one database snapshot. It excludes logs and does not invent a completion percentage. Public conditional polling is added with the report API.
 
@@ -62,8 +63,8 @@ sudo env CONTROL_URL=http://10.66.0.1:4871 \
 
 The test-only PostgreSQL service may run on a disposable qualification host. Production control and package execution still require separate host/VM boundaries. The devbox is authorized for testing only; no public service is deployed there.
 
-`pnpm check` covers lease cancellation, transport restrictions, and local ownership. `pnpm test:database` covers concurrent claims, worker scope, late/conflicting submissions, cleanup confirmation, bounded retries, fairness, locality, policy changes, and HTTP validation. `scripts/orchestration-smoke.mjs` uses a real PostgreSQL catalog, private HTTP server, and separate worker process without database credentials to prepare an exact public package and accept all sixteen groups under runsc. It is a required Linux CI gate. The existing hostile worker, preparation, and engine gates remain required.
+`pnpm check` covers lease/command cancellation, transport restrictions, and local ownership. `pnpm test:database` covers concurrent claims, worker scope, late/conflicting submissions, cleanup confirmation, bounded retries, fairness, locality, eviction, policy changes, and HTTP validation. `scripts/orchestration-smoke.mjs` uses a real PostgreSQL catalog, private HTTP server, and separate worker process without database credentials. It prepares an exact public package, kills and replaces the worker during execution, verifies expired capacity stays reserved until recovery, and accepts all sixteen groups under runsc from the original snapshot. It is a required Linux CI gate. The existing hostile worker, preparation, and engine gates remain required.
 
-Migration 0002 expands the existing schema. Historical reports remain readable. Older preparation records without installed-manifest/local-snapshot metadata are not eligible for new remote work; they are never silently relabeled as fresh snapshots.
+Migration 0002 expands the existing schema. Historical reports remain readable. Older preparation records without installed-manifest/local-snapshot metadata are not eligible for new remote work; they are never silently relabeled as fresh snapshots. Legacy active jobs receive fenced session identifiers and require confirmed cleanup. A database constraint requires a session for every leased/running job.
 
 References: [PostgreSQL row locking](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE), [Node HTTP limits](https://nodejs.org/docs/latest-v24.x/api/http.html).

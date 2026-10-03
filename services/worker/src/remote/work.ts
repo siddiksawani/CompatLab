@@ -22,7 +22,7 @@ export async function executeAssignment(
         if (job.profileRevision !== PREPARATION_PROFILE)
           throw new TypeError("Preparation profile is unavailable.");
         for (const image of [INSTALLER_IMAGE, PROXY_IMAGE])
-          await docker(["pull", "--platform=linux/amd64", image], 180_000);
+          await docker(["pull", "--platform=linux/amd64", image], 180_000, signal);
         signal.throwIfAborted();
         const snapshot = await supervisor.prepare(artifact, scope, signal);
         const manifest = await readBoundedFile(

@@ -56,3 +56,7 @@ BEGIN
 END $$;
 CREATE TRIGGER preparation_inputs BEFORE UPDATE ON preparations FOR EACH ROW EXECUTE FUNCTION preserve_execution_inputs();
 CREATE TRIGGER scan_plan BEFORE UPDATE OF plan ON scans FOR EACH ROW EXECUTE FUNCTION preserve_execution_inputs();
+
+UPDATE jobs SET session_id=gen_random_uuid(),cleanup_required=true
+WHERE state IN ('leased','running') AND session_id IS NULL;
+ALTER TABLE jobs ADD CONSTRAINT active_job_session CHECK (state NOT IN ('leased','running') OR session_id IS NOT NULL);

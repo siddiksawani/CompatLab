@@ -1,5 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
-import { attemptSchema, workerCapabilitiesSchema, workerSessionSchema } from "@compatlab/contracts";
+import {
+  attemptSchema,
+  workerCapabilitiesSchema,
+  workerInventorySchema,
+} from "@compatlab/contracts";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
@@ -77,7 +81,9 @@ export async function registerWorker(
   });
 }
 export async function readyWorker(db: CatalogDatabase, token: string, rawSession: unknown) {
-  const { sessionId } = workerSessionSchema.parse(rawSession);
+  const { sessionId, snapshotIds } = workerInventorySchema
+    .partial({ snapshotIds: true })
+    .parse(rawSession);
   return catalogTransaction(db, async (tx) => {
     const worker = await authenticatedWorker(tx, token);
     if (worker.state === "quarantined")
@@ -140,6 +146,7 @@ export async function readyWorker(db: CatalogDatabase, token: string, rawSession
           sql`UPDATE scans SET progress_revision=progress_revision+1 WHERE id=${job.scanId}`,
         );
     }
+    await reconcileSnapshotInventory(tx, worker.id, snapshotIds ?? []);
     await tx
       .update(workers)
       .set({ sessionId, state: "healthy", recoveryRequired: false, lastSeenAt: now })
@@ -151,6 +158,41 @@ export async function readyWorker(db: CatalogDatabase, token: string, rawSession
       details: { sessionId, abandonedAttempts: pending.length },
     });
     return { workerId: worker.id };
+  });
+}
+
+export async function reconcileSnapshotInventory(
+  tx: CatalogTransaction,
+  workerId: string,
+  snapshotIds: readonly string[],
+) {
+  await tx.execute(
+    sql`UPDATE preparations SET snapshot_available=false WHERE owner_worker_id=${workerId} AND snapshot_available AND snapshot_id IS NOT NULL AND NOT (${JSON.stringify(snapshotIds)}::jsonb ? snapshot_id::text)`,
+  );
+}
+
+export async function authorizeSnapshotEviction(
+  db: CatalogDatabase,
+  token: string,
+  rawInventory: unknown,
+) {
+  const { sessionId, snapshotIds } = workerInventorySchema.parse(rawInventory);
+  return catalogTransaction(db, async (tx) => {
+    const worker = await activeWorker(tx, token, sessionId);
+    const reserved = (
+      await tx.execute<{
+        id: string;
+      }>(sql`SELECT DISTINCT p.snapshot_id AS id FROM preparations p JOIN scans s ON s.preparation_id=p.id
+      WHERE p.owner_worker_id=${worker.id} AND p.snapshot_id IS NOT NULL AND (
+        s.state IN ('requested','preparing','running','aggregating') OR EXISTS (SELECT 1 FROM jobs j WHERE j.scan_id=s.id AND j.state IN ('leased','running'))
+      )`)
+    ).rows;
+    const protectedIds = new Set(reserved.map((row) => row.id));
+    const evictable = [...new Set(snapshotIds)].filter((id) => !protectedIds.has(id));
+    await tx.execute(
+      sql`UPDATE preparations SET snapshot_available=false WHERE owner_worker_id=${worker.id} AND snapshot_available AND ${JSON.stringify(evictable)}::jsonb ? snapshot_id::text`,
+    );
+    return { snapshotIds: evictable };
   });
 }
 

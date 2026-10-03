@@ -4,6 +4,7 @@ import {
   type JobAssignment,
   jobAssignmentSchema,
   jobEvidenceBudget,
+  workerInventorySchema,
   workerSessionSchema,
 } from "@compatlab/contracts";
 import { and, eq, sql } from "drizzle-orm";
@@ -20,16 +21,25 @@ import {
   scans,
   workers,
 } from "../schema.js";
-import { activeWorker, databaseNow, SCHEDULER_POLICY, SchedulingError } from "./workers.js";
+import {
+  activeWorker,
+  databaseNow,
+  reconcileSnapshotInventory,
+  SCHEDULER_POLICY,
+  SchedulingError,
+} from "./workers.js";
 
 export async function claimJob(
   db: CatalogDatabase,
   token: string,
   rawSession: unknown,
 ): Promise<JobAssignment | null> {
-  const { sessionId } = workerSessionSchema.parse(rawSession);
+  const { sessionId, snapshotIds } = workerInventorySchema
+    .partial({ snapshotIds: true })
+    .parse(rawSession);
   return catalogTransaction(db, async (tx) => {
     const worker = await activeWorker(tx, token, sessionId);
+    if (snapshotIds) await reconcileSnapshotInventory(tx, worker.id, snapshotIds);
     const now = await databaseNow(tx);
     await tx.update(workers).set({ lastSeenAt: now }).where(eq(workers.id, worker.id));
     const { capabilities: caps } = worker;

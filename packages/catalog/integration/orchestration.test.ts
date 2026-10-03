@@ -14,6 +14,7 @@ import { ControlClient } from "../../../services/worker/src/remote/client.js";
 import {
   abandonAttempt,
   admitScan,
+  authorizeSnapshotEviction,
   blockSubject,
   claimJob,
   migrateCatalog,
@@ -192,6 +193,37 @@ async function finishPreparation() {
 }
 
 describe("durable worker scheduling", () => {
+  it("denies eviction of reserved snapshots and removes evicted snapshots from reuse", async () => {
+    const fixture = await finishPreparation();
+    const inventory = { sessionId: worker.sessionId, snapshotIds: [fixture.result.snapshot.id] };
+    expect(await authorizeSnapshotEviction(catalog.db, worker.token, inventory)).toEqual({
+      snapshotIds: [],
+    });
+    const job = await next();
+    await expect(
+      catalog.pool.query("UPDATE jobs SET session_id=NULL WHERE id=$1", [job.jobId]),
+    ).rejects.toMatchObject({ code: "23514" });
+    await catalog.db.update(schema.scans).set({ state: "cancelled" });
+    expect(await authorizeSnapshotEviction(catalog.db, worker.token, inventory)).toEqual({
+      snapshotIds: [],
+    });
+    await abandonAttempt(catalog.db, worker.token, { ...attempt(job), cleanupConfirmed: true });
+    expect(await authorizeSnapshotEviction(catalog.db, worker.token, inventory)).toEqual({
+      snapshotIds: inventory.snapshotIds,
+    });
+    expect((await catalog.db.select().from(schema.preparations))[0]?.snapshotAvailable).toBe(false);
+  });
+  it("reconciles a missing local snapshot before accepting new claims", async () => {
+    const fixture = await finishPreparation();
+    expect(
+      await claimJob(catalog.db, worker.token, { sessionId: worker.sessionId, snapshotIds: [] }),
+    ).toBeNull();
+    await reconcileCatalog(catalog.db);
+    expect(await scanProgress(catalog.db, fixture.scan.scanId)).toMatchObject({
+      state: "failed_infrastructure",
+    });
+    expect((await catalog.db.select().from(schema.preparations))[0]?.snapshotAvailable).toBe(false);
+  });
   it("retains the source manifest when omitted export labels contain NUL", async () => {
     await reserve();
     const job = await next();
@@ -574,12 +606,19 @@ it("authenticates and validates private HTTP requests without exposing request c
     });
     expect(origin.status).toBe(400);
     const client = new ControlClient(address, worker.token);
-    expect(await client.post("/v1/jobs/claim", { sessionId: worker.sessionId })).toEqual({
+    await expect(
+      client.post("/v1/jobs/claim", { sessionId: worker.sessionId }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      await client.post("/v1/jobs/claim", { sessionId: worker.sessionId, snapshotIds: [] }),
+    ).toEqual({
       job: null,
       snapshotIds: [],
     });
     await reserve();
-    expect(await client.post("/v1/jobs/claim", { sessionId: worker.sessionId })).toMatchObject({
+    expect(
+      await client.post("/v1/jobs/claim", { sessionId: worker.sessionId, snapshotIds: [] }),
+    ).toMatchObject({
       job: { kind: "preparation", schemaVersion: 1 },
     });
     await expect(

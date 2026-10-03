@@ -34,6 +34,18 @@ export async function advanceScan(
   }
   if (!row || !["requested", "preparing", "running"].includes(row.scan.state)) return;
   const { scan, preparation: prep } = row;
+  if (prep.state === "ready" && !prep.snapshotAvailable) {
+    await tx
+      .update(scans)
+      .set({
+        state: "failed_infrastructure",
+        finishedAt: now,
+        progressRevision: sql`${scans.progressRevision}+1`,
+      })
+      .where(eq(scans.id, scan.id));
+    await finishQueued(tx, scan.id, "runner_unavailable");
+    return;
+  }
   if (!(await allowedSelection(tx, prep.artifactId, scan.matrixId))) {
     await tx
       .update(scans)

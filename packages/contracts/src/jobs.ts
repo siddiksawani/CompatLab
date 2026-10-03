@@ -28,6 +28,9 @@ export const workerCapabilitiesSchema = z.strictObject({
   policyRevision: z.literal("runtime_limits_v2"),
 });
 export const workerSessionSchema = z.strictObject({ sessionId: z.uuid() });
+export const workerInventorySchema = workerSessionSchema.extend({
+  snapshotIds: z.array(z.uuid()).max(1024),
+});
 export const attemptSchema = workerSessionSchema.extend({
   jobId: z.uuid(),
   attemptToken: z.uuid(),

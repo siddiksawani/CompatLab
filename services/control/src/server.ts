@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import {
   abandonAttempt,
   authenticatedWorker,
+  authorizeSnapshotEviction,
   type CatalogDatabase,
   claimJob,
   readyWorker,
@@ -11,7 +12,7 @@ import {
   submitJobResult,
   workerSnapshotPins,
 } from "@compatlab/catalog";
-import { parseBoundedJson } from "@compatlab/contracts";
+import { parseBoundedJson, workerInventorySchema } from "@compatlab/contracts";
 
 const bodyLimit = 32 * 1024 ** 2;
 export function createControlServer(db: CatalogDatabase) {
@@ -44,6 +45,7 @@ export function createControlServer(db: CatalogDatabase) {
         request.method !== "POST" ||
         ![
           "/v1/workers/ready",
+          "/v1/workers/evictions",
           "/v1/jobs/claim",
           "/v1/jobs/renew",
           "/v1/jobs/results",
@@ -87,14 +89,19 @@ export function createControlServer(db: CatalogDatabase) {
       let result: unknown;
       switch (request.url) {
         case "/v1/workers/ready":
-          result = await readyWorker(db, token, body);
+          result = await readyWorker(db, token, workerInventorySchema.parse(body));
           break;
-        case "/v1/jobs/claim":
+        case "/v1/workers/evictions":
+          result = await authorizeSnapshotEviction(db, token, body);
+          break;
+        case "/v1/jobs/claim": {
+          const inventory = workerInventorySchema.parse(body);
           result = {
-            job: await claimJob(db, token, body),
-            snapshotIds: await workerSnapshotPins(db, token, body),
+            job: await claimJob(db, token, inventory),
+            snapshotIds: await workerSnapshotPins(db, token, { sessionId: inventory.sessionId }),
           };
           break;
+        }
         case "/v1/jobs/renew":
           result = await renewJob(db, token, body);
           break;
