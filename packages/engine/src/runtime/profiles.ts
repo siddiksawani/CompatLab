@@ -2,6 +2,8 @@ import type { ProbeMode, RuntimeKind } from "@compatlab/contracts";
 
 export const RUNTIME_BASE_IMAGE =
   "gcr.io/distroless/cc-debian13:nonroot@sha256:20afe6a70f2565277b704cc17289cb557f353a3619f6350f52a2317106598df4";
+export const RUNTIME_SUPPORT_IMAGE =
+  "node:26.10.0-bookworm-slim@sha256:0a992e1420e2d70611578f1844a6f10a9d11fe6bb535aabf72efe3007f13d79b";
 export type RuntimeProfile = {
   id: string;
   kind: RuntimeKind;

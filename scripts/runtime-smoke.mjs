@@ -53,34 +53,40 @@ try {
   ]);
   const before = await inspectTree(workspace);
   await volume.seal();
+  const failures = [];
   for (const image of images) {
-    const profile = runtimeProfile(image.profileId);
-    const version = await docker([
-      "run",
-      "--rm",
-      "--runtime=runsc",
-      "--network=none",
-      "--read-only",
-      "--entrypoint",
-      profile.binary,
-      image.imageId,
-      "--version",
-    ]);
-    assert.match(
-      version,
-      new RegExp(`(?:^|\\s|v)${profile.version.replaceAll(".", "\\.")}(?:$|\\s)`),
-    );
-    const evidence = await execute(image, workspace, "qualify");
-    assert.equal(evidence.kind, image.kind);
-    assert.equal(evidence.observations.length, 18);
-    assert.equal(
-      evidence.observations.filter((observation) => observation.outcome === "fail").length,
-      3,
-    );
-    process.stdout.write(
-      `${profile.id}: ESM, CJS, TLA, export order, native loading, prerequisites, offline caches qualified\n`,
-    );
+    try {
+      const profile = runtimeProfile(image.profileId);
+      const version = await docker([
+        "run",
+        "--rm",
+        "--runtime=runsc",
+        "--network=none",
+        "--read-only",
+        "--entrypoint",
+        profile.binary,
+        image.imageId,
+        "--version",
+      ]);
+      assert.match(
+        version,
+        new RegExp(`(?:^|\\s|v)${profile.version.replaceAll(".", "\\.")}(?:$|\\s)`),
+      );
+      const evidence = await execute(image, workspace, "qualify");
+      assert.equal(evidence.kind, image.kind);
+      assert.equal(evidence.observations.length, 18);
+      assert.equal(
+        evidence.observations.filter((observation) => observation.outcome === "fail").length,
+        3,
+      );
+      process.stdout.write(
+        `${profile.id}: ESM, CJS, TLA, export order, native loading, prerequisites, offline caches qualified\n`,
+      );
+    } catch (error) {
+      failures.push(error);
+    }
   }
+  if (failures.length) throw new AggregateError(failures, "Runtime qualification failed.");
   assert.equal((await inspectTree(workspace)).digest, before.digest);
   const nativeManifest = await readFile(
     join(workspace, "node_modules/compatlab-fixture-native/package.json"),

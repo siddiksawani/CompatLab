@@ -1,6 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { type RuntimeImage, runtimeImageSchema, runtimeMatrixSchema } from "@compatlab/contracts";
-import { RUNTIME_BASE_IMAGE, RUNTIME_PROFILES, runtimeProfile } from "@compatlab/engine";
+import {
+  RUNTIME_BASE_IMAGE,
+  RUNTIME_PROFILES,
+  RUNTIME_SUPPORT_IMAGE,
+  runtimeProfile,
+} from "@compatlab/engine";
 import { docker } from "../command.js";
 import { assertPreparationHost } from "../preparation/prepare.js";
 
@@ -39,6 +44,7 @@ export async function buildRuntimeImages(
         builtAt: new Date(builtAt).toISOString(),
         sourceImage: profile.sourceImage,
         baseImage: RUNTIME_BASE_IMAGE,
+        supportImage: RUNTIME_SUPPORT_IMAGE,
         platform: "linux_amd64_glibc",
         recipeRevision: "runtime_image_v1",
       }),
@@ -54,6 +60,7 @@ export async function verifyRuntimeImages(images: readonly RuntimeImage[]): Prom
     if (
       image.sourceImage !== profile.sourceImage ||
       image.baseImage !== RUNTIME_BASE_IMAGE ||
+      image.supportImage !== RUNTIME_SUPPORT_IMAGE ||
       image.kind !== profile.kind ||
       image.version !== profile.version
     )

@@ -8,6 +8,7 @@ const image = (index: number) => ({
   imageId: `sha256:${index.toString(16).padStart(64, "0")}`,
   builtAt: "2026-10-03T00:00:00.000Z",
   sourceImage: `node@sha256:${"a".repeat(64)}`,
+  supportImage: `support@sha256:${"c".repeat(64)}`,
   baseImage: `base@sha256:${"b".repeat(64)}`,
   platform: "linux_amd64_glibc",
   recipeRevision: "runtime_image_v1",

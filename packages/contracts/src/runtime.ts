@@ -16,6 +16,10 @@ export const runtimeImageSchema = z.strictObject({
     .string()
     .max(256)
     .regex(/@sha256:[a-f0-9]{64}$/),
+  supportImage: z
+    .string()
+    .max(256)
+    .regex(/@sha256:[a-f0-9]{64}$/),
   platform: z.literal("linux_amd64_glibc"),
   recipeRevision: z.literal("runtime_image_v1"),
 });

@@ -14,7 +14,7 @@ Manifest fields and Linux/x64/glibc declarations are static evidence. Shipped `.
 
 ## Image boundary
 
-`runtime-images/Dockerfile` copies only the pinned runtime binary into a common digest-pinned distroless Debian 13 image. Images contain no shell, npm, compiler, or Docker socket. The build records the local immutable Docker image ID, source/base digests, creation time, recipe revision, and platform. Verification checks image platform and recipe labels against approved profiles. These supervisor-owned records are not public request parameters or cryptographic attestations of package behavior.
+`runtime-images/Dockerfile` copies the pinned runtime binary into a common digest-pinned distroless Debian 13 image. All profiles also receive the same `libatomic` library from the pinned Node 26 support image; Node 26 requires it at startup. Images contain no shell, npm, compiler, or Docker socket. The build records the local immutable Docker image ID, source/base/support digests, creation time, recipe revision, and platform. Verification checks image platform and recipe labels against approved profiles. These supervisor-owned records are not public request parameters or cryptographic attestations of package behavior.
 
 Runtime containers use runsc, disabled networking, a read-only root and workspace, UID 65534, no capabilities, no-new-privileges, 1 GiB memory, one CPU, 128 processes, and private 64 MiB temporary storage. The harness mount is read-only. A separately bounded result filesystem and execution supervision arrive with the probe runner.
 
