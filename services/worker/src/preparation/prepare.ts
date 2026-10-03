@@ -62,6 +62,7 @@ export async function prepareArtifact(
   artifact: ResolvedArtifact,
   stateDirectory: string,
   signal?: AbortSignal,
+  retainedLock?: Uint8Array,
 ): Promise<PreparedSnapshot> {
   signal?.throwIfAborted();
   assertPackageName(artifact.name);
@@ -69,6 +70,7 @@ export async function prepareArtifact(
     throw new TypeError("Preparation requires an exact version.");
   artifactIntegrity(artifact.integrity);
   registryTarballUrl(artifact.tarballUrl);
+  if (retainedLock) validateLock(retainedLock, artifact);
   await assertPreparationHost();
   const id = randomUUID();
   const directory = join(resolve(stateDirectory), id);
@@ -103,7 +105,12 @@ export async function prepareArtifact(
       { mode: 0o644, flag: "wx" },
     );
     network = await createPreparationNetwork(id, directory);
-    logs.push(await phase(["install", "--package-lock-only", ...NPM_FLAGS], "resolve"));
+    if (retainedLock)
+      await writeFile(join(workspace, "package-lock.json"), retainedLock, {
+        mode: 0o644,
+        flag: "wx",
+      });
+    else logs.push(await phase(["install", "--package-lock-only", ...NPM_FLAGS], "resolve"));
     const lockBytes = await readBoundedFile(join(workspace, "package-lock.json"), MAX_LOCK_BYTES);
     const lock = validateLock(lockBytes, artifact);
     logs.push(await phase(["ci", ...NPM_FLAGS], "install"));

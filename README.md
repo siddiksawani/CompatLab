@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The project resolves public npm artifacts, prepares them with scripts disabled inside runsc, seals the workspace for verified local reuse, and plans runtime probes from ordered package exports. Pinned Node, Bun, and Deno profiles share the same read-only workspace. Probe execution and CLI reporting, the website, and full worker qualification are still in progress. See [registry resolution](docs/registry-resolution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for supported inputs and limits.
+The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. Full worker qualification, persistent scheduling, and the website are still in progress. See [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 
@@ -33,10 +33,11 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 
 | Path | Implemented responsibility |
 |---|---|
-| `apps/cli` | CLI argument handling and prerequisite reporting |
-| `packages/engine` | Registry resolution, static manifest analysis, export planning and runtime profiles |
+| `apps/cli` | Prerequisite reporting, local checks and reproduction |
+| `packages/engine` | Registry resolution, analysis, planning and bounded probe orchestration |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
-| `services/worker` | Docker prerequisites, sandboxed preparation, sealed storage and runtime image verification |
+| `services/worker` | Preparation, sealed storage, runtime supervision and local evidence storage |
+| `harnesses` | Root and sequential batch loading/checkpoint protocol |
 | `runtime-images` | Digest-pinned minimal runtime image recipe |
 | `fixtures` | Authored module/protocol and preparation archive fixtures |
 | `scripts` | Linux smoke test and disposable-CI runsc setup |

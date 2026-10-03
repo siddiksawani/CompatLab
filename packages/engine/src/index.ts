@@ -1,3 +1,4 @@
+export * from "./execution/run.js";
 export * from "./planning/observations.js";
 export * from "./planning/plan.js";
 export * from "./preparation/lock.js";
