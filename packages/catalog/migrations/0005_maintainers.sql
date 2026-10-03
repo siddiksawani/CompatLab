@@ -78,3 +78,6 @@ CREATE TABLE request_buckets (
 CREATE INDEX request_buckets_expiry ON request_buckets(expires_at);
 ALTER TABLE scans ADD COLUMN account_key text CHECK (account_key ~ '^[a-f0-9]{64}$');
 CREATE INDEX scans_account_requests ON scans(account_key,requested_at) WHERE account_key IS NOT NULL;
+DROP TRIGGER scans_identity ON scans;
+CREATE TRIGGER scans_identity BEFORE UPDATE OR DELETE ON scans FOR EACH ROW
+EXECUTE FUNCTION preserve_identity('state', 'requester_key', 'account_key', 'progress_revision', 'started_at', 'deadline_at', 'finished_at', 'plan', 'diagnostics', 'evidence_completed_at', 'aggregation_failed_at');

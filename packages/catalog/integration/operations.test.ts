@@ -349,6 +349,7 @@ describe("audited operator controls", () => {
         preparationId: oldPrep.id,
         matrixId: selection.matrixId,
         requesterKey: "a".repeat(64),
+        accountKey: "b".repeat(64),
         requestedAt: new Date(Date.now() - 9 * 86400_000),
         requesterExpiresAt: new Date(Date.now() - 2 * 86400_000),
         admissionPolicy: "test",
@@ -378,9 +379,8 @@ describe("audited operator controls", () => {
       rawEvidence: { retained: true },
     });
     expect(
-      (await catalog.db.select().from(schema.scans).where(eq(schema.scans.id, oldScan.id)))[0]
-        ?.requesterKey,
-    ).toBeNull();
+      (await catalog.db.select().from(schema.scans).where(eq(schema.scans.id, oldScan.id)))[0],
+    ).toMatchObject({ requesterKey: null, accountKey: null });
     await expect(catalog.pool.query("DELETE FROM audit_events")).rejects.toThrow("immutable");
     expect(await applyRetention(catalog.db, actor)).toEqual({ logs: 0, requesters: 0, audits: 0 });
   });
