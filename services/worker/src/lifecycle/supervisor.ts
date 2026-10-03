@@ -70,7 +70,7 @@ export class ExecutionSupervisor {
       } finally {
         scan.cancellation.abort();
         await Promise.allSettled([...scan.operations]);
-        this.scans.delete(scanId);
+        if (!this.capacity.blocked) this.scans.delete(scanId);
       }
     })();
     return this.track(operation);
