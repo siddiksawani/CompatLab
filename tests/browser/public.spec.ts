@@ -56,6 +56,35 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     expect(await (await fixture(request, "counts")).json()).toEqual(before);
   });
 }
+test("evidence controls wait for client initialization before accepting clicks", async ({
+  page,
+  request,
+}) => {
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request);
+  let release: () => void = () => {};
+  const scriptsReady = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await scriptsReady;
+    await route.continue();
+  });
+  try {
+    await page.reload({ waitUntil: "commit" });
+    const cell = page.locator(".cell-details").first();
+    await cell.locator("summary").click();
+    const button = cell.getByRole("button", { name: "Load entry details", exact: true });
+    await expect(button).toBeDisabled();
+    release();
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(cell.locator(".entry-list")).toContainText("compatlab-browser-fixture");
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
 test("lazy logs remain text, expire visibly, and reflect report invalidation", async ({
   page,
   request,
