@@ -1,6 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "composite": true, "rootDir": "src", "outDir": "dist" },
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "skipLibCheck": true
+  },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../services/worker" }]
+  "references": [{ "path": "../../services/worker" }, { "path": "../../packages/catalog" }]
 }

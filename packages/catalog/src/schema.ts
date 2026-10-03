@@ -43,6 +43,7 @@ export const workers = pgTable("workers", {
   recoveryRequired: boolean("recovery_required").notNull().default(true),
   revokedAt: time("revoked_at"),
   lastSeenAt: time("last_seen_at"),
+  acceptingJobs: boolean("accepting_jobs").notNull().default(true),
   createdAt: created(),
 });
 export const preparations = pgTable("preparations", {
@@ -171,4 +172,8 @@ export const auditEvents = pgTable("audit_events", {
   reason: text("reason").notNull(),
   details: jsonb("details").$type<Record<string, unknown>>().notNull(),
   createdAt: created(),
+});
+export const serviceControls = pgTable("service_controls", {
+  singleton: boolean("singleton").primaryKey().default(true),
+  admissionPaused: boolean("admission_paused").notNull().default(false),
 });

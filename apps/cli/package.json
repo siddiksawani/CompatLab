@@ -7,6 +7,8 @@
     "compatlab": "./dist/bin.js"
   },
   "dependencies": {
-    "@compatlab/worker": "workspace:*"
+    "@compatlab/catalog": "workspace:*",
+    "@compatlab/worker": "workspace:*",
+    "zod": "4.6.5"
   }
 }

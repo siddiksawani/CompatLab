@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+**/.browser-fixtures
+**/.env*
+test-results
+playwright-report
+coverage
+.DS_Store

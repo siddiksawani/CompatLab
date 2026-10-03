@@ -5,10 +5,14 @@ import {
   parsePackageSpec,
   reproduceReport,
 } from "@compatlab/worker";
+import { runAdmin } from "./admin.js";
+import { runBackup } from "./backup.js";
 
 const usage = `Usage: compatlab doctor [--json]
        compatlab check package@exact-version [--matrix initial_v1] [--state-dir PATH] [--json]
        compatlab reproduce report.json [--rebuild] [--lockfile PATH] [--state-dir PATH] [--json]
+       compatlab admin --help
+       compatlab backup encrypt|decrypt INPUT OUTPUT KEY_FILE
        compatlab --help
 
 Execution requires a local Linux amd64/runsc host with root privileges.
@@ -24,6 +28,8 @@ export async function runCli(
   operations: Operations = { check: checkPackage, reproduce: reproduceReport },
   signal?: AbortSignal,
 ): Promise<number> {
+  if (args[0] === "admin") return runAdmin(args.slice(1), io);
+  if (args[0] === "backup") return runBackup(args.slice(1), io);
   if (args.length === 0 || (args.length === 1 && args[0] === "--help")) {
     io.stdout(usage);
     return 0;

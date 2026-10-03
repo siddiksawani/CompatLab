@@ -1,0 +1,76 @@
+name: compatlab
+services:
+  postgres:
+    image: postgres:18.6-bookworm@sha256:3725f4e2499eef5134592b3b4ab79a543ed7f8e533b05b5b637af926630f6650
+    restart: unless-stopped
+    env_file: ${COMPATLAB_CONFIG_DIR:?Set a private configuration directory}/postgres.env
+    ports: ["127.0.0.1:55432:5432"]
+    volumes:
+      - database:/var/lib/postgresql
+      - ./init-database.sh:/docker-entrypoint-initdb.d/roles.sh:ro
+    shm_size: 128m
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "compatlab"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging: &logging
+      driver: journald
+      options:
+        tag: compatlab
+  web:
+    image: ${COMPATLAB_WEB_IMAGE:?Set an immutable web image digest}
+    restart: unless-stopped
+    env_file: ${COMPATLAB_CONFIG_DIR}/web.env
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+    logging: *logging
+  control:
+    image: ${COMPATLAB_CONTROL_IMAGE:?Set an immutable control image digest}
+    restart: unless-stopped
+    network_mode: host
+    env_file: ${COMPATLAB_CONFIG_DIR}/control.env
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1
+    logging: *logging
+  proxy:
+    image: ${COMPATLAB_PROXY_IMAGE:?Set an immutable proxy image digest}
+    restart: unless-stopped
+    env_file: ${COMPATLAB_CONFIG_DIR}/proxy.env
+    depends_on:
+      web: {condition: service_healthy}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - proxy_config:/config
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 1
+    logging: *logging
+volumes:
+  database:
+  certificates:
+  proxy_config:

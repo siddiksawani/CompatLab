@@ -9,6 +9,7 @@ import { z } from "zod";
 import { admitScan } from "../admission.js";
 import type { CatalogDatabase } from "../database.js";
 import { createReportApi } from "../reports/read.js";
+import { reportControlError } from "../telemetry.js";
 import { MetadataBusy } from "./cache.js";
 import { publicDiscovery } from "./discovery.js";
 import {
@@ -95,7 +96,7 @@ export function createPublicApi(
             : 503,
           { "retry-after": "5" },
         );
-      process.stderr.write('{"level":"error","event":"public_request_failed"}\n');
+      reportControlError("public_request_failed");
       return json({ error: "temporarily_unavailable" }, 503, { "retry-after": "5" });
     } finally {
       inFlight--;

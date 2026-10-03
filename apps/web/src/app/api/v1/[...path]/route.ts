@@ -1,3 +1,4 @@
+import { reportControlError } from "@compatlab/catalog/web";
 import { webRuntime } from "../../../../server/runtime";
 
 export const runtime = "nodejs";
@@ -6,7 +7,7 @@ async function handle(request: Request) {
   try {
     return await webRuntime().api(request);
   } catch {
-    process.stderr.write('{"level":"error","event":"web_configuration_unavailable"}\n');
+    reportControlError("web_configuration_unavailable");
     return Response.json(
       { error: "temporarily_unavailable" },
       { status: 503, headers: { "cache-control": "no-store" } },

@@ -1,0 +1,23 @@
+[Unit]
+Description=CompatLab execution worker
+After=network-online.target docker.service wg-quick@wg0.service
+Requires=docker.service wg-quick@wg0.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/compatlab
+EnvironmentFile=/etc/compatlab/worker.env
+ExecStart=/opt/compatlab-node/bin/node services/worker/dist/remote/bin.js
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=compatlab-worker
+
+[Install]
+WantedBy=multi-user.target
