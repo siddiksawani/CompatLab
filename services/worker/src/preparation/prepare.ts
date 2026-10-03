@@ -14,7 +14,7 @@ import {
   type ValidatedLock,
   validateLock,
 } from "@compatlab/engine";
-import { type CommandResult, docker, removeContainer, streamCommand } from "../command.js";
+import { type CommandResult, command, docker, removeContainer, streamCommand } from "../command.js";
 import { inspectDocker } from "../doctor.js";
 import { inspectTree, readBoundedFile, type TreeInspection } from "./files.js";
 import { installerFailure, NpmOutput } from "./npm-output.js";
@@ -249,7 +249,7 @@ export async function runInstaller(options: {
     result = await streamCommand(
       "docker",
       [
-        "run",
+        "create",
         "--name",
         name,
         "--label",
@@ -296,8 +296,11 @@ export async function runInstaller(options: {
         ...args,
       ],
       signal,
-      (bytes) => output.write(bytes),
     );
+    if (result.exitCode === 0 && result.termination === "completed")
+      result = await streamCommand("docker", ["start", "--attach", name], signal, (bytes) =>
+        output.write(bytes),
+      );
     if (result.exitCode !== 125 && result.exitCode !== 126 && result.exitCode !== 127) {
       const observed = await docker(["inspect", "--format", "{{.State.OOMKilled}}", name]);
       if (observed !== "true" && observed !== "false")
@@ -333,5 +336,20 @@ export async function assertPreparationHost(): Promise<void> {
     throw new PreparationError(
       "runner_unavailable",
       "Preparation requires root on the local Linux amd64 Docker/runsc host.",
+    );
+  const config = JSON.parse(
+    (await readBoundedFile("/etc/docker/daemon.json", 64 * 1024)).toString("utf8"),
+  );
+  const runtime = config.runtimes?.runsc;
+  if (
+    runtime?.path !== "/usr/local/bin/runsc" ||
+    JSON.stringify(runtime.runtimeArgs) !== JSON.stringify(["--platform=systrap"]) ||
+    !(await command("/usr/local/bin/runsc", ["--version"])).startsWith(
+      "runsc version release-20260928.0\n",
+    )
+  )
+    throw new PreparationError(
+      "runner_unavailable",
+      "The execution host must use the pinned runsc systrap configuration.",
     );
 }

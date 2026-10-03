@@ -2,7 +2,7 @@ import { z } from "zod";
 import { probeModeSchema } from "./harness.js";
 
 export const PROBE_HARNESS_REVISION = "load_v2";
-export const PROBE_POLICY_REVISION = "runtime_limits_v1";
+export const PROBE_POLICY_REVISION = "runtime_limits_v2";
 export const MAX_BATCH_BYTES = 2 * 1024 ** 2;
 export const MAX_REPORT_BYTES = 20 * 1024 ** 2;
 export const MAX_SCAN_LOG_BYTES = 4 * 1024 ** 2;

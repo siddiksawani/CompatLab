@@ -2,6 +2,7 @@ import { lstat, mkdir, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { PreparationError } from "@compatlab/engine";
 import { command } from "../command.js";
+import { cleanup } from "../lifecycle/cleanup.js";
 
 export class WorkspaceVolume {
   readonly path: string;
@@ -89,24 +90,26 @@ export class WorkspaceVolume {
   }
 
   async dispose(): Promise<void> {
-    const exists = await lstat(this.path).then(
-      () => true,
-      (error: NodeJS.ErrnoException) => {
-        if (error.code === "ENOENT") return false;
-        throw error;
-      },
-    );
-    let mounted = exists;
-    try {
-      if (exists) await command("mountpoint", ["--quiet", this.path]);
-    } catch (error) {
-      if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 32)
-        throw error;
-      mounted = false;
-    }
-    if (mounted) {
-      await command("umount", [this.path]);
-    }
-    await rm(this.directory, { recursive: true, force: true });
+    await cleanup(async () => {
+      const exists = await lstat(this.path).then(
+        () => true,
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return false;
+          throw error;
+        },
+      );
+      let mounted = exists;
+      try {
+        if (exists) await command("mountpoint", ["--quiet", this.path]);
+      } catch (error) {
+        if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 32)
+          throw error;
+        mounted = false;
+      }
+      if (mounted) {
+        await command("umount", [this.path]);
+      }
+      await rm(this.directory, { recursive: true, force: true });
+    });
   }
 }

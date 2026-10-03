@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. Full worker qualification, persistent scheduling, and the website are still in progress. See [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
+The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. Persistent scheduling and the website are still in progress. See [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 

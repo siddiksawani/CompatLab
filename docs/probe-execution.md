@@ -1,6 +1,6 @@
 # Local probe execution
 
-The local engine loads public npm artifacts inside pinned runsc containers. It records raw loading evidence, static manifest observations, exact images, snapshot identity and coverage. Classification and public reports arrive in later slices. The worker remains experimental until the hostile lifecycle qualification in slice 06; public execution remains disabled until the launch gates pass.
+The local engine loads public npm artifacts inside pinned runsc containers. It records raw loading evidence, static manifest observations, exact images, snapshot identity and coverage. Classification and public reports arrive in later slices. The worker runs with the [qualified lifecycle profile](worker-lifecycle.md); public execution remains disabled until the launch gates pass.
 
 ## Commands
 
@@ -17,7 +17,7 @@ Names must include an exact version; scoped packages use `@scope/name@version`. 
 
 Each successful command saves a bounded JSON report, the exact lock bytes, and the sealed snapshot. Exit 0 means all applicable planned loading observations completed successfully; 1 means a loading failure or incomplete coverage; 2 means invalid arguments; 3 means the operation could not run. Text output shows compact coverage; JSON includes bounded evidence. Loading success does not exercise arbitrary exported functions or prove general compatibility.
 
-Reproduction defaults to verified reuse of the actual retained snapshot. Missing, changed or unmounted snapshots fail visibly. `--rebuild` installs from the retained validated lock with scripts disabled and records a new generation. It never silently calls a rebuild a reuse. Runtime image IDs must still be available and approved. This release accepts local report files; remote report URLs arrive with the read API. Retained state and locks must accompany a copied report. Retention, eviction and restart recovery are subsequent worker/operations work.
+Reproduction defaults to verified reuse of the actual retained snapshot. Missing, changed or unmounted snapshots fail visibly. `--rebuild` installs from the retained validated lock with scripts disabled and records a new generation. It never silently calls a rebuild a reuse. Runtime image IDs must still be available and approved. This release accepts local report files; remote report URLs arrive with the read API. Retained state and locks must accompany a copied report. Workspace eviction and startup recovery follow the worker lifecycle policy; report/log retention operations arrive with the control plane.
 
 ## Execution method
 
@@ -37,7 +37,7 @@ An interrupted batch retains validated observations. A known crashing or timed-o
 - Root checkpoint: 64 KiB; batch checkpoint: 2 MiB; local report: 20 MiB.
 - Error messages: 2,048 characters; stdout/stderr: 128 KiB each per job, 4 MiB retained per scan; terminate after 8 MiB emitted per job.
 
-Limits never expand because a package requests more work. A checkpoint limit can leave incomplete coverage. The engine stops dispatch if accumulated evidence reaches the remaining report byte budget; the CLI returns an explicit limit error instead of allocating an oversized report. Containers are removed before reading final evidence and unmounting output. Preparation snapshots remain sealed for explicit reuse. Full capacity reservations and recovery qualification arrive in slice 06.
+Limits never expand because a package requests more work. A checkpoint limit can leave incomplete coverage. The engine stops dispatch if accumulated evidence reaches the remaining report byte budget; the CLI returns an explicit limit error instead of allocating an oversized report. Containers are removed before reading final evidence and unmounting output. Preparation snapshots remain sealed for explicit reuse. Host capacity reservations and recovery are enforced by the worker supervisor.
 
 ## Qualification
 

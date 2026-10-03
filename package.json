@@ -19,7 +19,8 @@
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
     "test:preparation": "node scripts/preparation-smoke.mjs",
     "test:runtimes": "node scripts/runtime-smoke.mjs",
-    "test:engine": "node scripts/engine-smoke.mjs"
+    "test:engine": "node scripts/engine-smoke.mjs",
+    "test:worker": "node scripts/worker-smoke.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
