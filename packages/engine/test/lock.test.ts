@@ -115,6 +115,15 @@ describe("frozen npm lock policy", () => {
     ).toThrow();
     expect(() => validateLock(bytes(), { ...artifact, version: "2.0.0" })).toThrow();
   });
+  it("stops at the dependency count limit within the byte budget", () => {
+    const entries: Record<string, unknown> = {};
+    for (let index = 0; index < 10_000; index++) entries[`node_modules/dep-${index}`] = rootEntry;
+    const lock = bytes(entries);
+    expect(lock.length).toBeLessThan(MAX_LOCK_BYTES);
+    expect(() => validateLock(lock, artifact)).toThrow(
+      expect.objectContaining({ classification: "preparation_limit_exceeded" }),
+    );
+  });
 });
 
 it("validates the installed root identity without loading its entrypoint", () => {

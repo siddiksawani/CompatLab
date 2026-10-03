@@ -76,12 +76,13 @@ function inspectLock(
       "package_manifest_invalid",
       "The consumer lock does not match the selected dependency.",
     );
-  const records = Object.entries(lock.packages).filter(([location]) => location !== "");
-  if (records.length > 10_000)
-    fail("preparation_limit_exceeded", "The dependency count exceeds 10,000.");
   const dependencies: LockedDependency[] = [];
   const verified = new Set<string>();
-  for (const [location, entry] of records) {
+  for (const location in lock.packages) {
+    if (!Object.hasOwn(lock.packages, location) || location === "") continue;
+    if (dependencies.length === 10_000)
+      fail("preparation_limit_exceeded", "The dependency count exceeds 10,000.");
+    const entry = lock.packages[location];
     assertLocation(location);
     if (!isRecord(entry) || entry.link || !isExactVersion(entry.version))
       return fail(
