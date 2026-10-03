@@ -1,5 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { createConnection } from "node:net";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { command, docker, removeContainer } from "../command.js";
 
 export const PROXY_IMAGE =
@@ -192,6 +194,7 @@ export async function createPreparationNetwork(
       "--log-driver=local",
       "--log-opt=max-size=128k",
       "--log-opt=max-file=1",
+      "--log-opt=compress=false",
       "--mount",
       `type=bind,src=${config},dst=/etc/squid/squid.conf,readonly`,
       "--entrypoint=/usr/sbin/squid",
@@ -203,9 +206,38 @@ export async function createPreparationNetwork(
     proxyCreated = true;
     await docker(["network", "connect", "bridge", proxyName]);
     await docker(["start", proxyName]);
+    const readyDeadline = Date.now() + 5000;
+    while (true) {
+      try {
+        await connect(proxyIp);
+        break;
+      } catch {
+        if (Date.now() >= readyDeadline)
+          throw new Error(
+            `Preparation proxy did not become ready: ${await docker(["logs", "--tail", "20", proxyName])}`,
+          );
+        await delay(100);
+      }
+    }
     return { name, jobIp, proxyIp, dispose };
   } catch (error) {
     await dispose();
     throw error;
   }
+}
+
+function connect(host: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const socket = createConnection({ host, port: 3128 });
+    socket.setTimeout(500);
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve();
+    });
+    socket.once("error", reject);
+    socket.once("timeout", () => {
+      socket.destroy();
+      reject(new Error("Proxy connection timed out."));
+    });
+  });
 }
