@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+  - services/*
+
+engineStrict: true
+saveExact: true
+strictPeerDependencies: true
+blockExoticSubdeps: true
+allowBuilds: {}

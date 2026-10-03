@@ -1,0 +1,27 @@
+{
+  "name": "compatlab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm lint && pnpm build && pnpm typecheck:tests && pnpm test",
+    "cli": "node apps/cli/dist/bin.js",
+    "test:sandbox": "node scripts/sandbox-smoke.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.19.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}
