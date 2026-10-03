@@ -3,6 +3,7 @@ import {
   boolean,
   customType,
   integer,
+  json,
   jsonb,
   pgTable,
   text,
@@ -26,7 +27,9 @@ export const packageVersions = pgTable("package_versions", {
   version: text("version").notNull(),
   integrity: text("integrity").notNull(),
   tarballUrl: text("tarball_url").notNull(),
-  manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull(),
+  manifest: json("manifest").$type<Record<string, unknown>>().notNull(),
+  observedTags: jsonb("observed_tags").$type<Record<string, string>>().notNull().default({}),
+  tagsObservedAt: time("tags_observed_at"),
   integrityAnomaly: boolean("integrity_anomaly").notNull().default(false),
   observedAt: time("observed_at").notNull().defaultNow(),
 });

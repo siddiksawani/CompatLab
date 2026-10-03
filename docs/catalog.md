@@ -8,7 +8,7 @@ The SQL migration is the schema authority. `src/schema.ts` provides typed Drizzl
 
 | Tables | Responsibility |
 |---|---|
-| `packages`, `package_versions` | Exact registry observations; package/version/integrity identity and changed-integrity flags |
+| `packages`, `package_versions` | Exact artifact identity, ordered manifest, latest observed tags and changed-integrity flags |
 | `preparations` | Profile/platform and resolution generation, retained lock bytes/digest, sealed snapshot generation, tree digest and worker locality |
 | `runtime_images`, `matrices`, `matrix_members` | Approved immutable runtime definitions and ordered matrix configuration |
 | `scans`, `runs` | Preparation/matrix identity, lifecycle, per-image/mode/group evidence and bounded logs |
@@ -18,9 +18,11 @@ The SQL migration is the schema authority. `src/schema.ts` provides typed Drizzl
 
 There are thirteen domain tables plus migration history. Matrix membership is a join table so PostgreSQL can reject a run whose image is outside its scan's matrix. Membership must be complete, contiguous, ordered, and contain unique profiles and image IDs. A deferred constraint checks the complete matrix at transaction commit.
 
-Artifact observations, matrix configuration, memberships, runtime definitions, scan identities and report content cannot be edited or deleted in place. A runtime digest can be registered again with the same definition; the original registration timestamp is retained. Image quarantine and matrix enablement are separate mutable fields. Once preparation results are known, their lock, snapshot generation and digest cannot change. Worker assignment can change while preparation is in progress; sealed snapshot locality is fixed. Eviction only clears availability. PostgreSQL verifies the SHA-256 of retained lock bytes.
+Artifact identity and manifests, matrix configuration, memberships, runtime definitions, scan identities and report content cannot be edited or deleted in place. Manifests use PostgreSQL `json` to preserve conditional export key order; their original text cannot be replaced even with an order-only change. The latest nonempty registry tag observation and its timestamp are separate mutable metadata. Exact-version resolution does not fetch tags, so its empty tag map leaves previous observations intact. Tags never determine artifact identity or cache reuse.
 
-Variable data has database byte bounds: manifests 2 MiB, locks 16 MiB, preparation diagnostics 256 KiB, run evidence/reports 20 MiB, run logs 4 MiB, and small configuration/audit data 16 KiB. The engine's stricter per-session and whole-scan budgets still apply before persistence. These column limits do not replace result validation in the later private job API or classifier.
+A runtime digest can be registered again with the same definition; the original registration timestamp is retained. Image quarantine and matrix enablement are separate mutable fields. Matrix image IDs and artifact/image block subjects are normalized UUIDs. Once preparation results are known, their lock, snapshot generation and digest cannot change. Worker assignment can change while preparation is in progress; sealed snapshot locality is fixed. Eviction only clears availability. PostgreSQL verifies the SHA-256 of retained lock bytes.
+
+Variable data has database byte bounds: manifests 2 MiB, tag observations 64 KiB, locks 16 MiB, preparation diagnostics 256 KiB, run evidence/reports 20 MiB, run logs 4 MiB, and small configuration/audit data 16 KiB. The engine's stricter per-session and whole-scan budgets still apply before persistence. These column limits do not replace result validation in the later private job API or classifier.
 
 ## Admission transaction
 

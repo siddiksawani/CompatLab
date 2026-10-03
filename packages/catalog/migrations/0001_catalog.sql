@@ -10,10 +10,13 @@ CREATE TABLE package_versions (
   version text COLLATE "C" NOT NULL CHECK (length(version) BETWEEN 1 AND 256),
   integrity text NOT NULL CHECK (length(integrity) BETWEEN 1 AND 1024),
   tarball_url text NOT NULL CHECK (length(tarball_url) <= 2048),
-  manifest jsonb NOT NULL CHECK (jsonb_typeof(manifest) = 'object' AND octet_length(manifest::text) <= 2097152),
+  manifest json NOT NULL CHECK (json_typeof(manifest) = 'object' AND octet_length(manifest::text) <= 2097152),
+  observed_tags jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(observed_tags) = 'object' AND octet_length(observed_tags::text) <= 65536),
+  tags_observed_at timestamptz,
   integrity_anomaly boolean NOT NULL DEFAULT false,
   observed_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (package_id, version, integrity)
+  UNIQUE (package_id, version, integrity),
+  CHECK ((observed_tags = '{}'::jsonb) = (tags_observed_at IS NULL))
 );
 
 CREATE TABLE workers (
@@ -183,7 +186,8 @@ CREATE TABLE blocks (
   reason text NOT NULL CHECK (length(reason) BETWEEN 1 AND 1024),
   actor text NOT NULL CHECK (length(actor) BETWEEN 1 AND 128),
   created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz
+  revoked_at timestamptz,
+  CHECK (CASE WHEN scope IN ('artifact', 'image') THEN subject = subject::uuid::text ELSE true END)
 );
 CREATE UNIQUE INDEX blocks_active ON blocks(scope, subject) WHERE revoked_at IS NULL;
 
@@ -206,7 +210,6 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER packages_identity BEFORE UPDATE OR DELETE ON packages FOR EACH ROW EXECUTE FUNCTION preserve_identity();
-CREATE TRIGGER versions_identity BEFORE UPDATE OR DELETE ON package_versions FOR EACH ROW EXECUTE FUNCTION preserve_identity('integrity_anomaly');
 CREATE TRIGGER images_identity BEFORE UPDATE OR DELETE ON runtime_images FOR EACH ROW EXECUTE FUNCTION preserve_identity('state');
 CREATE TRIGGER matrices_identity BEFORE UPDATE OR DELETE ON matrices FOR EACH ROW EXECUTE FUNCTION preserve_identity('enabled');
 CREATE TRIGGER members_identity BEFORE UPDATE OR DELETE ON matrix_members FOR EACH ROW EXECUTE FUNCTION preserve_identity();
@@ -215,6 +218,18 @@ CREATE TRIGGER scans_identity BEFORE UPDATE OR DELETE ON scans FOR EACH ROW EXEC
 CREATE TRIGGER reports_identity BEFORE UPDATE OR DELETE ON reports FOR EACH ROW EXECUTE FUNCTION preserve_identity('invalidated_at', 'invalidation_reason', 'replaced_by');
 CREATE TRIGGER blocks_identity BEFORE UPDATE OR DELETE ON blocks FOR EACH ROW EXECUTE FUNCTION preserve_identity('revoked_at');
 CREATE TRIGGER audit_identity BEFORE UPDATE OR DELETE ON audit_events FOR EACH ROW EXECUTE FUNCTION preserve_identity();
+
+CREATE FUNCTION preserve_artifact() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' OR
+    ROW(OLD.id, OLD.package_id, OLD.version, OLD.integrity, OLD.tarball_url, OLD.manifest::text, OLD.observed_at)
+    IS DISTINCT FROM
+    ROW(NEW.id, NEW.package_id, NEW.version, NEW.integrity, NEW.tarball_url, NEW.manifest::text, NEW.observed_at) THEN
+    RAISE EXCEPTION 'immutable artifact identity or manifest' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER versions_identity BEFORE UPDATE OR DELETE ON package_versions FOR EACH ROW EXECUTE FUNCTION preserve_artifact();
 
 CREATE FUNCTION preserve_preparation_result() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE field text;

@@ -13,7 +13,7 @@ import {
   scans,
   workers,
 } from "./schema.js";
-import { revisionSchema, validateArtifact } from "./validation.js";
+import { revisionSchema, uuidSchema, validateArtifact } from "./validation.js";
 
 export const ADMISSION_POLICY = {
   revision: "admission_v1",
@@ -23,7 +23,7 @@ export const ADMISSION_POLICY = {
 } as const;
 const active: ScanState[] = ["requested", "preparing", "running", "aggregating"];
 const optionsSchema = z.strictObject({
-  matrixId: z.uuid(),
+  matrixId: uuidSchema,
   requesterKey: z.string().regex(/^[a-f0-9]{64}$/),
   classifierRevision: revisionSchema,
 });
@@ -206,12 +206,23 @@ async function observeArtifact(
     );
   const changed = versions.some((row) => row.integrity !== artifact.integrity);
   let observed = versions.find((row) => row.integrity === artifact.integrity);
+  const hasTags = Object.keys(artifact.observedTags).length > 0;
   if (!observed) {
     const { name: _name, ...identity } = artifact;
     [observed] = await tx
       .insert(packageVersions)
-      .values({ ...identity, packageId: pkg.id, integrityAnomaly: changed })
+      .values({
+        ...identity,
+        packageId: pkg.id,
+        integrityAnomaly: changed,
+        tagsObservedAt: hasTags ? sql`clock_timestamp()` : null,
+      })
       .returning();
+  } else if (hasTags) {
+    await tx
+      .update(packageVersions)
+      .set({ observedTags: artifact.observedTags, tagsObservedAt: sql`clock_timestamp()` })
+      .where(eq(packageVersions.id, observed.id));
   }
   if (!observed) throw new Error("Artifact registration failed.");
   if (changed && versions.some((row) => !row.integrityAnomaly)) {

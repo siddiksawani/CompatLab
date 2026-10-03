@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { jobStateSchema, scanStateSchema } from "@compatlab/contracts";
+import { planProbes, RUNTIME_PROFILES } from "@compatlab/engine";
 import { eq, getTableColumns, getTableName } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -212,7 +213,15 @@ describe("catalog policy and historical reports", () => {
         harness: "load_v2",
         probe: "explicit_exports_v1",
       };
-      await blockSubject(catalog.db, scope, subjects[scope], actor);
+      const subject = subjects[scope];
+      await blockSubject(
+        catalog.db,
+        scope,
+        scope === "artifact" || scope === "image" ? subject.toUpperCase() : subject,
+        actor,
+      );
+      await blockSubject(catalog.db, scope, subject, actor);
+      expect((await catalog.db.select().from(schema.blocks))[0]?.subject).toBe(subject);
       expect(
         await findCachedReport(catalog.db, {
           artifactId: fixture.preparation.artifactId,
@@ -351,6 +360,80 @@ describe("catalog policy and historical reports", () => {
 });
 
 describe("database constraints", () => {
+  it("preserves conditional export order and rejects order-only manifest changes", async () => {
+    const source = artifact();
+    source.manifest.exports = { default: "./default.js", node: "./node.js" };
+    await admitScan(catalog.db, source, options(selection.matrixId));
+    const stored = (await catalog.db.select().from(schema.packageVersions))[0];
+    if (!stored) throw new Error("Fixture artifact missing.");
+    expect(Object.keys(stored.manifest.exports as object)).toEqual(["default", "node"]);
+    const plan = planProbes(Buffer.from(JSON.stringify(stored.manifest)), RUNTIME_PROFILES);
+    expect(plan.runtimes[0]?.root.esm).toEqual({
+      applicable: true,
+      reason: "public_target",
+      target: "./default.js",
+    });
+    await expect(
+      catalog.pool.query("UPDATE package_versions SET manifest=$1::json WHERE id=$2", [
+        JSON.stringify({
+          ...source.manifest,
+          exports: { node: "./node.js", default: "./default.js" },
+        }),
+        stored.id,
+      ]),
+    ).rejects.toMatchObject({ code: "23514" });
+  });
+  it("refreshes observed tags separately from immutable artifact metadata", async () => {
+    const source = artifact();
+    source.observedTags = { latest: "1.0.0", next: "2.0.0-beta.1" };
+    await admitScan(catalog.db, source, options(selection.matrixId));
+    const first = (await catalog.db.select().from(schema.packageVersions))[0];
+    if (!first) throw new Error("Fixture artifact missing.");
+    expect(first.observedTags).toEqual(source.observedTags);
+    expect(first.tagsObservedAt).toBeInstanceOf(Date);
+    const latest = { latest: "2.0.0" };
+    expect(
+      await admitScan(
+        catalog.db,
+        { ...source, observedTags: latest, manifest: { ...source.manifest, changed: true } },
+        options(selection.matrixId),
+      ),
+    ).toMatchObject({ kind: "existing" });
+    await admitScan(catalog.db, { ...source, observedTags: {} }, options(selection.matrixId));
+    const rows = await catalog.db.select().from(schema.packageVersions);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: first.id,
+      observedAt: first.observedAt,
+      manifest: source.manifest,
+      observedTags: latest,
+    });
+    expect(rows[0]?.tagsObservedAt?.getTime()).toBeGreaterThanOrEqual(
+      first.tagsObservedAt?.getTime() ?? 0,
+    );
+  });
+  it("normalizes matrix image UUIDs before membership and uniqueness checks", async () => {
+    expect(
+      await registerMatrix(
+        catalog.db,
+        matrix(selection.imageIds.map((id) => id.toUpperCase())),
+        actor,
+      ),
+    ).toBe(selection.matrixId);
+    const imageId = selection.imageIds[0];
+    if (!imageId) throw new Error("Fixture image missing.");
+    await expect(
+      registerMatrix(catalog.db, matrix([imageId, imageId.toUpperCase()], "duplicate_v1"), actor),
+    ).rejects.toThrow("unique");
+    const fixture = await seedReport(catalog.db, selection.matrixId);
+    expect(
+      await findCachedReport(catalog.db, {
+        artifactId: fixture.preparation.artifactId.toUpperCase(),
+        matrixId: selection.matrixId.toUpperCase(),
+        classifierRevision: "classifier_v1",
+      }),
+    ).toEqual({ reportId: fixture.report.id, scanId: fixture.scan.scanId });
+  });
   it("retains natural keys and immutable matrix/image definitions", async () => {
     await catalog.db.insert(schema.packages).values({ name: "immutable-package" });
     await expect(
@@ -500,6 +583,11 @@ describe("database constraints", () => {
     ).rejects.toMatchObject({ code: "23514" });
     await expect(
       catalog.pool.query(
+        "UPDATE package_versions SET observed_tags=jsonb_build_object('tag',repeat('x',65536)),tags_observed_at=now()",
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+    await expect(
+      catalog.pool.query(
         "INSERT INTO preparations(artifact_id,profile_revision,platform,lock_bytes,lock_digest) SELECT artifact_id,profile_revision,platform,decode(repeat('00',16777217),'hex'),encode(sha256(decode(repeat('00',16777217),'hex')),'hex') FROM preparations LIMIT 1",
       ),
     ).rejects.toMatchObject({ code: "23514" });
@@ -545,6 +633,14 @@ describe("database constraints", () => {
     await expect(
       admitScan(catalog.db, { ...artifact(), version: "latest" }, options(selection.matrixId)),
     ).rejects.toThrow();
+    for (const observedTags of [
+      { latest: "not-a-version" },
+      { "1.x": "1.0.0" },
+      Object.fromEntries(Array.from({ length: 5000 }, (_, index) => [`tag-${index}`, "1.0.0"])),
+    ])
+      await expect(
+        admitScan(catalog.db, { ...artifact(), observedTags }, options(selection.matrixId)),
+      ).rejects.toThrow();
     expect(await catalog.db.select().from(schema.packages)).toHaveLength(0);
   });
 });

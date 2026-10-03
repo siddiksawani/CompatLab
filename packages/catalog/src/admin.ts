@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "./database.js";
 import { auditEvents, blocks, matrices, matrixMembers, reports, runtimeImages } from "./schema.js";
-import { type AdminAction, adminActionSchema, revisionSchema } from "./validation.js";
+import { type AdminAction, adminActionSchema, revisionSchema, uuidSchema } from "./validation.js";
 
 async function audit(
   tx: CatalogTransaction,
@@ -52,7 +52,7 @@ const matrixSchema = z
     harnessRevision: revisionSchema,
     planRevision: revisionSchema,
     policyRevision: revisionSchema,
-    imageIds: z.array(z.uuid()).min(1).max(16),
+    imageIds: z.array(uuidSchema).min(1).max(16),
   })
   .refine(
     (value) => new Set(value.imageIds).size === value.imageIds.length,
@@ -165,14 +165,16 @@ export async function blockSubject(
 ): Promise<void> {
   z.enum(["package", "artifact", "image", "harness", "probe"]).parse(scope);
   z.string().min(1).max(256).parse(subject);
-  if (scope === "artifact" || scope === "image") z.uuid().parse(subject);
+  const normalizedSubject =
+    scope === "artifact" || scope === "image" ? uuidSchema.parse(subject) : subject;
   const action = adminActionSchema.parse(actor);
   await catalogTransaction(db, async (tx) => {
     const rows = await tx
       .insert(blocks)
-      .values({ scope, subject, ...action })
+      .values({ scope, subject: normalizedSubject, ...action })
       .onConflictDoNothing()
       .returning({ id: blocks.id });
-    if (rows.length) await audit(tx, "subject_blocked", { scope, subject }, action);
+    if (rows.length)
+      await audit(tx, "subject_blocked", { scope, subject: normalizedSubject }, action);
   });
 }
