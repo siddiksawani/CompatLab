@@ -2,7 +2,7 @@
 
 The worker exposes `prepareArtifact` and `reuseSnapshot`. Both require a local Linux amd64 Docker/runsc host with root privileges for bounded filesystems and firewall rules. They refuse remote Docker endpoints and unsupported hosts. Bridge netfilter must be loaded, with `net.bridge.bridge-nf-call-iptables=1`; the worker checks this before creating a network. There is no host npm or ordinary-Docker fallback.
 
-This is the preparation implementation and its qualification suite. Public execution remains disabled; the wider process, network, resource, cancellation, and recovery qualification belongs to delivery slice 06.
+This is the preparation implementation and its qualification suite. Public execution remains disabled; the wider process, network, resource, cancellation, and recovery suite is documented in [worker lifecycle](worker-lifecycle.md).
 
 ## Installation
 
@@ -33,7 +33,7 @@ Lock validation requires npm lock version 3, the exact consumer dependency, publ
 
 A successful npm exit is insufficient when extraction reports an entry error or the filesystem exhausts bytes/inodes. The supervisor rejects partial installations, including npm warning-only `ENOSPC` outcomes. Terminal npm error codes are observed throughout the bounded stream and retained in the stderr tail.
 
-The ext4 backing file is sparse, so the supervisor must reserve its maximum growth and maintain disk headroom. Host-wide reservation and low-disk admission arrive in slice 06. Cleanup removes containers before unmounting. A failed cleanup or unmount leaves resources for investigation instead of deleting an active mount.
+The ext4 backing file is sparse, so the supervisor must reserve its maximum growth and maintain disk headroom. The worker supervisor enforces host-wide reservations and low-disk admission. Cleanup removes containers before unmounting. A failed cleanup or unmount leaves resources for investigation instead of deleting an active mount.
 
 Preparation has a private internal bridge. The job can reach only its Squid proxy on TCP 3128, with host-input and forwarding rules blocking bypass. The listener binds only to its private job interface and accepts requests only from that job's IP. The proxy allows CONNECT to exactly `registry.npmjs.org:443`, rejects private IPv4/IPv6 destinations, and has bounded memory, requests, timeouts, and logs. The proxy uses explicit public DNS resolvers (1.1.1.1 and 1.0.0.1), with ICMP/ARP discovery helpers disabled. TLS verification remains npm's responsibility; there is no interception certificate or custom registry gateway. Runtime networking is separate and disabled.
 

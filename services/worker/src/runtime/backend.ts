@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -138,12 +138,22 @@ async function runSession(
       checkpoint = value;
     };
     let finished = false;
+    controller.signal.throwIfAborted();
+    await docker([
+      ...runtimeContainerArguments({
+        name,
+        image,
+        workspace,
+        harness,
+        output: output.path,
+        operation: "create",
+      }),
+      ...runtimeArguments(image.kind, "/workspace/.compatlab/probe.mjs"),
+    ]);
+    controller.signal.throwIfAborted();
     const commandResult = streamCommand(
       "docker",
-      [
-        ...runtimeContainerArguments({ name, image, workspace, harness, output: output.path }),
-        ...runtimeArguments(image.kind, "/workspace/.compatlab/probe.mjs"),
-      ],
+      ["start", "--attach", name],
       controller.signal,
     ).finally(() => {
       finished = true;
@@ -177,6 +187,9 @@ async function runSession(
       await readCheckpoint();
       finalValid = true;
     } catch {}
+    const filesystem = await statfs(output.path);
+    if (!reason && (filesystem.bavail === 0 || filesystem.ffree === 0))
+      reason = "output_limit_exceeded";
     result.stopReason = runtimeOutcome(
       processResult,
       state,

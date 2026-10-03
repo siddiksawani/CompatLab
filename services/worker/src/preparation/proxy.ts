@@ -3,6 +3,7 @@ import { createConnection } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { command, docker, removeContainer, streamCommand } from "../command.js";
+import { cleanup } from "../lifecycle/cleanup.js";
 
 export const PROXY_IMAGE =
   "ubuntu/squid:6.6-24.04_beta@sha256:8fafd41d6ddceb295d26eea9938321d825ac5351c7e46cf6a8aa5d093b8ed1ce";
@@ -68,27 +69,28 @@ export async function createPreparationNetwork(
   let proxyCreated = false;
   let chainCreated = false;
   const rules: string[][] = [];
-  const dispose = async () => {
-    if (proxyCreated) {
-      await removeContainer(proxyName);
-      proxyCreated = false;
-    }
-    while (rules.length) {
-      const rule = rules.at(-1);
-      if (!rule) break;
-      await command("iptables", ["-w", "-D", ...rule]);
-      rules.pop();
-    }
-    if (chainCreated) {
-      await command("iptables", ["-w", "-F", chain]);
-      await command("iptables", ["-w", "-X", chain]);
-      chainCreated = false;
-    }
-    if (networkCreated) {
-      await docker(["network", "rm", name]);
-      networkCreated = false;
-    }
-  };
+  const dispose = async () =>
+    cleanup(async () => {
+      if (proxyCreated) {
+        await removeContainer(proxyName);
+        proxyCreated = false;
+      }
+      while (rules.length) {
+        const rule = rules.at(-1);
+        if (!rule) break;
+        await command("iptables", ["-w", "-D", ...rule]);
+        rules.pop();
+      }
+      if (chainCreated) {
+        await command("iptables", ["-w", "-F", chain]);
+        await command("iptables", ["-w", "-X", chain]);
+        chainCreated = false;
+      }
+      if (networkCreated) {
+        await docker(["network", "rm", name]);
+        networkCreated = false;
+      }
+    });
   try {
     await docker([
       "network",

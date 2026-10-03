@@ -16,7 +16,7 @@ Manifest fields and Linux/x64/glibc declarations are static evidence. Shipped `.
 
 `runtime-images/Dockerfile` copies the pinned runtime binary into a common digest-pinned distroless Debian 13 image. All profiles also receive the same `libatomic` library from the pinned Node 26 support image; Node 26 requires it at startup. Images contain no shell, npm, compiler, or Docker socket. The build records the local immutable Docker image ID, source/base/support digests, creation time, recipe revision, and platform. Verification checks image platform and recipe labels against approved profiles. These supervisor-owned records are not public request parameters or cryptographic attestations of package behavior.
 
-Runtime containers use runsc, disabled networking, a read-only root and workspace, UID 65534, no capabilities, no-new-privileges, 1 GiB memory, one CPU, 128 processes, and private 64 MiB temporary storage. The harness mount is read-only. A separately bounded result filesystem and execution supervision arrive with the probe runner.
+Runtime containers use runsc, disabled networking, a read-only root and workspace, UID 65534, no capabilities, no-new-privileges, 1 GiB memory, one CPU, 128 guest processes/threads, and private 64 MiB temporary storage. The host cgroup allows 512 tasks for systrap overhead. The harness mount is read-only. The probe runner provides a separately bounded result filesystem and external supervision.
 
 Deno uses `-A` inside this OS boundary, manual `node_modules`, `--cached-only`, no config/lock discovery, and a private `/tmp/deno` derived cache. Bun receives `--no-install`. Node uses ordinary runtime semantics without experimental permission restrictions. All runtimes see the same actual sealed npm tree.
 
@@ -24,6 +24,6 @@ Deno uses `-A` inside this OS boundary, manual `node_modules`, `--cached-only`, 
 
 After `pnpm build`, run `sudo "$(command -v node)" scripts/runtime-smoke.mjs` on a disposable Linux amd64/runsc host. CI builds all four derived images and checks exact versions, conditional export behavior, synchronous ESM, TLA require failures, a shipped N-API addon, missing native prerequisites, read-only workspace enforcement, and Deno's private offline cache. A small published package is prepared once and loaded by every runtime from the same verified snapshot.
 
-This gate qualifies the selected runtime profiles. Full hostile-code containment and lifecycle qualification remain delivery slice 06; public execution stays disabled until the launch gates pass.
+This gate qualifies the selected runtime profiles. The [worker lifecycle gate](worker-lifecycle.md) adds hostile-code containment and recovery qualification; public execution stays disabled until the launch gates pass.
 
 Primary references: [Node package exports](https://nodejs.org/api/packages.html), [Deno run flags](https://docs.deno.com/runtime/reference/cli/run/), [Deno Node compatibility](https://docs.deno.com/runtime/fundamentals/node/), [Bun automatic installation](https://bun.sh/docs/runtime/auto-install), and [distroless image contents](https://github.com/GoogleContainerTools/distroless/blob/main/README.md).

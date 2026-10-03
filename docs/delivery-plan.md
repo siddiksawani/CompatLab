@@ -36,7 +36,7 @@ Before PR 12, review results with ten developers/maintainers and confirm five co
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.
-- Keep CI actions and dependencies pinned. Require `Quality`, `Sandbox smoke`, `Preparation qualification`, `Runtime qualification`, and `Engine qualification` for merges; add engine/worker/database/browser gates as those components arrive.
+- Keep CI actions and dependencies pinned. Require `Quality`, `Sandbox smoke`, `Preparation qualification`, `Runtime qualification`, `Engine qualification`, and `Worker qualification` for merges; add engine/worker/database/browser gates as those components arrive.
 - Use squash merges and delete merged branches. No automatic merges or direct pushes to `main`.
 - Keep PR descriptions focused on the resulting behavior, tests, and limitations. Update this sequence when a slice's scope changes.
 

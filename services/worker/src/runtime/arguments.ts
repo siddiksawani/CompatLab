@@ -8,6 +8,7 @@ export function runtimeContainerArguments(options: {
   workspace: string;
   harness: string;
   output: string;
+  operation?: "run" | "create";
 }): string[] {
   const { name, image, workspace, harness, output } = options;
   if (!/^compatlab-runtime-[a-z0-9-]+$/.test(name) || !/^sha256:[a-f0-9]{64}$/.test(image.imageId))
@@ -16,7 +17,7 @@ export function runtimeContainerArguments(options: {
     if (!isAbsolute(path) || /[,\r\n]/.test(path))
       throw new TypeError("Runtime mounts require unambiguous absolute paths.");
   return [
-    "run",
+    options.operation ?? "run",
     "--name",
     name,
     "--label=compatlab.managed=true",
@@ -30,7 +31,7 @@ export function runtimeContainerArguments(options: {
     "--memory=1g",
     "--memory-swap=1g",
     "--cpus=1",
-    "--pids-limit=128",
+    "--pids-limit=512",
     "--ulimit=nproc=128:128",
     "--ulimit=core=0:0",
     "--log-driver=none",

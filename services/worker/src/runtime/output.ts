@@ -1,5 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { command } from "../command.js";
+import { cleanup } from "../lifecycle/cleanup.js";
 
 export class OutputVolume {
   private constructor(readonly path: string) {}
@@ -22,17 +23,19 @@ export class OutputVolume {
     }
   }
   async dispose(): Promise<void> {
-    let mounted = true;
-    try {
-      await command("mountpoint", ["--quiet", this.path]);
-    } catch (error) {
-      if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 32)
-        throw error;
-      mounted = false;
-    }
-    if (mounted) {
-      await command("umount", [this.path]);
-    }
-    await rm(this.path, { recursive: true, force: true });
+    await cleanup(async () => {
+      let mounted = true;
+      try {
+        await command("mountpoint", ["--quiet", this.path]);
+      } catch (error) {
+        if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 32)
+          throw error;
+        mounted = false;
+      }
+      if (mounted) {
+        await command("umount", [this.path]);
+      }
+      await rm(this.path, { recursive: true, force: true });
+    });
   }
 }

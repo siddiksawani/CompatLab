@@ -1,5 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
+import { CleanupError } from "./lifecycle/cleanup.js";
 
 const exec = promisify(execFile);
 export async function command(file: string, args: string[], timeout = 10_000): Promise<string> {
@@ -91,6 +92,6 @@ export async function removeContainer(name: string): Promise<void> {
       typeof error.stderr !== "string" ||
       !error.stderr.includes(`No such container: ${name}`)
     )
-      throw error;
+      throw new CleanupError(error);
   }
 }
