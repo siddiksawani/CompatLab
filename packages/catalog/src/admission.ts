@@ -1,10 +1,18 @@
 import type { ScanState } from "@compatlab/contracts";
 import type { ResolvedArtifact } from "@compatlab/engine";
-import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, exists, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "./database.js";
 import { allowedSelection, findCachedReport } from "./policy.js";
-import { auditEvents, jobs, packages, packageVersions, preparations, scans } from "./schema.js";
+import {
+  auditEvents,
+  jobs,
+  packages,
+  packageVersions,
+  preparations,
+  scans,
+  workers,
+} from "./schema.js";
 import { revisionSchema, validateArtifact } from "./validation.js";
 
 export const ADMISSION_POLICY = {
@@ -105,6 +113,7 @@ export async function admitScan(
     const [reusable] = await tx
       .select({ id: preparations.id })
       .from(preparations)
+      .leftJoin(workers, eq(workers.id, preparations.ownerWorkerId))
       .leftJoin(
         scans,
         and(eq(scans.preparationId, preparations.id), eq(scans.matrixId, options.matrixId)),
@@ -116,8 +125,26 @@ export async function admitScan(
           eq(preparations.platform, selected.platform),
           isNull(scans.id),
           or(
-            inArray(preparations.state, ["pending", "preparing"]),
-            and(eq(preparations.state, "ready"), eq(preparations.snapshotAvailable, true)),
+            and(
+              inArray(preparations.state, ["pending", "preparing"]),
+              exists(
+                tx
+                  .select({ id: jobs.id })
+                  .from(jobs)
+                  .where(
+                    and(
+                      eq(jobs.preparationId, preparations.id),
+                      eq(jobs.kind, "preparation"),
+                      inArray(jobs.state, ["queued", "leased", "running"]),
+                    ),
+                  ),
+              ),
+            ),
+            and(
+              eq(preparations.state, "ready"),
+              eq(preparations.snapshotAvailable, true),
+              eq(workers.state, "healthy"),
+            ),
           ),
         ),
       )

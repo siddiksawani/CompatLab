@@ -18,7 +18,7 @@ The SQL migration is the schema authority. `src/schema.ts` provides typed Drizzl
 
 There are thirteen domain tables plus migration history. Matrix membership is a join table so PostgreSQL can reject a run whose image is outside its scan's matrix. Membership must be complete, contiguous, ordered, and contain unique profiles and image IDs. A deferred constraint checks the complete matrix at transaction commit.
 
-Artifact observations, matrix configuration, memberships, runtime definitions, scan identities and report content cannot be edited or deleted in place. A runtime digest can be registered again with the same definition; the original registration timestamp is retained. Image quarantine and matrix enablement are separate mutable fields. Once preparation results are known, their lock, snapshot generation, digest and locality cannot change. Eviction only clears availability. PostgreSQL verifies the SHA-256 of retained lock bytes.
+Artifact observations, matrix configuration, memberships, runtime definitions, scan identities and report content cannot be edited or deleted in place. A runtime digest can be registered again with the same definition; the original registration timestamp is retained. Image quarantine and matrix enablement are separate mutable fields. Once preparation results are known, their lock, snapshot generation and digest cannot change. Worker assignment can change while preparation is in progress; sealed snapshot locality is fixed. Eviction only clears availability. PostgreSQL verifies the SHA-256 of retained lock bytes.
 
 Variable data has database byte bounds: manifests 2 MiB, locks 16 MiB, preparation diagnostics 256 KiB, run evidence/reports 20 MiB, run logs 4 MiB, and small configuration/audit data 16 KiB. The engine's stricter per-session and whole-scan budgets still apply before persistence. These column limits do not replace result validation in the later private job API or classifier.
 
@@ -32,7 +32,7 @@ Admission follows this order:
 2. Reject disabled/unknown matrices, quarantined images, integrity anomalies and active package/artifact/image/harness/probe blocks.
 3. Return a valid report for the requested classifier revision, or an already active scan, without consuming new-work quota.
 4. Enforce `admission_v1`: at most twenty requested scans globally, two active scans per requester, and five minutes between new scans of the same package/version. Active means requested, preparing, running or aggregating. Replies include a retry interval.
-5. Reuse a pending or available ready preparation where the selected matrix has no previous scan. Otherwise create a new resolution generation. Insert the scan and, when a new preparation is needed, its unique preparation job atomically.
+5. Reuse a pending preparation with an active job, or an available ready preparation on a healthy worker, where the selected matrix has no previous scan. Otherwise create a new resolution generation. Insert the scan and, when a new preparation is needed, its unique preparation job atomically.
 
 The cooldown spans matrices and requesters. A completed scan without a usable report can be admitted again after the cooldown, using a new preparation generation. Admission does not silently reset an old scan or change its matrix. Ready/preparing shared preparations retain their original preparation job; slice 08 will advance dependent scans and create run/aggregation jobs.
 

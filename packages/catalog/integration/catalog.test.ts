@@ -161,6 +161,25 @@ describe("concurrent admission", () => {
     const second = admitted(await admitScan(catalog.db, source, options(selection.matrixId)));
     expect(second.preparationId).not.toBe(first.preparationId);
   });
+  it.each(["drained", "evicted", "orphaned"])(
+    "does not reuse a %s preparation for another matrix",
+    async (condition) => {
+      const { source, scan } = await seedOldScan(catalog.db, selection.matrixId);
+      if (condition !== "orphaned") await readyPreparation(catalog.db, scan.preparationId);
+      if (condition === "drained")
+        await catalog.db.update(schema.workers).set({ state: "drained" });
+      if (condition === "evicted")
+        await catalog.db.update(schema.preparations).set({ snapshotAvailable: false });
+      const other = await registerMatrix(
+        catalog.db,
+        matrix(selection.imageIds.slice(0, 2), "other_v1"),
+        actor,
+      );
+      const next = admitted(await admitScan(catalog.db, source, options(other)));
+      expect(next.preparationId).not.toBe(scan.preparationId);
+      expect(await catalog.db.select().from(schema.jobs)).toHaveLength(2);
+    },
+  );
   it("rolls back all admission records if job creation fails", async () => {
     await catalog.pool.query(
       "CREATE FUNCTION reject_test_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'qualification rollback'; END $$; CREATE TRIGGER reject_test_job BEFORE INSERT ON jobs FOR EACH ROW EXECUTE FUNCTION reject_test_job()",
@@ -333,6 +352,10 @@ describe("catalog policy and historical reports", () => {
 
 describe("database constraints", () => {
   it("retains natural keys and immutable matrix/image definitions", async () => {
+    await catalog.db.insert(schema.packages).values({ name: "immutable-package" });
+    await expect(
+      catalog.pool.query("UPDATE packages SET name='changed-package'"),
+    ).rejects.toMatchObject({ code: "23514" });
     expect(
       await registerRuntime(catalog.db, { ...image(0), builtAt: new Date().toISOString() }, actor),
     ).toBe(selection.imageIds[0]);
@@ -349,6 +372,11 @@ describe("database constraints", () => {
     ).rejects.toMatchObject({ code: "23514" });
     await expect(
       catalog.pool.query("DELETE FROM matrix_members WHERE matrix_id = $1", [selection.matrixId]),
+    ).rejects.toMatchObject({ code: "23514" });
+    await expect(
+      catalog.pool.query("UPDATE matrix_members SET position=5 WHERE matrix_id=$1 AND position=0", [
+        selection.matrixId,
+      ]),
     ).rejects.toMatchObject({ code: "23514" });
     await expect(
       catalog.pool.query(
@@ -435,6 +463,27 @@ describe("database constraints", () => {
         "INSERT INTO preparations(artifact_id,profile_revision,platform,resolution_generation) SELECT artifact_id,profile_revision,platform,resolution_generation FROM preparations LIMIT 1",
       ),
     ).rejects.toMatchObject({ code: "23505" });
+  });
+  it("permits preparation worker retries before sealing and freezes locality afterwards", async () => {
+    const scan = admitted(await admitScan(catalog.db, artifact(), options(selection.matrixId)));
+    const owners = await catalog.db
+      .insert(schema.workers)
+      .values(
+        [0, 1].map((index) => ({
+          tokenHash: hash(`worker-${index}`),
+          capabilities: {},
+          capacity: 1,
+        })),
+      )
+      .returning();
+    for (const owner of owners)
+      await catalog.db
+        .update(schema.preparations)
+        .set({ ownerWorkerId: owner.id, state: "preparing" });
+    await readyPreparation(catalog.db, scan.preparationId);
+    await expect(
+      catalog.pool.query("UPDATE preparations SET owner_worker_id=$1", [owners[0]?.id]),
+    ).rejects.toMatchObject({ code: "23514" });
   });
   it("bounds JSON and retained lock bytes in PostgreSQL", async () => {
     const fixture = await seedReport(catalog.db, selection.matrixId);

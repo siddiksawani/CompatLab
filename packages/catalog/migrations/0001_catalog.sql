@@ -199,7 +199,8 @@ CREATE INDEX audit_events_created ON audit_events(created_at);
 
 CREATE FUNCTION preserve_identity() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF TG_OP = 'DELETE' OR (to_jsonb(OLD) - TG_ARGV) IS DISTINCT FROM (to_jsonb(NEW) - TG_ARGV) THEN
+  -- PostgreSQL exposes TG_ARGV as NULL when a trigger has no arguments.
+  IF TG_OP = 'DELETE' OR (to_jsonb(OLD) - coalesce(TG_ARGV, ARRAY[]::text[])) IS DISTINCT FROM (to_jsonb(NEW) - coalesce(TG_ARGV, ARRAY[]::text[])) THEN
     RAISE EXCEPTION 'immutable % identity', TG_TABLE_NAME USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
@@ -218,11 +219,14 @@ CREATE TRIGGER audit_identity BEFORE UPDATE OR DELETE ON audit_events FOR EACH R
 CREATE FUNCTION preserve_preparation_result() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE field text;
 BEGIN
-  FOREACH field IN ARRAY ARRAY['lock_bytes', 'lock_digest', 'snapshot_generation', 'tree_digest', 'owner_worker_id'] LOOP
+  FOREACH field IN ARRAY ARRAY['lock_bytes', 'lock_digest', 'snapshot_generation', 'tree_digest'] LOOP
     IF to_jsonb(OLD)->field <> 'null'::jsonb AND to_jsonb(OLD)->field IS DISTINCT FROM to_jsonb(NEW)->field THEN
       RAISE EXCEPTION 'immutable preparation result' USING ERRCODE = '23514';
     END IF;
   END LOOP;
+  IF OLD.snapshot_generation IS NOT NULL AND NEW.owner_worker_id IS DISTINCT FROM OLD.owner_worker_id THEN
+    RAISE EXCEPTION 'immutable sealed snapshot locality' USING ERRCODE = '23514';
+  END IF;
   IF OLD.state = 'ready' AND NEW.state <> 'ready' THEN
     RAISE EXCEPTION 'a ready preparation cannot change state' USING ERRCODE = '23514';
   END IF;
