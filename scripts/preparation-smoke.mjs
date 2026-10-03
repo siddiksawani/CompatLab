@@ -204,6 +204,9 @@ try {
         args: ["ci", ...NPM_FLAGS],
         signal: AbortSignal.timeout(60_000),
       });
+      assert.equal(await exists(join(volume.path, "escape")), false);
+      assert.equal(await exists(join(base, "escape")), false);
+      assert.equal(await exists("/tmp/compatlab-archive-escape"), false);
       if (scenario === "integrity") {
         assert.notEqual(result.exitCode, 0);
         assert.equal(result.failure, "artifact_integrity_mismatch");
@@ -211,6 +214,9 @@ try {
       } else if (["expanded", "inodes"].includes(scenario)) {
         assert.equal(result.failure, "preparation_limit_exceeded", JSON.stringify(result));
         assert.match(`${result.stderr}\n${result.stderrTail}`, /ENOSPC/);
+      } else if (scenario === "traversal") {
+        assert.equal(result.failure, "archive_rejected");
+        assert.match(result.stderrTail, /TAR_ENTRY_ERROR path contains/);
       } else {
         assert.equal(result.exitCode, 0, JSON.stringify(result));
         assert.equal(result.failure, undefined, JSON.stringify(result));
@@ -237,9 +243,6 @@ try {
             false,
           );
         }
-        assert.equal(await exists(join(volume.path, "escape")), false);
-        assert.equal(await exists(join(base, "escape")), false);
-        assert.equal(await exists("/tmp/compatlab-archive-escape"), false);
         assert.deepEqual(
           await readBoundedFile(join(workspace, "package-lock.json"), 16 * 1024 ** 2),
           lockBytes,

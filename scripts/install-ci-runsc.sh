@@ -16,3 +16,11 @@ sudo tar -xjf "$runsc_dir/gvisor.tar.bz2" -C /usr/local/bin
 sudo /usr/local/bin/runsc install -- --platform=systrap
 sudo systemctl restart docker
 runsc --version
+for attempt in {1..6}; do
+  if timeout 5 docker info --format '{{json .Runtimes}}' | jq --exit-status 'has("runsc")' >/dev/null; then
+    exit 0
+  fi
+  sleep 1
+done
+echo "Docker did not become ready with runsc after restarting." >&2
+exit 1
