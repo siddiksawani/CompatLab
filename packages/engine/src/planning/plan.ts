@@ -41,7 +41,7 @@ export function planProbes(bytes: Uint8Array, profiles: readonly RuntimeProfile[
   });
   const runtimes = profiles.map((profile) => {
     const root = entry(".", mixedMap ? false : rootValue, profile);
-    if (exported === undefined) {
+    if (exported === undefined || exported === null) {
       const main = typeof manifest.main === "string" ? manifest.main : "index.js";
       const mode = executableTarget(main)
         ? { applicable: true as const, reason: "resolution_required" as const }

@@ -41,7 +41,16 @@ for (const id of [
         !(id === "tla" && mode === "commonjs"),
         "A TLA module unexpectedly supported synchronous require.",
       );
-      const expected = id === "conditions" ? kind : id === "order" ? "first" : id;
+      const expected =
+        id === "conditions"
+          ? kind === "deno" && mode === "commonjs"
+            ? "node"
+            : kind
+          : (id === "node-addons" && kind === "deno") || (id === "module-sync" && kind === "bun")
+            ? "default"
+            : id === "order"
+              ? "first"
+              : id;
       assert.equal(mode === "esm" ? (value.default ?? value).value : value.value, expected);
       observations.push({ id, mode, outcome: "pass" });
     }

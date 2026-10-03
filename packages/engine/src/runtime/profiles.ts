@@ -80,10 +80,10 @@ export function exportConditions(kind: RuntimeKind, mode: ProbeMode): Set<string
   return new Set([
     "default",
     "node",
-    "node-addons",
-    "module-sync",
+    ...(kind === "deno" ? [] : ["node-addons"]),
+    ...(kind === "bun" ? [] : ["module-sync"]),
     mode === "esm" ? "import" : "require",
-    ...(kind === "node" ? [] : [kind]),
+    ...(kind === "bun" || (kind === "deno" && mode === "esm") ? [kind] : []),
   ]);
 }
 

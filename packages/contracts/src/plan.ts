@@ -35,7 +35,7 @@ export const probePlanSchema = z.strictObject({
   schemaVersion: z.literal(1),
   revision: z.literal(PROBE_PLAN_REVISION),
   name: z.string().max(214),
-  version: z.string().max(128),
+  version: z.string().max(256),
   runtimes: z.array(runtimePlanSchema).min(1).max(16),
   omissions: z.strictObject({
     counts: z.record(omissionReasonSchema, z.number().int().nonnegative()),

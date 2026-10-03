@@ -39,6 +39,7 @@ let live;
 try {
   const workspace = join(volume.path, "workspace");
   await mkdir(workspace);
+  await chmod(workspace, 0o777);
   await createRuntimeFixtures(workspace);
   const addon = join(workspace, "node_modules/compatlab-fixture-native/addon.node");
   await command("cc", [

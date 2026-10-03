@@ -44,6 +44,21 @@ describe("public entry planning", () => {
       expect.objectContaining({ target: "./bun.js" }),
       expect.objectContaining({ target: "./deno.js" }),
     ]);
+    expect(result.runtimes[3]?.root.commonjs).toMatchObject({ target: "./node.js" });
+    for (const [condition, enabled] of [
+      ["node-addons", [true, true, true, false]],
+      ["module-sync", [true, true, false, true]],
+    ] as const) {
+      const conditional = planProbes(
+        manifest({ exports: { [condition]: "./enabled.js", default: "./default.js" } }),
+        RUNTIME_PROFILES,
+      );
+      expect(conditional.runtimes.map((runtime) => runtime.root.esm)).toEqual(
+        enabled.map((value) =>
+          expect.objectContaining({ target: value ? "./enabled.js" : "./default.js" }),
+        ),
+      );
+    }
   });
   it("records stable explicit order and exclusions without expanding patterns", () => {
     const result = plan({
@@ -81,6 +96,10 @@ describe("public entry planning", () => {
       plan({ type: "module", main: "./missing.js", module: "./alternate.js" }).runtimes[0]?.root
         .commonjs,
     ).toEqual({ applicable: true, reason: "resolution_required" });
+    expect(plan({ exports: null }).runtimes[0]?.root.commonjs).toEqual({
+      applicable: true,
+      reason: "resolution_required",
+    });
   });
   it("limits executable subpaths, bounds omission samples, and supports variable matrices", () => {
     const exports: Record<string, string> = {};

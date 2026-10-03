@@ -8,6 +8,8 @@ The initial profiles are Node 24.21.0 (LTS), Node 26.10.0 (Current), Bun 1.4.2, 
 
 Only explicit public executable subpaths are selected, up to 512 across the chosen matrix. Wildcards are not expanded. Assets, declarations, blocked exports, invalid subpaths, and overflow have separate omission counts and bounded samples. A path can be applicable for one runtime or mode and excluded for another. Invalid or uncertain target syntax stays eligible for a runtime resolution attempt, preserving diagnostic evidence.
 
+Conditions are runtime-specific: Deno's `deno` condition applies to ESM imports, while its `createRequire()` follows Node conditions without `node-addons`. Bun includes `bun` and `node-addons`; its pinned profile does not select `module-sync`. These differences are checked against real runtimes, not inferred from a shared Node condition list.
+
 Manifest fields and Linux/x64/glibc declarations are static evidence. Shipped `.node` files remain eligible. Lifecycle scripts and build files are indicators, not proof of an unmet prerequisite. Loading and classification arrive in subsequent slices.
 
 ## Image boundary
