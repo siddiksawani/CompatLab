@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { chown, lstat, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { PREPARATION_INSTALLER_IMAGE, PREPARATION_PROFILE_REVISION } from "@compatlab/contracts";
 import {
   artifactIntegrity,
   assertPackageName,
@@ -21,9 +22,8 @@ import { installerFailure, NpmOutput } from "./npm-output.js";
 import { createPreparationNetwork, type PreparationNetwork } from "./proxy.js";
 import { WorkspaceVolume } from "./volume.js";
 
-export const INSTALLER_IMAGE =
-  "node:24.21.0-bookworm-slim@sha256:5cbc7caba8c2c0f0bca675d1b61b9f2857e1cf1853c6164ee9dd409501a936e7";
-export const PREPARATION_PROFILE = "npm_11_19_0_linux_amd64_v2";
+export const INSTALLER_IMAGE = PREPARATION_INSTALLER_IMAGE;
+export const PREPARATION_PROFILE = PREPARATION_PROFILE_REVISION;
 export const NPM_FLAGS = [
   "--ignore-scripts",
   "--no-audit",

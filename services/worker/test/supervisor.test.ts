@@ -44,6 +44,20 @@ beforeEach(() => {
 });
 
 describe("scan snapshot ownership", () => {
+  it("refreshes remote reservations without dropping pins held by an executing job", async () => {
+    const supervisor = await ExecutionSupervisor.open("/state");
+    await supervisor.withScan(async (remote) => {
+      supervisor.replaceSnapshotPins(["reserved"], remote);
+      expect(await preparation(supervisor)).toEqual(new Set(["reserved"]));
+      await supervisor.withScan(async (active) => {
+        supervisor.pinSnapshot("reserved", active);
+        supervisor.replaceSnapshotPins([], remote);
+        expect(await preparation(supervisor)).toEqual(new Set(["reserved"]));
+      });
+      expect(await preparation(supervisor)).toEqual(new Set());
+    });
+    await supervisor.close();
+  });
   it("releases successful and failed scan pins before subsequent collection", async () => {
     const supervisor = await ExecutionSupervisor.open("/state");
     try {

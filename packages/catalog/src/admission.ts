@@ -1,6 +1,6 @@
 import type { ScanState } from "@compatlab/contracts";
 import type { ResolvedArtifact } from "@compatlab/engine";
-import { and, count, desc, eq, exists, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "./database.js";
 import { allowedSelection, findCachedReport } from "./policy.js";
@@ -143,7 +143,13 @@ export async function admitScan(
             and(
               eq(preparations.state, "ready"),
               eq(preparations.snapshotAvailable, true),
+              isNotNull(preparations.snapshotId),
+              isNotNull(preparations.installedManifest),
               eq(workers.state, "healthy"),
+              eq(workers.recoveryRequired, false),
+              isNotNull(workers.sessionId),
+              isNull(workers.revokedAt),
+              sql`${workers.lastSeenAt} > ${new Date(now.getTime() - 30_000)}`,
             ),
           ),
         ),

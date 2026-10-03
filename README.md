@@ -2,7 +2,7 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports will distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
-The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog adds immutable identities, transactional admission, quotas and cache policy checks. Durable dispatch and the website are still in progress. See [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
+The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog and private control service provide transactional admission, durable leases, authenticated result ingestion and snapshot-local dispatch. Hosted report classification and the website are still in progress. See [orchestration](docs/orchestration.md), [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 
@@ -35,9 +35,10 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 |---|---|
 | `apps/cli` | Prerequisite reporting, local checks and reproduction |
 | `packages/engine` | Registry resolution, analysis, planning and bounded probe orchestration |
-| `packages/catalog` | PostgreSQL migrations, identities, transactional admission and policy-aware cache lookup |
+| `packages/catalog` | PostgreSQL identities, admission, leases, result validation, recovery and cache lookup |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
 | `services/worker` | Preparation, sealed storage, runtime supervision and local evidence storage |
+| `services/control` | Private WireGuard-bound worker API and reconciliation |
 | `harnesses` | Root and sequential batch loading/checkpoint protocol |
 | `runtime-images` | Digest-pinned minimal runtime image recipe |
 | `fixtures` | Authored module/protocol and preparation archive fixtures |

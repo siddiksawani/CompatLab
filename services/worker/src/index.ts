@@ -9,6 +9,7 @@ export * from "./preparation/prepare.js";
 export * from "./preparation/proxy.js";
 export * from "./preparation/reuse.js";
 export * from "./preparation/volume.js";
+export * from "./remote/agent.js";
 export * from "./runtime/arguments.js";
 export * from "./runtime/backend.js";
 export * from "./runtime/images.js";

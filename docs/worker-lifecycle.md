@@ -10,7 +10,7 @@ Before admission, recovery removes CompatLab-labeled containers, preparation net
 
 Changing the state directory retires the previous directory's snapshot cache before admitting work in the new directory. Retained reports and lock files stay in the previous directory. Returning there requires rebuilding evicted snapshots explicitly. This prevents multiple state directories from accumulating independent cache budgets.
 
-Creation and startup are separate Docker operations. Cancellation after creation prevents package startup, and every execution path removes the container before output cleanup. The supervisor combines user cancellation, the scan deadline and host-lease loss. It drains active operations before releasing ownership. Durable remote job leases and result submission arrive in slice 08; this host lock is not a substitute for them.
+Creation and startup are separate Docker operations. Cancellation after creation prevents package startup, and every execution path removes the container before output cleanup. The supervisor combines user cancellation, the scan deadline and host-lease loss. It drains active operations before releasing ownership. The [remote agent](orchestration.md) also enforces durable job leases with a monotonic deadline and renews them while submitting results. Local ownership and remote leases protect different failure boundaries.
 
 Low-level preparation/backend functions remain internal interfaces for the supervisor and qualification fixtures. They must not be exposed directly through an API. The local CLI uses the supervisor for its full lifecycle.
 

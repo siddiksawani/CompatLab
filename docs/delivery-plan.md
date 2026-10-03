@@ -29,14 +29,14 @@ PRs 2–6 collectively close the M0/M1/M2 feasibility and worker gates. Stop and
 
 PRs 7–11 close durable-control, public-interface and launch gates. Include PostgreSQL integration tests when storage is introduced and browser tests when pages exist. Broad load characterization is required before increasing public limits. Deployment remains a separate release decision after the code and gates are ready.
 
-Before PR 12, review results with ten developers/maintainers and confirm five concrete requests for recurring monitoring or probes. Do not expand scope simply to finish the numbered list. Before PR 14, review custom-probe authority, inputs and sandbox exposure. Optional private/team execution needs an additional external security review.
+On October 3, 2026, the maintainer explicitly authorized completing PRs 8–14 without waiting for the customer-demand gate. The targets of ten developer/maintainer reviews and five concrete monitoring/probe requests remain product-validation work, not completed evidence. Before PR 14, review custom-probe authority, inputs and sandbox exposure. Optional private/team execution needs an additional external security review. Public deployment still requires the launch gates and its own release decision.
 
 ## Repository workflow
 
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.
-- Keep CI actions and dependencies pinned. Require `Quality`, `Sandbox smoke`, `Preparation qualification`, `Runtime qualification`, `Engine qualification`, `Worker qualification`, and `Database qualification` for merges; add the browser gate when the website arrives.
+- Keep CI actions and dependencies pinned. Require `Quality`, `Sandbox smoke`, `Preparation qualification`, `Runtime qualification`, `Engine qualification`, `Worker qualification`, `Database qualification`, and `Orchestration qualification` for merges; add the browser gate when the website arrives.
 - Use squash merges and delete merged branches. No automatic merges or direct pushes to `main`.
 - Keep PR descriptions focused on the resulting behavior, tests, and limitations. Update this sequence when a slice's scope changes.
 

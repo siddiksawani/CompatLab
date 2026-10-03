@@ -78,6 +78,10 @@ export class ExecutionSupervisor {
   pinSnapshot(id: string, scanId: string): void {
     this.scan(scanId).snapshots.add(id);
   }
+  replaceSnapshotPins(ids: readonly string[], scanId: string): void {
+    const scan = this.scan(scanId);
+    scan.snapshots = new Set(ids);
+  }
   private get protectedSnapshots(): ReadonlySet<string> {
     return new Set([...this.scans.values()].flatMap((scan) => [...scan.snapshots]));
   }
