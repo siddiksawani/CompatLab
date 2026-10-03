@@ -238,6 +238,15 @@ importers:
         specifier: 4.0.2
         version: 4.0.2
 
+  services/control:
+    dependencies:
+      '@compatlab/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
+      '@compatlab/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+
   services/worker:
     dependencies:
       '@compatlab/contracts':

@@ -3,11 +3,23 @@ import { promisify } from "node:util";
 import { CleanupError } from "./lifecycle/cleanup.js";
 
 const exec = promisify(execFile);
-export async function command(file: string, args: string[], timeout = 10_000): Promise<string> {
-  const { stdout } = await exec(file, args, { timeout, maxBuffer: 128 * 1024, encoding: "utf8" });
+export async function command(
+  file: string,
+  args: string[],
+  timeout = 10_000,
+  signal?: AbortSignal,
+): Promise<string> {
+  const { stdout } = await exec(file, args, {
+    timeout,
+    maxBuffer: 128 * 1024,
+    encoding: "utf8",
+    signal,
+    killSignal: "SIGKILL",
+  });
   return stdout.trim();
 }
-export const docker = (args: string[], timeout?: number) => command("docker", args, timeout);
+export const docker = (args: string[], timeout?: number, signal?: AbortSignal) =>
+  command("docker", args, timeout, signal);
 
 export type CommandResult = {
   exitCode: number | null;

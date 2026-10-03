@@ -3,7 +3,7 @@ import type { CatalogReader } from "./database.js";
 import { lookupSchema, type ReportLookup } from "./validation.js";
 
 // The outer query supplies p (package), v (artifact), and m (matrix).
-const allowed = sql`
+export const selectionAllowed = sql`
   NOT v.integrity_anomaly AND m.enabled
   AND NOT EXISTS (
     SELECT 1 FROM matrix_members mm JOIN runtime_images ri ON ri.id = mm.image_id
@@ -23,7 +23,7 @@ export async function allowedSelection(db: CatalogReader, artifactId: string, ma
   const result = await db.execute<{ profile: string; platform: string }>(sql`
     SELECT m.preparation_profile AS profile, m.platform FROM package_versions v
     JOIN packages p ON p.id = v.package_id CROSS JOIN matrices m
-    WHERE v.id = ${artifactId} AND m.id = ${matrixId} AND ${allowed}`);
+    WHERE v.id = ${artifactId} AND m.id = ${matrixId} AND ${selectionAllowed}`);
   return result.rows[0];
 }
 
@@ -40,7 +40,7 @@ export async function findCachedReport(
     WHERE v.id = ${lookup.artifactId} AND m.id = ${lookup.matrixId}
       AND r.classifier_revision = ${lookup.classifierRevision}
       AND s.state IN ('completed', 'inconclusive')
-      AND r.invalidated_at IS NULL AND r.replaced_by IS NULL AND ${allowed}
+      AND r.invalidated_at IS NULL AND r.replaced_by IS NULL AND ${selectionAllowed}
     ORDER BY r.created_at DESC, r.id LIMIT 1`);
   return result.rows[0] ?? null;
 }

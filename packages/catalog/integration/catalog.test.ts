@@ -615,6 +615,7 @@ describe("database constraints", () => {
         state,
         attempt: 1,
         attemptToken: randomUUID(),
+        sessionId: randomUUID(),
         workerId: preparation.ownerWorkerId,
         leaseExpiresAt: new Date(Date.now() + 30_000),
         deadlineAt: new Date(Date.now() + 900_000),
@@ -645,6 +646,111 @@ describe("database constraints", () => {
   });
 });
 
+it("upgrades legacy snapshots without replacing their reports or treating them as dispatchable", async () => {
+  const upgrade = await database();
+  try {
+    const migrations = await catalogMigrations();
+    await migrateCatalog(upgrade.pool, migrations.slice(0, 1));
+    const selected = await seedMatrix(upgrade.db);
+    const source = artifact("legacy-fixture");
+    const pkg = (
+      await upgrade.db.insert(schema.packages).values({ name: source.name }).returning()
+    )[0];
+    if (!pkg) throw new Error("Fixture package missing.");
+    const version = (
+      await upgrade.db
+        .insert(schema.packageVersions)
+        .values({
+          packageId: pkg.id,
+          version: source.version,
+          integrity: source.integrity,
+          tarballUrl: source.tarballUrl,
+          manifest: source.manifest,
+        })
+        .returning()
+    )[0];
+    if (!version) throw new Error("Fixture artifact missing.");
+    const owner = (
+      await upgrade.pool.query(
+        "INSERT INTO workers(token_hash,capabilities,capacity,state,last_seen_at) VALUES ($1,'{}',3,'healthy',now()) RETURNING id",
+        [hash("legacy-worker")],
+      )
+    ).rows[0];
+    const lock = Buffer.from('{"lockfileVersion":3}');
+    const prep = (
+      await upgrade.pool.query(
+        "INSERT INTO preparations(artifact_id,profile_revision,platform,state,lock_bytes,lock_digest,snapshot_generation,tree_digest,owner_worker_id,snapshot_available) VALUES ($1,'npm_11_19_0_linux_amd64_v2','linux_amd64_glibc','ready',$2,$3,gen_random_uuid(),$4,$5,true) RETURNING id",
+        [version.id, lock, hash(lock.toString()), hash("legacy-tree"), owner.id],
+      )
+    ).rows[0];
+    const scan = (
+      await upgrade.pool.query(
+        "INSERT INTO scans(preparation_id,matrix_id,state,admission_policy,requested_at) VALUES ($1,$2,'completed','admission_v1',now()-interval '10 minutes') RETURNING id",
+        [prep.id, selected.matrixId],
+      )
+    ).rows[0];
+    const payload = { schemaVersion: 1, evidence: "retained legacy observation" };
+    const report = (
+      await upgrade.pool.query(
+        "INSERT INTO reports(scan_id,classifier_revision,payload) VALUES ($1,'classifier_v1',$2) RETURNING id",
+        [scan.id, payload],
+      )
+    ).rows[0];
+    const pendingPreparation = (
+      await upgrade.pool.query(
+        "INSERT INTO preparations(artifact_id,profile_revision,platform,state,owner_worker_id) VALUES ($1,'npm_11_19_0_linux_amd64_v2','linux_amd64_glibc','preparing',$2) RETURNING id",
+        [version.id, owner.id],
+      )
+    ).rows[0];
+    const pendingScan = (
+      await upgrade.pool.query(
+        "INSERT INTO scans(preparation_id,matrix_id,state,admission_policy,requested_at,started_at,deadline_at) VALUES ($1,$2,'preparing','admission_v1',now()-interval '10 minutes',now(),now()+interval '15 minutes') RETURNING id",
+        [pendingPreparation.id, selected.matrixId],
+      )
+    ).rows[0];
+    const pendingJob = (
+      await upgrade.pool.query(
+        "INSERT INTO jobs(kind,scan_id,preparation_id,state,attempt,attempt_token,worker_id,lease_expires_at,deadline_at) VALUES ('preparation',$1,$2,'leased',1,gen_random_uuid(),$3,now()+interval '30 seconds',now()+interval '15 minutes') RETURNING id",
+        [pendingScan.id, pendingPreparation.id, owner.id],
+      )
+    ).rows[0];
+    await migrateCatalog(upgrade.pool);
+    const recovered = (
+      await upgrade.db.select().from(schema.jobs).where(eq(schema.jobs.id, pendingJob.id))
+    )[0];
+    expect(recovered).toMatchObject({ state: "leased", cleanupRequired: true });
+    expect(recovered?.sessionId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(
+      await findCachedReport(upgrade.db, {
+        artifactId: version.id,
+        matrixId: selected.matrixId,
+        classifierRevision: "classifier_v1",
+      }),
+    ).toEqual({ reportId: report.id, scanId: scan.id });
+    expect((await upgrade.db.select().from(schema.reports))[0]?.payload).toEqual(payload);
+    expect((await upgrade.db.select().from(schema.workers))[0]).toMatchObject({
+      sessionId: null,
+      recoveryRequired: true,
+    });
+    const other = await registerMatrix(
+      upgrade.db,
+      matrix(selected.imageIds.slice(0, 2), "upgrade_v1"),
+      actor,
+    );
+    const fresh = admitted(await admitScan(upgrade.db, source, options(other)));
+    expect(fresh.preparationId).not.toBe(prep.id);
+    await expect(
+      upgrade.pool.query("UPDATE preparations SET lock_bytes=$1,lock_digest=$2 WHERE id=$3", [
+        Buffer.from("changed"),
+        hash("changed"),
+        prep.id,
+      ]),
+    ).rejects.toThrow("immutable preparation result");
+  } finally {
+    await upgrade.dispose();
+  }
+});
+
 it("serializes migrations, verifies checksums, rolls back failures and preserves rows across additive upgrades", async () => {
   const upgrade = await database();
   try {
@@ -658,7 +764,7 @@ it("serializes migrations, verifies checksums, rolls back failures and preserves
       ),
     ).rejects.toThrow("history differs");
     const failed = {
-      id: "0002_upgrade.sql",
+      id: "9998_upgrade.sql",
       sql: "CREATE TABLE upgrade_probe(id integer); SELECT * FROM missing_upgrade_table",
     };
     await expect(migrateCatalog(upgrade.pool, [...initial, failed])).rejects.toThrow();
@@ -668,9 +774,9 @@ it("serializes migrations, verifies checksums, rolls back failures and preserves
     expect(
       (await upgrade.pool.query("SELECT count(*)::int AS count FROM schema_migrations")).rows[0]
         .count,
-    ).toBe(1);
+    ).toBe(initial.length);
     const additive = {
-      id: "0002_upgrade.sql",
+      id: "9998_upgrade.sql",
       sql: "ALTER TABLE packages ADD COLUMN description text",
     };
     await migrateCatalog(upgrade.pool, [...initial, additive]);

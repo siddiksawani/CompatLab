@@ -11,7 +11,7 @@ import {
 import { createProbeBackend } from "../runtime/backend.js";
 import { CapacityPool, readHostCapacity } from "./capacity.js";
 import { acquireHostLease } from "./lease.js";
-import { collectSnapshots, recoverResources } from "./recovery.js";
+import { collectSnapshots, recoverResources, snapshotInventory } from "./recovery.js";
 import { privateDirectory } from "./storage.js";
 
 export class ExecutionSupervisor {
@@ -30,10 +30,14 @@ export class ExecutionSupervisor {
   private constructor(
     readonly stateDirectory: string,
     private readonly lease: Awaited<ReturnType<typeof acquireHostLease>>,
+    private readonly authorizeEviction?: (ids: string[]) => Promise<readonly string[]>,
   ) {
     this.capacity = new CapacityPool(() => readHostCapacity(stateDirectory));
   }
-  static async open(stateDirectory: string): Promise<ExecutionSupervisor> {
+  static async open(
+    stateDirectory: string,
+    options: { authorizeEviction?: (ids: string[]) => Promise<readonly string[]> } = {},
+  ): Promise<ExecutionSupervisor> {
     await assertPreparationHost();
     const state = await privateDirectory(stateDirectory);
     const lease = await acquireHostLease(state);
@@ -47,9 +51,9 @@ export class ExecutionSupervisor {
         await collectSnapshots(lease.previousState, new Set(), 0);
       }
       await recoverResources(state);
-      await collectSnapshots(state);
+      if (!options.authorizeEviction) await collectSnapshots(state);
       await lease.activate();
-      return new ExecutionSupervisor(state, lease);
+      return new ExecutionSupervisor(state, lease, options.authorizeEviction);
     } catch (error) {
       await lease.close();
       throw error;
@@ -78,6 +82,21 @@ export class ExecutionSupervisor {
   pinSnapshot(id: string, scanId: string): void {
     this.scan(scanId).snapshots.add(id);
   }
+  replaceSnapshotPins(ids: readonly string[], scanId: string): void {
+    const scan = this.scan(scanId);
+    scan.snapshots = new Set(ids);
+  }
+  snapshotInventory(): Promise<string[]> {
+    return snapshotInventory(this.stateDirectory);
+  }
+  collect(): Promise<number> {
+    return collectSnapshots(
+      this.stateDirectory,
+      this.protectedSnapshots,
+      8 * 1024 ** 3,
+      this.authorizeEviction,
+    );
+  }
   private get protectedSnapshots(): ReadonlySet<string> {
     return new Set([...this.scans.values()].flatMap((scan) => [...scan.snapshots]));
   }
@@ -90,7 +109,12 @@ export class ExecutionSupervisor {
     const combined = this.signal(signal, scanId);
     return this.track(
       this.capacity.run("preparation", scanId, combined, async () => {
-        await collectSnapshots(this.stateDirectory, this.protectedSnapshots, 6 * 1024 ** 3);
+        await collectSnapshots(
+          this.stateDirectory,
+          this.protectedSnapshots,
+          6 * 1024 ** 3,
+          this.authorizeEviction,
+        );
         const snapshot = await prepareArtifact(
           artifact,
           join(this.stateDirectory, "snapshots"),

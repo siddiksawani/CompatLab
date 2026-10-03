@@ -70,6 +70,7 @@ export async function collectSnapshots(
   stateDirectory: string,
   protectedIds: ReadonlySet<string> = new Set(),
   maximumBytes = 8 * 1024 ** 3,
+  authorizeEviction?: (ids: string[]) => Promise<readonly string[]>,
 ): Promise<number> {
   const directory = await privateDirectory(join(stateDirectory, "snapshots"));
   const retained: { id: string; path: string; bytes: number; created: number }[] = [];
@@ -102,15 +103,50 @@ export async function collectSnapshots(
     retained.push({ id, path, bytes: file.blocks * 512, created });
   }
   let total = retained.reduce((sum, item) => sum + item.bytes, 0);
+  const candidates = [];
+  let projected = total;
   for (const item of retained.sort((a, b) => a.created - b.created)) {
     if (protectedIds.has(item.id)) continue;
-    if (Date.now() - item.created > 7 * 24 * 60 * 60 * 1000 || total > maximumBytes) {
+    if (Date.now() - item.created > 7 * 24 * 60 * 60 * 1000 || projected > maximumBytes) {
+      candidates.push(item);
+      projected -= item.bytes;
+    }
+  }
+  const allowed = new Set(
+    authorizeEviction && candidates.length
+      ? await authorizeEviction(candidates.map((item) => item.id))
+      : candidates.map((item) => item.id),
+  );
+  for (const item of candidates)
+    if (allowed.has(item.id)) {
       await cleanup(() => disposeSnapshot(item.path));
       total -= item.bytes;
     }
-  }
   if (total > maximumBytes) throw new Error("Retained snapshots exceed the storage budget.");
   return total;
+}
+
+export async function snapshotInventory(stateDirectory: string): Promise<string[]> {
+  const directory = await privateDirectory(join(stateDirectory, "snapshots"));
+  const ids = [];
+  for (const id of await readdir(directory)) {
+    if (!uuid.test(id)) throw new Error("Unrecognized snapshot directory.");
+    try {
+      const path = await privateDirectory(join(directory, id));
+      const metadata = JSON.parse(
+        (await readBoundedFile(join(path, "snapshot.json"), 64 * 1024)).toString("utf8"),
+      );
+      if (metadata.schemaVersion === 1 && metadata.id === id && metadata.sealed === true)
+        ids.push(id);
+    } catch (error) {
+      if (
+        !(error instanceof SyntaxError) &&
+        !(typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")
+      )
+        throw error;
+    }
+  }
+  return ids;
 }
 async function disposeSnapshot(path: string): Promise<void> {
   const volume = join(path, "volume");

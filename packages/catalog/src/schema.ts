@@ -1,4 +1,4 @@
-import type { JobState, RuntimeImage, ScanState } from "@compatlab/contracts";
+import type { JobState, ProbePlan, RuntimeImage, ScanState } from "@compatlab/contracts";
 import {
   boolean,
   customType,
@@ -39,6 +39,9 @@ export const workers = pgTable("workers", {
   capabilities: jsonb("capabilities").$type<Record<string, unknown>>().notNull(),
   state: text("state").$type<"healthy" | "drained" | "quarantined">().notNull().default("drained"),
   capacity: integer("capacity").notNull(),
+  sessionId: uuid("session_id"),
+  recoveryRequired: boolean("recovery_required").notNull().default(true),
+  revokedAt: time("revoked_at"),
   lastSeenAt: time("last_seen_at"),
   createdAt: created(),
 });
@@ -55,6 +58,10 @@ export const preparations = pgTable("preparations", {
   lockBytes: bytes("lock_bytes"),
   lockDigest: text("lock_digest"),
   snapshotGeneration: uuid("snapshot_generation"),
+  snapshotId: uuid("snapshot_id"),
+  installerImage: text("installer_image"),
+  installedManifest: json("installed_manifest").$type<Record<string, unknown>>(),
+  metadata: json("metadata").$type<Record<string, unknown>>(),
   treeDigest: text("tree_digest"),
   ownerWorkerId: uuid("owner_worker_id"),
   snapshotAvailable: boolean("snapshot_available").notNull().default(false),
@@ -98,6 +105,7 @@ export const scans = pgTable("scans", {
   requesterExpiresAt: time("requester_expires_at").notNull(),
   admissionPolicy: text("admission_policy").notNull(),
   progressRevision: integer("progress_revision").notNull().default(0),
+  plan: jsonb("plan").$type<ProbePlan>(),
   requestedAt: time("requested_at").notNull().defaultNow(),
   startedAt: time("started_at"),
   deadlineAt: time("deadline_at"),
@@ -125,6 +133,8 @@ export const jobs = pgTable("jobs", {
   availableAt: time("available_at").notNull().defaultNow(),
   attempt: integer("attempt").notNull().default(0),
   attemptToken: uuid("attempt_token"),
+  sessionId: uuid("session_id"),
+  cleanupRequired: boolean("cleanup_required").notNull().default(false),
   workerId: uuid("worker_id"),
   leaseExpiresAt: time("lease_expires_at"),
   deadlineAt: time("deadline_at"),

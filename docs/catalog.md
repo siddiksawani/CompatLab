@@ -1,6 +1,6 @@
 # Persistent catalog and admission
 
-`@compatlab/catalog` is the private PostgreSQL data layer. It uses PostgreSQL 18.6, Drizzle ORM 0.45.3 and node-postgres 8.23.1. It reserves work and provides policy-aware report lookup. It does not dispatch jobs, expose an HTTP API, classify evidence, or execute packages. Those components arrive in slices 08–11.
+`@compatlab/catalog` is the private PostgreSQL data layer. It uses PostgreSQL 18.6, Drizzle ORM 0.45.3 and node-postgres 8.23.1. It reserves work, provides policy-aware report lookup, and owns durable scheduling transactions. The [private control API](orchestration.md) dispatches work to authenticated execution workers. Hosted classification and public reads arrive in slice 09.
 
 ## Data and identities
 
@@ -12,7 +12,7 @@ The SQL migration is the schema authority. `src/schema.ts` provides typed Drizzl
 | `preparations` | Profile/platform and resolution generation, retained lock bytes/digest, sealed snapshot generation, tree digest and worker locality |
 | `runtime_images`, `matrices`, `matrix_members` | Approved immutable runtime definitions and ordered matrix configuration |
 | `scans`, `runs` | Preparation/matrix identity, lifecycle, per-image/mode/group evidence and bounded logs |
-| `jobs`, `workers` | Durable work identities and fields for the later claim/lease protocol |
+| `jobs`, `workers` | Durable work, scoped credentials, supervisor sessions, leases and cleanup reconciliation |
 | `reports` | Immutable classifier revisions/payloads with separate invalidation/replacement metadata |
 | `blocks`, `audit_events` | Policy exclusions and append-only administrative history |
 
@@ -22,7 +22,7 @@ Artifact identity and manifests, matrix configuration, memberships, runtime defi
 
 A runtime digest can be registered again with the same definition; the original registration timestamp is retained. Image quarantine and matrix enablement are separate mutable fields. Matrix image IDs and artifact/image block subjects are normalized UUIDs. Once preparation results are known, their lock, snapshot generation and digest cannot change. Worker assignment can change while preparation is in progress; sealed snapshot locality is fixed. Eviction only clears availability. PostgreSQL verifies the SHA-256 of retained lock bytes.
 
-Variable data has database byte bounds: manifests 2 MiB, tag observations 64 KiB, locks 16 MiB, preparation diagnostics 256 KiB, run evidence/reports 20 MiB, run logs 4 MiB, and small configuration/audit data 16 KiB. The engine's stricter per-session and whole-scan budgets still apply before persistence. These column limits do not replace result validation in the later private job API or classifier.
+Variable data has database byte bounds: manifests 2 MiB, tag observations 64 KiB, locks 16 MiB, preparation metadata 4 MiB, stored plans 8 MiB, preparation diagnostics 256 KiB, run evidence/reports 20 MiB, run logs 4 MiB, and small configuration/audit data 16 KiB. The engine's stricter per-session and whole-scan budgets still apply before persistence. The private API divides those budgets among the actual planned runtime groups and validates checkpoint consistency before persistence.
 
 ## Admission transaction
 
@@ -36,7 +36,7 @@ Admission follows this order:
 4. Enforce `admission_v1`: at most twenty requested scans globally, two active scans per requester, and five minutes between new scans of the same package/version. Active means requested, preparing, running or aggregating. Replies include a retry interval.
 5. Reuse a pending preparation with an active job, or an available ready preparation on a healthy worker, where the selected matrix has no previous scan. Otherwise create a new resolution generation. Insert the scan and, when a new preparation is needed, its unique preparation job atomically.
 
-The cooldown spans matrices and requesters. A completed scan without a usable report can be admitted again after the cooldown, using a new preparation generation. Admission does not silently reset an old scan or change its matrix. Ready/preparing shared preparations retain their original preparation job; slice 08 will advance dependent scans and create run/aggregation jobs.
+The cooldown spans matrices and requesters. A completed scan without a usable report can be admitted again after the cooldown, using a new preparation generation. Admission does not silently reset an old scan or change its matrix. Ready/preparing shared preparations retain their original preparation job; reconciliation advances dependent scans and creates run/aggregation jobs. Ready reuse requires complete snapshot metadata and a recently seen, reconciled owner session. Legacy snapshots remain historical evidence and cannot be silently dispatched through the new protocol.
 
 All callers that create public work must use this transaction. The database account belongs only to trusted control services. Raw worker clients must not receive it. Registration, quarantine, blocking and invalidation functions are private administrative primitives, not authentication or public endpoints; operator authorization arrives with the control and operations slices. Actor/reason records are required for their mutations.
 

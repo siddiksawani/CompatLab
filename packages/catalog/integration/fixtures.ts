@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
+  PREPARATION_INSTALLER_IMAGE,
   PROBE_HARNESS_REVISION,
   PROBE_PLAN_REVISION,
   PROBE_POLICY_REVISION,
@@ -109,6 +110,9 @@ export async function readyPreparation(db: CatalogDatabase, preparationId: strin
         capabilities: { platform: "linux_amd64_glibc" },
         capacity: 3,
         state: "healthy",
+        recoveryRequired: false,
+        sessionId: randomUUID(),
+        lastSeenAt: new Date(),
       })
       .returning()
   )[0];
@@ -122,6 +126,9 @@ export async function readyPreparation(db: CatalogDatabase, preparationId: strin
       lockDigest: hash(lock.toString()),
       treeDigest: hash("tree"),
       snapshotGeneration: randomUUID(),
+      snapshotId: randomUUID(),
+      installerImage: PREPARATION_INSTALLER_IMAGE,
+      installedManifest: { name: "fixture", version: "1.0.0" },
       ownerWorkerId: worker.id,
       snapshotAvailable: true,
     })

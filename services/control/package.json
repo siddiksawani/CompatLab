@@ -1,0 +1,16 @@
+{
+  "name": "@compatlab/control",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "dependencies": {
+    "@compatlab/catalog": "workspace:*",
+    "@compatlab/contracts": "workspace:*"
+  }
+}

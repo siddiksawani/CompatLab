@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { streamCommand } from "../src/command.js";
+import { command, streamCommand } from "../src/command.js";
 
 describe("bounded command output", () => {
+  it("aborts a blocking command before its longer process timeout", async () => {
+    await expect(
+      command(
+        process.execPath,
+        ["-e", "setInterval(()=>{},1000)"],
+        180_000,
+        AbortSignal.timeout(100),
+      ),
+    ).rejects.toMatchObject({ name: "AbortError", code: "ABORT_ERR" });
+  });
   it("retains stream prefixes while counting discarded bytes", async () => {
     const result = await streamCommand(
       process.execPath,
