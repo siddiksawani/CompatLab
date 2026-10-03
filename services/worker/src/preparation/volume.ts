@@ -79,8 +79,12 @@ export class WorkspaceVolume {
       "--output",
       "OPTIONS",
     ]);
-    if (!options.split(",").includes("ro"))
-      throw new PreparationError("archive_rejected", "The retained workspace is not sealed.");
+    const flags = new Set(options.split(","));
+    if (!["ro", "nodev", "nosuid"].every((flag) => flags.has(flag)) || flags.has("noexec"))
+      throw new PreparationError(
+        "archive_rejected",
+        "The retained workspace mount policy changed.",
+      );
     return volume;
   }
 

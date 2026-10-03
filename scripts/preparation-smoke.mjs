@@ -56,6 +56,32 @@ try {
   assert.equal(reopened.workspace, live.workspace);
   assert.equal(reopened.generation, live.generation);
   assert.equal(reopened.tree.digest, live.tree.digest);
+  const metadataPath = join(live.directory, "snapshot.json");
+  const metadataBytes = await readFile(metadataPath);
+  await writeFile(metadataPath, "{truncated");
+  await assert.rejects(() => reuseSnapshot(live.id, base, artifact), {
+    classification: "artifact_integrity_mismatch",
+  });
+  await writeFile(metadataPath, metadataBytes);
+  for (const policy of ["ro,dev,nosuid,exec", "ro,nodev,suid,exec", "ro,nodev,nosuid,noexec"]) {
+    await command("mount", ["-o", `remount,${policy}`, join(live.directory, "volume")]);
+    await assert.rejects(() => reuseSnapshot(live.id, base, artifact), {
+      classification: "archive_rejected",
+    });
+  }
+  await command("mount", ["-o", "remount,ro,nodev,nosuid,exec", join(live.directory, "volume")]);
+  const launchFailure = await runInstaller({
+    name: `compatlab-missing-network-${randomUUID()}`,
+    workspace: live.workspace,
+    state: live.workspace,
+    network: { name: `compatlab-absent-${randomUUID()}`, jobIp: "192.0.2.3", proxyIp: "192.0.2.2" },
+    args: ["--version"],
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(launchFailure.failure, "sandbox_start_failed");
+  process.stdout.write(
+    "reuse: corrupt metadata and altered mount policies rejected; launch failures remain infrastructure errors\n",
+  );
   const probe =
     "const fs=require('node:fs');try{fs.writeFileSync('/workspace/node_modules/is-number/index.js','changed');process.exit(1)}catch(e){if(e.code!=='EROFS')throw e}console.log('sealed')";
   for (let index = 0; index < 2; index++)

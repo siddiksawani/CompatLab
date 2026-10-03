@@ -11,6 +11,12 @@ const observe = (text: string) => {
 };
 
 describe("npm failure evidence", () => {
+  it.each([125, 126, 127])(
+    "keeps Docker launch exit %i separate from package failures",
+    (exitCode) => {
+      expect(installerFailure(exitCode, observe(""), available)).toBe("sandbox_start_failed");
+    },
+  );
   it("retains and recognizes terminal errors after a discarded log prefix", async () => {
     const output = new NpmOutput();
     const result = await streamCommand(

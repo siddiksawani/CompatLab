@@ -25,9 +25,16 @@ export async function reuseSnapshot(
   await assertPreparationHost();
   const directory = join(resolve(stateDirectory), id);
   const workspace = join(directory, "volume", "workspace");
-  const metadata: unknown = JSON.parse(
-    (await readBoundedFile(join(directory, "snapshot.json"), 64 * 1024)).toString("utf8"),
-  );
+  const metadataBytes = await readBoundedFile(join(directory, "snapshot.json"), 64 * 1024);
+  let metadata: unknown;
+  try {
+    metadata = JSON.parse(new TextDecoder("utf8", { fatal: true }).decode(metadataBytes));
+  } catch {
+    throw new PreparationError(
+      "artifact_integrity_mismatch",
+      "The retained snapshot metadata is corrupt.",
+    );
+  }
   const storedArtifact = record(metadata) && record(metadata.artifact) ? metadata.artifact : {};
   if (
     !record(metadata) ||

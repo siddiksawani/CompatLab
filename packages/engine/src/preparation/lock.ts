@@ -18,6 +18,7 @@ export type PreparationClassification =
   | "archive_rejected"
   | "dependency_install_failed"
   | "preparation_limit_exceeded"
+  | "sandbox_start_failed"
   | "runner_unavailable";
 export class PreparationError extends Error {
   override readonly name = "PreparationError";
