@@ -134,12 +134,27 @@ try {
         entries: ["compatlab-hostile-cpu"],
         startIndex: 0,
       };
-      const timer = signal ? setTimeout(() => signal.abort(), 1500) : null;
+      let cgroup;
+      const operation = backend.run(input, image, timeout);
       try {
-        const result = await backend.run(input, image, timeout);
+        if (signal) {
+          cgroup = await inspectRunningCgroup();
+          signal.abort();
+        }
+        const result = await operation;
         assert.equal(result.stopReason, reason, JSON.stringify(result));
+        if (cgroup)
+          assert.equal(
+            await readFile(join(cgroup, "cgroup.procs"), "utf8").catch((error) => {
+              if (error.code === "ENOENT") return "";
+              throw error;
+            }),
+            "",
+            "Cancelled sandbox retained host processes.",
+          );
       } finally {
-        if (timer) clearTimeout(timer);
+        signal?.abort();
+        await operation;
       }
       assert.deepEqual(await readdir(jobs), []);
     }
@@ -173,6 +188,33 @@ try {
   server.close();
   await volume.dispose();
   await rm(base, { recursive: true, force: true });
+}
+
+async function inspectRunningCgroup() {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const names = (
+      await docker(["ps", "--filter", "name=compatlab-runtime-", "--format", "{{.Names}}"])
+    ).split("\n");
+    const name = names.find((name) => name && name !== siblingName);
+    if (name) {
+      const pid = await docker(["inspect", "--format", "{{.State.Pid}}", name]);
+      assert.match(pid, /^[1-9]\d*$/);
+      const record = await readFile(`/proc/${pid}/cgroup`, "utf8");
+      const path = /^0::(\/[^\n]*)$/m.exec(record)?.[1];
+      assert.ok(path && !path.split("/").includes(".."), "A cgroup v2 sandbox is required.");
+      const cgroup = join("/sys/fs/cgroup", path);
+      const [quota, period] = (await readFile(join(cgroup, "cpu.max"), "utf8"))
+        .trim()
+        .split(" ")
+        .map(Number);
+      assert.ok(quota > 0 && quota / period <= 1, "CPU quota must be at most one core.");
+      assert.equal((await readFile(join(cgroup, "memory.max"), "utf8")).trim(), "1073741824");
+      assert.equal((await readFile(join(cgroup, "pids.max"), "utf8")).trim(), "512");
+      return cgroup;
+    }
+    await delay(100);
+  }
+  throw new Error("The CPU fixture did not enter a measurable sandbox cgroup.");
 }
 
 async function qualifyPreparationNetwork() {

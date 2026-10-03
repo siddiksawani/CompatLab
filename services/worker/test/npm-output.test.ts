@@ -11,10 +11,13 @@ const observe = (text: string) => {
 };
 
 describe("npm failure evidence", () => {
-  it.each([125, 126, 127])(
-    "keeps Docker launch exit %i separate from package failures",
+  it.each([1, 125, 126, 127])(
+    "uses Docker state to distinguish launch failure from installer exit %i",
     (exitCode) => {
-      expect(installerFailure(exitCode, observe(""), available)).toBe("sandbox_start_failed");
+      expect(
+        installerFailure(exitCode, observe(""), { ...available, sandboxStartFailed: true }),
+      ).toBe("sandbox_start_failed");
+      expect(installerFailure(exitCode, observe(""), available)).toBe("dependency_install_failed");
     },
   );
   it("retains and recognizes terminal errors after a discarded log prefix", async () => {

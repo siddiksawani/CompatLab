@@ -31,7 +31,7 @@ export function runtimeContainerArguments(options: {
     "--memory=1g",
     "--memory-swap=1g",
     "--cpus=1",
-    "--pids-limit=128",
+    "--pids-limit=512",
     "--ulimit=nproc=128:128",
     "--ulimit=core=0:0",
     "--log-driver=none",

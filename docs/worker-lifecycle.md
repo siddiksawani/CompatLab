@@ -22,6 +22,8 @@ Sealed snapshots have an 8 GiB allocated-byte ceiling and a seven-day cache life
 
 Each runtime retains the existing memory/CPU, guest-process, temporary filesystem, output filesystem and emitted-log bounds. Output byte/inode exhaustion is recorded as a resource limit. Actual container state distinguishes OOM and package exit codes from Docker startup failures. The scan deadline continues through subsequent work and waits.
 
+The guest process/thread limit is 128 through `RLIMIT_NPROC`. The host cgroup allows 512 tasks to account for systrap's sandbox and executor threads. A host limit of 128 exhausted runtime overhead before the guest fork limit in qualification; policy v2 separates those limits. The worker gate measures the cgroup CPU, memory and host-task limits and checks that cancellation leaves no processes in that cgroup.
+
 ## Qualification
 
 On a disposable execution host with the pinned setup:

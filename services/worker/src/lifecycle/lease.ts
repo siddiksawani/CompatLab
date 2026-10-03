@@ -35,6 +35,7 @@ export async function acquireHostLease(
     { stdio: ["pipe", "pipe", "ignore"] },
   );
   const lost = new AbortController();
+  child.stdin.on("error", (error) => lost.abort(error));
   let closing = false;
   const exited = new Promise<void>((resolve) =>
     child.once("close", () => {
@@ -54,10 +55,14 @@ export async function acquireHostLease(
       };
       child.once("error", fail);
       child.once("close", fail);
-      child.stdout.once("data", (bytes) => {
-        clearTimeout(timer);
-        if (bytes.toString() !== "locked") fail();
-        else resolve();
+      let handshake = "";
+      child.stdout.on("data", (bytes) => {
+        handshake += bytes.toString();
+        if (!"locked".startsWith(handshake)) fail();
+        else if (handshake === "locked") {
+          clearTimeout(timer);
+          resolve();
+        }
       });
     });
     const bytes = await readBoundedFile(leasePath, 8192);
@@ -86,9 +91,12 @@ export async function acquireHostLease(
       async close() {
         if (closing) return;
         closing = true;
-        await writeFile(leasePath, JSON.stringify({ ...owner, active: false }), { mode: 0o600 });
-        child.stdin.end();
-        await exited;
+        try {
+          await writeFile(leasePath, JSON.stringify({ ...owner, active: false }), { mode: 0o600 });
+        } finally {
+          child.stdin.end();
+          await exited;
+        }
       },
     };
   } catch (error) {

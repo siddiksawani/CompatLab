@@ -245,6 +245,7 @@ export async function runInstaller(options: {
   const output = new NpmOutput();
   let result: CommandResult;
   let oomKilled = false;
+  let sandboxStartFailed = true;
   try {
     result = await streamCommand(
       "docker",
@@ -269,7 +270,7 @@ export async function runInstaller(options: {
         "--memory=2g",
         "--memory-swap=2g",
         "--cpus=1",
-        "--pids-limit=128",
+        "--pids-limit=512",
         "--ulimit=nproc=128:128",
         "--ulimit=core=0:0",
         "--log-driver=none",
@@ -297,15 +298,15 @@ export async function runInstaller(options: {
       ],
       signal,
     );
-    if (result.exitCode === 0 && result.termination === "completed")
+    if (result.exitCode === 0 && result.termination === "completed") {
       result = await streamCommand("docker", ["start", "--attach", name], signal, (bytes) =>
         output.write(bytes),
       );
-    if (result.exitCode !== 125 && result.exitCode !== 126 && result.exitCode !== 127) {
-      const observed = await docker(["inspect", "--format", "{{.State.OOMKilled}}", name]);
-      if (observed !== "true" && observed !== "false")
-        throw new Error("Container memory evidence is unavailable.");
-      oomKilled = observed === "true";
+      const observed = JSON.parse(await docker(["inspect", "--format", "{{json .State}}", name]));
+      if (typeof observed.OOMKilled !== "boolean" || typeof observed.StartedAt !== "string")
+        throw new Error("Container state evidence is unavailable.");
+      oomKilled = observed.OOMKilled;
+      sandboxStartFailed = Boolean(observed.Error) || observed.StartedAt.startsWith("0001-");
     }
   } finally {
     await removeContainer(name);
@@ -318,6 +319,7 @@ export async function runInstaller(options: {
     inodes: filesystem.ffree,
     oomKilled,
     downloadLimitExceeded,
+    sandboxStartFailed,
   });
   return { ...result, oomKilled, downloadLimitExceeded, ...(failure ? { failure } : {}) };
 }

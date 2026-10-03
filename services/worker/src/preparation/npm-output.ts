@@ -37,9 +37,10 @@ export function installerFailure(
     inodes: number;
     oomKilled?: boolean;
     downloadLimitExceeded?: boolean;
+    sandboxStartFailed?: boolean;
   },
 ): PreparationClassification | undefined {
-  if (exitCode === 125 || exitCode === 126 || exitCode === 127) return "sandbox_start_failed";
+  if (available.sandboxStartFailed) return "sandbox_start_failed";
   if (available.oomKilled || available.downloadLimitExceeded) return "preparation_limit_exceeded";
   if (available.bytes < 1024 * 1024 || available.inodes < 32) return "preparation_limit_exceeded";
   if (output.tarEntryError) return "archive_rejected";
