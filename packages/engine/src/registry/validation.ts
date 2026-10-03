@@ -1,4 +1,4 @@
-import { valid } from "semver";
+import { valid, validRange } from "semver";
 import ssri from "ssri";
 import validatePackageName from "validate-npm-package-name";
 import { RegistryError } from "./errors.js";
@@ -26,12 +26,20 @@ export function isExactVersion(version: unknown): version is string {
 }
 
 export function assertSelector(selector: string): void {
-  if (
-    typeof selector !== "string" ||
-    (!isExactVersion(selector) && !/^[a-zA-Z][a-zA-Z0-9._-]{0,127}$/.test(selector))
-  ) {
+  if (!isExactVersion(selector) && !isDistTag(selector)) {
     throw new TypeError("Select an exact version or a dist-tag; version ranges are not supported.");
   }
+}
+
+export function isDistTag(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 128 &&
+    value.isWellFormed() &&
+    encodeURIComponent(value) === value &&
+    validRange(value) === null
+  );
 }
 
 export function registryTarballUrl(value: unknown): string {

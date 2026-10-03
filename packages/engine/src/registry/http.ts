@@ -124,7 +124,11 @@ async function readJson(response: Response, maxBytes: number): Promise<unknown> 
   if (!contentType || !/^application\/(?:json|[a-z0-9.-]+\+json)$/.test(contentType)) {
     throw new RegistryError("package_manifest_invalid", "The registry response is not JSON.");
   }
-  if (Number(response.headers.get("content-length")) > maxBytes) {
+  const encoding = response.headers.get("content-encoding")?.trim().toLowerCase();
+  if (
+    (!encoding || encoding === "identity") &&
+    Number(response.headers.get("content-length")) > maxBytes
+  ) {
     throw new RegistryError(
       "preparation_limit_exceeded",
       "Registry metadata exceeds its byte limit.",

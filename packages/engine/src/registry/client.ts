@@ -5,6 +5,7 @@ import {
   artifactIntegrity,
   assertPackageName,
   assertSelector,
+  isDistTag,
   isExactVersion,
   isRecord,
   REGISTRY_ORIGIN,
@@ -102,7 +103,7 @@ export class RegistryClient {
     const tags: Record<string, string> = {};
     if (isRecord(result["dist-tags"])) {
       for (const [tag, version] of Object.entries(result["dist-tags"])) {
-        if (/^[a-zA-Z][a-zA-Z0-9._-]{0,127}$/.test(tag) && isExactVersion(version))
+        if (isDistTag(tag) && isExactVersion(version))
           Object.defineProperty(tags, tag, { value: version, enumerable: true });
       }
     }

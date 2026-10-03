@@ -57,6 +57,21 @@ describe("exact registry identity", () => {
     ]);
   });
 
+  it("lists and resolves numeric-leading tags using npm tag semantics", async () => {
+    const { client } = fixtureClient((url) =>
+      url.pathname === "/lab"
+        ? {
+            name: "lab",
+            versions: { "1.0.0": {} },
+            "dist-tags": { "0.14-stable": "1.0.0", "1.x": "1.0.0", "\ud800": "1.0.0" },
+          }
+        : manifest("lab", "1.0.0"),
+    );
+    expect((await client.versions("lab")).tags).toEqual({ "0.14-stable": "1.0.0" });
+    expect((await client.resolve("lab", "0.14-stable")).version).toBe("1.0.0");
+    await expect(client.resolve("lab", "1.x")).rejects.toThrow(TypeError);
+  });
+
   it("resolves an exact prerelease without fetching tags or requiring optional fields", async () => {
     const { client, requests } = fixtureClient(() => ({
       ...manifest("lab", "2.0.0-rc.1"),
@@ -270,6 +285,23 @@ describe("bounded HTTP over a real mock registry", () => {
       });
     },
   );
+
+  it("accepts gzip whose encoded size exceeds the decoded limit", async () => {
+    const data = Buffer.from(JSON.stringify("a".repeat(98)));
+    const encoded = gzipSync(data, { level: 0 });
+    expect(encoded.byteLength).toBeGreaterThan(data.byteLength);
+    serve = (_req, res) =>
+      res
+        .writeHead(200, {
+          "Content-Type": "application/json",
+          "Content-Encoding": "gzip",
+          "Content-Length": encoded.byteLength,
+        })
+        .end(encoded);
+    expect(await request(new RegistryHttp({ fetch: fixtureFetch }), data.byteLength)).toBe(
+      "a".repeat(98),
+    );
+  });
 
   it.each([Buffer.from("{"), Buffer.from([0xff, 0xfe])])(
     "rejects malformed JSON and UTF-8",
