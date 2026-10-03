@@ -105,6 +105,7 @@ try {
       await writeFile(join(workspace, "package.json"), JSON.stringify(manifest));
       const packageEntry = (pkg) => ({
         version: pkg.version,
+        hasInstallScript: Boolean(pkg.manifest?.scripts),
         resolved: pkg.tarballUrl,
         integrity: pkg.integrity,
         ...(pkg.manifest ?? {}),

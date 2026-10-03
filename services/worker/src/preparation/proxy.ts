@@ -103,6 +103,21 @@ export async function createPreparationNetwork(
     const match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d+)$/.exec(subnet);
     if (!match || Number(match[5]) > 24 || match.slice(1, 5).some((part) => Number(part) > 255))
       throw new Error("Unsupported private network allocation.");
+    // Docker requires an explicit subnet before it accepts fixed endpoint addresses.
+    await docker(["network", "rm", name]);
+    networkCreated = false;
+    await docker([
+      "network",
+      "create",
+      "--internal",
+      "--ipv6=false",
+      "--subnet",
+      subnet,
+      "--label",
+      "compatlab.managed=true",
+      name,
+    ]);
+    networkCreated = true;
     const prefix = `${match[1]}.${match[2]}.${match[3]}`;
     const proxyIp = `${prefix}.2`;
     const jobIp = `${prefix}.3`;
