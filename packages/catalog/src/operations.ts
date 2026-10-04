@@ -307,7 +307,7 @@ export async function removeScanLogs(db: CatalogDatabase, scanId: string, rawAct
   });
 }
 export async function operationStatus(db: CatalogDatabase) {
-  const [queue, workerRows, health, retention] = await Promise.all([
+  const [queue, workerRows, health, retention, availability] = await Promise.all([
     db.execute(
       sql`SELECT state,count(*)::int AS count,coalesce(max(extract(epoch FROM clock_timestamp()-requested_at))::int,0) AS "oldestSeconds" FROM scans WHERE state IN ('requested','preparing','running','aggregating') GROUP BY state`,
     ),
@@ -320,6 +320,11 @@ export async function operationStatus(db: CatalogDatabase) {
     db.execute(
       sql`SELECT (SELECT count(*)::int FROM runs WHERE logs IS NOT NULL AND logs_expire_at<now()) AS "expiredLogs",(SELECT count(*)::int FROM scans WHERE requester_key IS NOT NULL AND requester_expires_at<now()) AS "expiredRequesters",(SELECT count(*)::int FROM audit_events WHERE created_at<now()-interval '180 days') AS "expiredAudits"`,
     ),
+    db.execute(sql`SELECT m.id AS "matrixId",c.worker_guard_enabled AS enabled,
+      c.worker_guard_enabled AND (a.matrix_id IS NULL OR a.paused OR a.last_healthy_at IS NULL OR a.last_healthy_at<=clock_timestamp()-interval '180 seconds') AS paused,
+      a.last_healthy_at AS "lastHealthyAt",a.healthy_since AS "healthySince",a.checked_at AS "checkedAt"
+      FROM matrices m CROSS JOIN service_controls c LEFT JOIN worker_availability a ON a.matrix_id=m.id
+      WHERE m.enabled ORDER BY m.created_at DESC LIMIT 100`),
   ]);
   return {
     schemaVersion: 1,
@@ -328,6 +333,7 @@ export async function operationStatus(db: CatalogDatabase) {
     workers: workerRows.rows,
     health: health.rows[0],
     retention: retention.rows[0],
+    workerAvailability: availability.rows,
   };
 }
 export async function auditBackup(

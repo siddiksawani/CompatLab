@@ -3,6 +3,7 @@ import type { ResolvedArtifact } from "@compatlab/engine";
 import { and, count, desc, eq, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { allowedAssertion } from "./assertions/policy.js";
+import { workerAdmissionAvailable } from "./availability.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "./database.js";
 import { allowedSelection, findCachedReport } from "./policy.js";
 import {
@@ -17,7 +18,7 @@ import {
 import { adminActionSchema, revisionSchema, uuidSchema, validateArtifact } from "./validation.js";
 
 export const ADMISSION_POLICY = {
-  revision: "admission_v4",
+  revision: "admission_v5",
   queuedScans: 20,
   activePerRequester: 2,
   hourlyPerRequester: 10,
@@ -54,6 +55,7 @@ export type AdmissionResult =
         | "requester_rate"
         | "package_cooldown"
         | "admission_paused"
+        | "worker_unavailable"
         | "artifact_active";
       retryAfterSeconds: number;
     };
@@ -153,6 +155,8 @@ export async function admitScanInTransaction(
     ).rows[0]?.paused !== false
   )
     return { kind: "throttled", reason: "admission_paused", retryAfterSeconds: 60 };
+  if (!(await workerAdmissionAvailable(tx, options.matrixId)))
+    return { kind: "throttled", reason: "worker_unavailable", retryAfterSeconds: 60 };
   const millis = (
     await tx.execute<{ millis: string }>(
       sql`SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint AS millis`,

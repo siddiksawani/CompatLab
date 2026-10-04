@@ -5,6 +5,7 @@ export default defineConfig({
     include: ["{apps,packages,services}/**/test/**/*.test.ts", "tests/**/*.test.ts"],
     clearMocks: true,
     restoreMocks: true,
+    maxWorkers: 4,
     testTimeout: 10_000,
   },
 });

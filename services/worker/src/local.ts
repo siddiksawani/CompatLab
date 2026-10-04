@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   type AssertionBundle,
@@ -111,6 +111,7 @@ export async function checkCiPackage(
     await mkdir(staging, { mode: 0o700 });
     const archive = join(staging, "artifact.tgz");
     await writeFile(archive, bytes, { flag: "wx", mode: 0o444 });
+    await chmod(archive, 0o444);
     return await supervisor.withScan(async (scanId) => {
       const images = await localImages(state);
       await installerImages();

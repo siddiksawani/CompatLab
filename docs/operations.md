@@ -1,5 +1,7 @@
 # Operations and deployment
 
+The [production deployment plan](deployment.md) defines the VPS/home VM layout, Cloudflare changes, automatic delivery, outage protection and launch order. Enable the worker guard before public admission: it pauses new scans after three minutes without eligible heartbeats and reopens after two minutes of stable recovery, without clearing manual pauses. Use `admin worker-guard-enable` with a reason; inspect `status.workerAvailability` when diagnosing admission.
+
 The public MVP runs on a control VPS and a separate disposable Linux amd64 execution host. PostgreSQL, Next.js and Caddy share the control host. The worker has Docker and runsc; the web and control containers have neither a Docker socket nor package execution privileges. WireGuard connects the worker to the private control API. Public admission stays disabled until the release checklist passes and the maintainer chooses to launch.
 
 ## Build a release

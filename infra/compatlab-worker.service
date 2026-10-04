@@ -1,12 +1,12 @@
 [Unit]
 Description=CompatLab execution worker
-After=network-online.target docker.service wg-quick@wg0.service
-Requires=docker.service wg-quick@wg0.service
+After=network-online.target docker.service wg-quick@wg-compatlab.service
+Requires=docker.service wg-quick@wg-compatlab.service
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/compatlab
+WorkingDirectory=/opt/compatlab/current
 EnvironmentFile=/etc/compatlab/worker.env
 ExecStart=/opt/compatlab-node/bin/node services/worker/dist/remote/bin.js
 Restart=on-failure

@@ -11,6 +11,7 @@ import {
   migrateCatalog,
   operationStatus,
   readyWorker,
+  reconcileCatalog,
   registerMatrix,
   registerWorker,
   removeScanLogs,
@@ -19,6 +20,7 @@ import {
   retryInfrastructure,
   schema,
   setAdmissionPaused,
+  setWorkerGuard,
   setWorkerState,
   submitJobResult,
 } from "../src/index.js";
@@ -33,6 +35,7 @@ import {
   matrix,
   options,
   seedMatrix,
+  seedReport,
 } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
@@ -49,7 +52,9 @@ beforeEach(async () => {
   await catalog.pool.query(
     "TRUNCATE audit_events,blocks,reports,jobs,runs,scans,matrix_members,matrices,runtime_images,preparations,workers,package_versions,packages CASCADE",
   );
-  await catalog.pool.query("UPDATE service_controls SET admission_paused=false");
+  await catalog.pool.query(
+    "UPDATE service_controls SET admission_paused=false,worker_guard_enabled=false",
+  );
   selection = await seedMatrix(catalog.db);
   worker = await createWorker();
 });
@@ -75,6 +80,94 @@ async function claim() {
   return claimJob(catalog.db, worker.token, { sessionId: worker.sessionId });
 }
 describe("audited operator controls", () => {
+  async function stableWorker() {
+    await catalog.pool.query(
+      "UPDATE worker_availability SET healthy_since=now()-interval '121 seconds'",
+    );
+    await reconcileCatalog(catalog.db);
+  }
+  it("pauses after a three-minute outage, keeps cached reports, and requires stable recovery", async () => {
+    const cached = await seedReport(catalog.db, selection.matrixId);
+    await setWorkerGuard(catalog.db, true, actor);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+    await stableWorker();
+    const existing = artifact();
+    admitted(await admitScan(catalog.db, existing, options(selection.matrixId)));
+    await catalog.pool.query("UPDATE workers SET last_seen_at=now()-interval '181 seconds'");
+    await catalog.pool.query(
+      "UPDATE worker_availability SET last_healthy_at=now()-interval '181 seconds'",
+    );
+    // Admission fails closed even if the control maintenance loop has stopped.
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+    expect(await admitScan(catalog.db, cached.source, options(selection.matrixId))).toMatchObject({
+      kind: "cached",
+      reportId: cached.report.id,
+    });
+    expect(await admitScan(catalog.db, existing, options(selection.matrixId))).toMatchObject({
+      kind: "existing",
+    });
+    await reconcileCatalog(catalog.db);
+    worker.sessionId = randomUUID();
+    await readyWorker(catalog.db, worker.token, { sessionId: worker.sessionId });
+    await reconcileCatalog(catalog.db);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+    await stableWorker();
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      kind: "admitted",
+    });
+    expect((await operationStatus(catalog.db)).workerAvailability[0]).toMatchObject({
+      enabled: true,
+      paused: false,
+    });
+  });
+  it("does not resume manual pauses, drained workers, or incompatible matrices", async () => {
+    await setWorkerGuard(catalog.db, true, actor);
+    await setAdmissionPaused(catalog.db, true, actor);
+    await stableWorker();
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "admission_paused",
+    });
+    await setAdmissionPaused(catalog.db, false, actor);
+    await setWorkerState(catalog.db, worker.workerId, "drain", actor);
+    await catalog.pool.query(
+      "UPDATE worker_availability SET last_healthy_at=now()-interval '181 seconds'",
+    );
+    await reconcileCatalog(catalog.db);
+    await stableWorker();
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+    await setWorkerState(catalog.db, worker.workerId, "resume", actor);
+    await catalog.pool.query(
+      "UPDATE workers SET capabilities=jsonb_set(capabilities,'{policyRevision}','\"different_v1\"')",
+    );
+    await reconcileCatalog(catalog.db);
+    await stableWorker();
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+  });
+  it("does not treat an unobserved outage as continuously healthy", async () => {
+    await setWorkerGuard(catalog.db, true, actor);
+    await stableWorker();
+    await catalog.pool.query(
+      "UPDATE worker_availability SET last_healthy_at=now()-interval '181 seconds',checked_at=now()-interval '181 seconds'",
+    );
+    await reconcileCatalog(catalog.db);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "worker_unavailable",
+    });
+    await stableWorker();
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      kind: "admitted",
+    });
+  });
   it("returns only the remaining delay when an hourly request is about to expire", async () => {
     const source = admitted(await admitScan(catalog.db, artifact(), options(selection.matrixId)));
     const [original] = await catalog.db

@@ -2,6 +2,7 @@ import type { ProbePlan } from "@compatlab/contracts";
 import { PreparationError, planProbes, runtimeProfile } from "@compatlab/engine";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { allowedAssertion } from "../assertions/policy.js";
+import { refreshWorkerAvailability } from "../availability.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
 import { queueFinalReports } from "../reports/aggregate.js";
@@ -228,6 +229,7 @@ async function finishQueued(tx: CatalogTransaction, scanId: string, classificati
 export async function reconcileCatalog(db: CatalogDatabase) {
   return catalogTransaction(db, async (tx) => {
     const now = await databaseNow(tx);
+    await refreshWorkerAvailability(tx, now);
     await tx
       .update(workers)
       .set({ state: "drained", recoveryRequired: true })

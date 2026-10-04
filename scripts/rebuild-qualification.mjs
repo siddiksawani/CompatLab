@@ -15,6 +15,7 @@ const directory = await mkdtemp(join(tmpdir(), "compatlab-rebuild-")),
   original = join(directory, "original"),
   rebuilt = join(directory, "rebuilt");
 const started = performance.now();
+process.umask(0o077);
 try {
   const report = await checkPackage("is-number@7.0.0", { stateDirectory: original });
   const input = join(directory, "reproduction.json"),

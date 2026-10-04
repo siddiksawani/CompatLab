@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { createConnection } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -196,6 +196,7 @@ export async function createPreparationNetwork(
       `http_port ${proxyIp}:3128\nacl job src ${jobIp}/32\nhttp_access deny !job\n${SQUID_POLICY}`,
       { mode: 0o644, flag: "wx" },
     );
+    await chmod(config, 0o644);
     await docker([
       "create",
       "--name",

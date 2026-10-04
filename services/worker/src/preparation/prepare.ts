@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { chown, lstat, mkdir, rm, statfs, writeFile } from "node:fs/promises";
+import { chmod, chown, lstat, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   type CiArtifact,
@@ -126,6 +126,7 @@ async function prepareInput<Artifact extends ExecutionArtifact>(
     for (const path of [workspace, state]) {
       await mkdir(path);
       await chown(path, 65534, 65534);
+      await chmod(path, 0o755);
     }
     await writeFile(
       join(workspace, "package.json"),
@@ -137,13 +138,15 @@ async function prepareInput<Artifact extends ExecutionArtifact>(
       }),
       { mode: 0o644, flag: "wx" },
     );
+    await chmod(join(workspace, "package.json"), 0o644);
     network = await createPreparationNetwork(id, directory);
-    if (retainedLock)
+    if (retainedLock) {
       await writeFile(join(workspace, "package-lock.json"), retainedLock, {
         mode: 0o644,
         flag: "wx",
       });
-    else logs.push(await phase(["install", "--package-lock-only", ...NPM_FLAGS], "resolve"));
+      await chmod(join(workspace, "package-lock.json"), 0o644);
+    } else logs.push(await phase(["install", "--package-lock-only", ...NPM_FLAGS], "resolve"));
     const lockBytes = await readBoundedFile(join(workspace, "package-lock.json"), MAX_LOCK_BYTES);
     const lock = validateLock(lockBytes, artifact);
     logs.push(await phase(["ci", ...NPM_FLAGS], "install"));
@@ -154,6 +157,7 @@ async function prepareInput<Artifact extends ExecutionArtifact>(
         "npm changed the validated lock during installation.",
       );
     await mkdir(join(workspace, ".compatlab"), { mode: 0o755 });
+    await chmod(join(workspace, ".compatlab"), 0o755);
     await network.dispose();
     network = undefined;
     deadline.throwIfAborted();
