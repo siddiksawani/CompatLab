@@ -23,16 +23,20 @@ import {
   revokeBlock,
   schema,
   setAdmissionPaused,
+  setDeploymentPause,
   setMatrixEnabled,
   setWorkerGuard,
   setWorkerState,
+  updateWorkerDefinition,
 } from "@compatlab/catalog";
 import { z } from "zod";
 
 export const adminUsage = `Usage: compatlab admin status | migrate | retention
        compatlab admin pause | resume
        compatlab admin worker-guard-enable | worker-guard-disable
+       compatlab admin deployment-begin | deployment-end COMMIT
        compatlab admin worker-register capabilities.json
+       compatlab admin worker-update UUID capabilities.json
        compatlab admin worker-drain | worker-resume | worker-quarantine | worker-revoke UUID
        compatlab admin worker-retire UUID --confirm-host-destroyed
        compatlab admin runtime-register image.json | matrix-register matrix.json
@@ -54,7 +58,10 @@ const counts: Record<string, number> = {
   resume: 0,
   "worker-guard-enable": 0,
   "worker-guard-disable": 0,
+  "deployment-begin": 1,
+  "deployment-end": 1,
   "worker-register": 1,
+  "worker-update": 2,
   "worker-drain": 1,
   "worker-resume": 1,
   "worker-quarantine": 1,
@@ -72,7 +79,7 @@ const counts: Record<string, number> = {
   invalidate: 1,
   reclassify: 1,
   "host-status": 1,
-  "backup-record": 2,
+  "backup-record": 3,
   "worker-retire": 1,
   "remove-logs": 1,
 };
@@ -146,13 +153,24 @@ export async function runAdmin(
       case "retention":
         result = await applyRetention(db, actor);
         break;
+      case "deployment-begin":
+      case "deployment-end":
+        await setDeploymentPause(db, id, command === "deployment-begin", actor);
+        break;
       case "worker-guard-enable":
       case "worker-guard-disable":
         await setWorkerGuard(db, command === "worker-guard-enable", actor);
         break;
       case "backup-record":
-        await auditBackup(db, id, Number(positionals[1]), actor);
+        await auditBackup(db, id, Number(positionals[1]), actor, positionals[2]);
         break;
+      case "worker-update": {
+        const input = z
+          .object({ capabilities: z.unknown(), capacity: z.number().int().min(1).max(3) })
+          .parse(await jsonFile(positionals[1] ?? ""));
+        await updateWorkerDefinition(db, id, input.capabilities, input.capacity, actor);
+        break;
+      }
       case "worker-register": {
         const input = z
           .object({ capabilities: z.unknown(), capacity: z.number().int().min(1).max(3) })

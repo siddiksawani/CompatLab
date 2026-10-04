@@ -47,7 +47,7 @@ it("rejects malformed DNS and symlinked checkout destinations before creating se
     await rm(temporary, { recursive: true, force: true });
   }
 });
-it("removes failed encrypted uploads and expired local archives during a transport outage", async () => {
+it("retains completed encrypted archives during a transport outage and retries without dumping again", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "compatlab-backup-failure-"));
   try {
     const bins = join(temporary, "bin"),
@@ -79,7 +79,28 @@ it("removes failed encrypted uploads and expired local archives during a transpo
         },
       }),
     ).rejects.toThrow();
-    expect(await readdir(archives)).toEqual([]);
+    const retained = await readdir(archives);
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatch(/^compatlab-.*\.clb$/);
+    expect((await readFile(join(archives, retained[0] ?? ""))).subarray(0, 4).toString()).toBe(
+      "CLB1",
+    );
+    await writeFile(join(bins, "docker"), "#!/bin/sh\nexit 99\n", { mode: 0o700 });
+    await expect(
+      execute(process.execPath, ["infra/backup.mjs"], {
+        env: {
+          ...process.env,
+          PATH: `${bins}:${process.env.PATH}`,
+          QUALIFICATION_SSH_CALLS: calls,
+          BACKUP_DIRECTORY: archives,
+          BACKUP_KEY_FILE: key,
+          BACKUP_POSTGRES_CONTAINER: "fixture",
+          BACKUP_SSH_TARGET: "fixture:/private/backups",
+          BACKUP_RETRY_ONLY: "true",
+        },
+      }),
+    ).rejects.toThrow();
+    expect(await readdir(archives)).toEqual(retained);
     expect(await readFile(calls, "utf8")).toContain("rm -f -- '/private/backups/compatlab-");
     expect(await readFile(calls, "utf8")).toContain(".clb.partial'");
   } finally {

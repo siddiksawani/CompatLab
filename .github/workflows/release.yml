@@ -1,0 +1,68 @@
+name: Production release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+  qualification:
+    uses: ./.github/workflows/qualification.yml
+  publish:
+    name: Publish immutable release
+    if: github.ref == 'refs/heads/main'
+    needs: [quality, qualification]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and publish qualified artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash infra/publish-release.sh
+  deploy:
+    name: Deploy production
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy the current main release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_KEY: ${{ secrets.COMPATLAB_DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.COMPATLAB_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$current" != "$GITHUB_SHA" ]]; then
+            echo 'A newer main commit is awaiting its qualified deployment.'
+            exit 0
+          fi
+          install -d -m 700 "$RUNNER_TEMP/compatlab-ssh"
+          trap 'rm -f "$RUNNER_TEMP/compatlab-ssh/key"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/compatlab-ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/compatlab-ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/compatlab-ssh/"*
+          ssh -i "$RUNNER_TEMP/compatlab-ssh/key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/compatlab-ssh/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            compatlab-deploy@95.211.43.107 "deploy $GITHUB_SHA"

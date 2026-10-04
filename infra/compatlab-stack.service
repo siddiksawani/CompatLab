@@ -1,0 +1,17 @@
+[Unit]
+Description=CompatLab production stack
+After=network-online.target docker.service wg-quick@wg-compatlab.service
+Requires=docker.service wg-quick@wg-compatlab.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/compatlab/current
+Environment=COMPATLAB_CONFIG_DIR=/etc/compatlab
+ExecStartPre=/usr/bin/python3 infra/origin.py apply infra/cloudflare-ips.json
+ExecStart=/usr/bin/docker compose --project-name compatlab-prod --env-file release.env --file infra/compose.yaml up -d --wait --wait-timeout 120 postgres web control proxy
+TimeoutStartSec=180
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

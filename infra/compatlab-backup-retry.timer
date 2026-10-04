@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly retry of pending CompatLab backups
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+Unit=compatlab-backup-retry.service
+
+[Install]
+WantedBy=timers.target

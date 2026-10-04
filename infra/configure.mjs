@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +23,9 @@ const info = await lstat(path);
 if (!info.isDirectory() || ![0, process.getuid?.()].includes(info.uid) || (info.mode & 0o077) !== 0)
   throw new Error("Private configuration directory ownership or permissions are invalid.");
 const secret = () => randomBytes(32).toString("hex");
+const cloudflare = JSON.parse(
+  await readFile(new URL("./cloudflare-ips.json", import.meta.url), "utf8"),
+);
 const postgres = secret(),
   web = secret(),
   control = secret(),
@@ -32,7 +35,7 @@ const files = {
   "postgres.env": `POSTGRES_DB=compatlab\nPOSTGRES_PASSWORD=${postgres}\nWEB_DB_PASSWORD=${web}\nCONTROL_DB_PASSWORD=${control}\nOPERATOR_DB_PASSWORD=${operator}\n`,
   "web.env": `DATABASE_URL=postgres://compatlab_web:${web}@postgres:5432/compatlab\nPUBLIC_ORIGIN=https://${domain}\nPUBLIC_MATRIX_ID=00000000-0000-0000-0000-000000000000\nREQUESTER_SECRET=${secret()}\nPROXY_SECRET=${proxy}\nPUBLIC_SCANS_ENABLED=false\nMAINTAINER_AUTH_ENABLED=false\nMAINTAINER_EMAIL_ENABLED=false\nNEXT_TELEMETRY_DISABLED=1\n`,
   "control.env": `DATABASE_URL=postgres://compatlab_control:${control}@127.0.0.1:55432/compatlab\nCONTROL_BIND_ADDRESS=10.44.0.1\nCONTROL_WIREGUARD_INTERFACE=wg-compatlab\nCONTROL_PORT=4871\n`,
-  "proxy.env": `PUBLIC_DOMAIN=${domain}\nPROXY_SECRET=${proxy}\n`,
+  "proxy.env": `PUBLIC_DOMAIN=${domain}\nPUBLIC_WWW_DOMAIN=www.${domain}\nCANONICAL_DOMAIN=${domain}\nCLOUDFLARE_CIDRS=${[...cloudflare.ipv4, ...cloudflare.ipv6].join(" ")}\nPROXY_SECRET=${proxy}\n`,
   "notifications.env": "RESEND_API_KEY=\nNOTIFICATION_FROM=\n",
   "operator-url": `postgres://compatlab_operator:${operator}@127.0.0.1:55432/compatlab\n`,
   "migration-url": `postgres://postgres:${postgres}@127.0.0.1:55432/compatlab\n`,

@@ -6,6 +6,7 @@ import {
   abandonAttempt,
   admitScan,
   applyRetention,
+  auditBackup,
   cancelScan,
   claimJob,
   migrateCatalog,
@@ -20,9 +21,11 @@ import {
   retryInfrastructure,
   schema,
   setAdmissionPaused,
+  setDeploymentPause,
   setWorkerGuard,
   setWorkerState,
   submitJobResult,
+  updateWorkerDefinition,
 } from "../src/index.js";
 import { prepared } from "./execution-fixtures.js";
 import {
@@ -53,7 +56,7 @@ beforeEach(async () => {
     "TRUNCATE audit_events,blocks,reports,jobs,runs,scans,matrix_members,matrices,runtime_images,preparations,workers,package_versions,packages CASCADE",
   );
   await catalog.pool.query(
-    "UPDATE service_controls SET admission_paused=false,worker_guard_enabled=false",
+    "UPDATE service_controls SET admission_paused=false,worker_guard_enabled=false,deployment_release=NULL",
   );
   selection = await seedMatrix(catalog.db);
   worker = await createWorker();
@@ -80,6 +83,59 @@ async function claim() {
   return claimJob(catalog.db, worker.token, { sessionId: worker.sessionId });
 }
 describe("audited operator controls", () => {
+  it("keeps a retried backup's capture age and records its digest only once", async () => {
+    const capturedAt = new Date(Date.now() - 48 * 3600_000).toISOString();
+    await auditBackup(catalog.db, "f".repeat(64), 1024, actor, capturedAt);
+    await auditBackup(catalog.db, "f".repeat(64), 1024, actor);
+    const status = await operationStatus(catalog.db);
+    expect(new Date(String(status.health?.lastBackupAt)).toISOString()).toBe(capturedAt);
+    expect(
+      (await catalog.pool.query("SELECT id FROM audit_events WHERE action='backup_uploaded'")).rows,
+    ).toHaveLength(1);
+  });
+  it("requires an idle deployment and preserves administrative drain during worker replacement", async () => {
+    const row = (await catalog.db.select().from(schema.workers))[0];
+    if (!row) throw new Error("Missing worker fixture.");
+    await expect(
+      updateWorkerDefinition(catalog.db, worker.workerId, row.capabilities, 1, actor),
+    ).rejects.toThrow("Pause deployment");
+    await setDeploymentPause(catalog.db, "c".repeat(40), true, actor);
+    await setWorkerState(catalog.db, worker.workerId, "drain", actor);
+    await updateWorkerDefinition(catalog.db, worker.workerId, row.capabilities, 1, actor);
+    const sessionId = randomUUID();
+    await readyWorker(catalog.db, worker.token, { sessionId });
+    expect((await operationStatus(catalog.db)).workers[0]).toMatchObject({
+      acceptingJobs: false,
+      recoveryRequired: false,
+      capacity: 1,
+    });
+    await setDeploymentPause(catalog.db, "c".repeat(40), false, actor);
+    await setWorkerState(catalog.db, worker.workerId, "resume", actor);
+    admitted(await admitScan(catalog.db, artifact(), options(selection.matrixId)));
+    await setDeploymentPause(catalog.db, "d".repeat(40), true, actor);
+    await expect(
+      updateWorkerDefinition(catalog.db, worker.workerId, row.capabilities, 1, actor),
+    ).rejects.toThrow("finish all work");
+  });
+  it("keeps manual maintenance paused when its matching deployment completes", async () => {
+    const release = "a".repeat(40);
+    await setDeploymentPause(catalog.db, release, true, actor);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "admission_paused",
+    });
+    await expect(setDeploymentPause(catalog.db, "b".repeat(40), false, actor)).rejects.toThrow(
+      "different release",
+    );
+    await setAdmissionPaused(catalog.db, true, actor);
+    await setDeploymentPause(catalog.db, release, false, actor);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      reason: "admission_paused",
+    });
+    await setAdmissionPaused(catalog.db, false, actor);
+    expect(await admitScan(catalog.db, artifact(), options(selection.matrixId))).toMatchObject({
+      kind: "admitted",
+    });
+  });
   async function stableWorker() {
     await catalog.pool.query(
       "UPDATE worker_availability SET healthy_since=now()-interval '121 seconds'",

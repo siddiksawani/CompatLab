@@ -1,0 +1,13 @@
+[Unit]
+Description=CompatLab operational health and email alerts
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/compatlab/current
+ExecStart=/usr/bin/python3 infra/health.py
+TimeoutStartSec=90
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+

@@ -14,7 +14,7 @@
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit && tsc -p tsconfig.database-tests.json --noEmit && tsc -p tsconfig.browser-tests.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm lint && pnpm build && pnpm --filter @compatlab/web typecheck && pnpm typecheck:tests && pnpm test",
+    "check": "pnpm lint && pnpm build && pnpm --filter @compatlab/web typecheck && pnpm typecheck:tests && pnpm test && python3 -m unittest discover -s infra/tests -v",
     "cli": "node apps/cli/dist/bin.js",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
     "test:preparation": "node scripts/preparation-smoke.mjs",

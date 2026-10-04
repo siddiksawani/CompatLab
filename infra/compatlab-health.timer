@@ -1,0 +1,10 @@
+[Unit]
+Description=CompatLab health checks
+
+[Timer]
+OnBootSec=4m
+OnUnitActiveSec=2m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -150,7 +150,7 @@ export async function admitScanInTransaction(
   if (
     (
       await tx.execute<{ paused: boolean }>(
-        sql`SELECT admission_paused AS paused FROM service_controls WHERE singleton`,
+        sql`SELECT admission_paused OR deployment_release IS NOT NULL AS paused FROM service_controls WHERE singleton`,
       )
     ).rows[0]?.paused !== false
   )

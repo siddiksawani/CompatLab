@@ -1,6 +1,6 @@
 # Production deployment
 
-This is the approved design for `compatlab.me`. Launch verification is recorded separately; this plan is not evidence that installation has finished. Public maintainer accounts and monitoring stay disabled and marked coming soon.
+This is the approved design for `compatlab.me`. The [production runbook](production-operations.md) contains concrete commands and recovery procedures. Launch verification is recorded separately; this plan is not evidence that installation has finished. Public maintainer accounts and monitoring stay disabled and marked coming soon.
 
 ## Placement
 

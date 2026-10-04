@@ -143,6 +143,8 @@ try {
     join(config, "proxy.env"),
     "--env",
     "PUBLIC_DOMAIN=http://:8080",
+    "--env",
+    "PUBLIC_WWW_DOMAIN=http://:8081",
     "--mount",
     `type=bind,src=${resolve("infra/Caddyfile")},dst=/etc/caddy/Caddyfile,readonly`,
     "--tmpfs",
