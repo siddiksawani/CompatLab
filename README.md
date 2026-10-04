@@ -2,13 +2,15 @@
 
 CompatLab tests published npm artifacts across pinned JavaScript runtimes. Reports distinguish observed loading behavior, coverage, and environment limits from broader claims of compatibility.
 
+Production domain: [compatlab.me](https://compatlab.me). Read the [methodology](https://compatlab.me/methodology) before interpreting a passing report.
+
 The local engine resolves and prepares public npm artifacts with scripts disabled, seals their dependency tree, and probes them across pinned Node, Bun, and Deno runtimes. The CLI supports bounded checks and explicit snapshot reuse or lock-based rebuilds. The worker includes host ownership, capacity reservations, recovery and hostile-code qualification. The PostgreSQL catalog and private control service provide transactional admission, durable leases, authenticated result ingestion and snapshot-local dispatch. The anonymous website supports discovery, explicit scan requests, durable progress, report matrices, evidence and reproduction downloads. SSH operator controls, deployment packaging, encrypted off-host backups, retention and release-qualification gates are included; public admission defaults to disabled. See the [operations runbook](docs/operations.md) and [qualification record](docs/qualification.md). See [website setup](docs/website.md), [reports](docs/reports.md), [orchestration](docs/orchestration.md), [catalog and admission](docs/catalog.md), [worker lifecycle](docs/worker-lifecycle.md), [local execution](docs/probe-execution.md), [preparation](docs/preparation.md), and [runtime profiles](docs/runtime-profiles.md) for limits and prerequisites.
 
 ## Development
 
 [Named assertions and CI artifacts](docs/assertions-and-ci.md) extend the maintainer workflow. Assertions use commit-pinned offline fixtures and separate behavioral evidence. The Linux/runsc CLI can check a pre-publication archive with a distinct source identity and caller-supplied provenance.
 
-Optional [maintainer accounts](docs/maintainers.md) use GitHub App login, encrypted OAuth tokens, live repository authority checks, revocation and account quotas. Configure the App before enabling sign-in; public reports remain anonymous.
+The public maintainer section is **coming soon**. Its optional [account implementation](docs/maintainers.md) uses GitHub App login, encrypted OAuth tokens, live repository authority checks, revocation and account quotas, but sign-in and release monitoring stay disabled in this deployment. Public reports remain anonymous.
 
 Use Node.js **24.21.0** from `.node-version` and pnpm **12.8.1** from `package.json`.
 
@@ -58,4 +60,4 @@ The [fourteen-PR delivery plan](docs/delivery-plan.md) covers the public MVP and
 
 All project changes use feature branches and pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for checks and review expectations, and [SECURITY.md](SECURITY.md) for reporting security issues. The repository is maintained by [siddiksawani](https://github.com/siddiksawani) and licensed under [MIT](LICENSE).
 
-Maintainers can configure release reconciliation, compare immutable reports, request controlled rescans and opt into evidence-linked alerts. See [monitoring and deployment](docs/monitoring.md).
+For operating the public site, see [production operations](docs/production-operations.md) and [search discovery](docs/search-discovery.md). The deferred maintainer release-monitoring workflow is described in [monitoring and deployment](docs/monitoring.md).

@@ -2,7 +2,7 @@ import { reportHistorySchema } from "@compatlab/contracts";
 import { observedDate, packageUrl, readError } from "../../components/labels";
 import { publicRead } from "../../server/runtime";
 
-export const metadata = { title: "Report history" };
+export const metadata = { title: "Report history", robots: { index: false, follow: true } };
 export default async function HistoryPage({
   searchParams,
 }: {

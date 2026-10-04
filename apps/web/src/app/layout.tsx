@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { publicOrigin } from "../server/metadata";
 import "./style.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(publicOrigin()),
   title: { default: "CompatLab — JavaScript runtime evidence", template: "%s | CompatLab" },
   description:
     "Inspect how exact npm packages install and load across pinned Node.js, Bun and Deno runtimes.",

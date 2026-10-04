@@ -1,4 +1,10 @@
-export const metadata = { title: "Use of the service" };
+import { pageMetadata } from "../../server/metadata";
+
+export const metadata = pageMetadata(
+  "Use of the service",
+  "Conditions for using CompatLab public npm scans and the limitations of runtime loading evidence.",
+  "/terms",
+);
 export default function Terms() {
   return (
     <article className="page prose">

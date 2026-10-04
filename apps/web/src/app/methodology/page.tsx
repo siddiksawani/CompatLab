@@ -1,4 +1,10 @@
-export const metadata = { title: "Methodology and local CLI" };
+import { pageMetadata } from "../../server/metadata";
+
+export const metadata = pageMetadata(
+  "Methodology and local CLI",
+  "How CompatLab tests exact npm artifacts across pinned runtimes, what loading evidence means, and how to reproduce results on a qualified Linux host.",
+  "/methodology",
+);
 export default function Methodology() {
   const commands = [
     "pnpm install --frozen-lockfile",

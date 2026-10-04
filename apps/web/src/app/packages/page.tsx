@@ -3,6 +3,10 @@ import { readError } from "../../components/labels";
 import { RequestScan } from "../../components/request-scan";
 import { publicRead } from "../../server/runtime";
 
+export const metadata = {
+  title: "Select an exact npm package version",
+  robots: { index: false, follow: true },
+};
 export default async function PackagePage({
   searchParams,
 }: {

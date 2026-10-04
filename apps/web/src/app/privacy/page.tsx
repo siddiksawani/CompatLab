@@ -1,4 +1,10 @@
-export const metadata = { title: "Privacy and retention" };
+import { pageMetadata } from "../../server/metadata";
+
+export const metadata = pageMetadata(
+  "Privacy and retention",
+  "What CompatLab retains for anonymous scans, public reports and operational logs, and how to request removal.",
+  "/privacy",
+);
 export default function Privacy() {
   return (
     <article className="page prose">

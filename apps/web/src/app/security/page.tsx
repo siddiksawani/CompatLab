@@ -1,4 +1,10 @@
-export const metadata = { title: "Security and disclosure" };
+import { pageMetadata } from "../../server/metadata";
+
+export const metadata = pageMetadata(
+  "Security and disclosure",
+  "How to report a security issue in CompatLab and how its isolated execution model limits untrusted package access.",
+  "/security",
+);
 export default function Security() {
   return (
     <article className="page prose">

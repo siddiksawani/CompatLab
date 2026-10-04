@@ -1,3 +1,4 @@
+import { reportIsDiscoverable } from "@compatlab/catalog/web";
 import { type HostedReport, type ReportCell, reportEnvelopeSchema } from "@compatlab/contracts";
 import { displayIdentifier } from "@compatlab/engine";
 import Image from "next/image";
@@ -6,6 +7,7 @@ import { cache } from "react";
 import { Copy } from "../../../components/copy";
 import { Evidence } from "../../../components/evidence";
 import { labels, observedDate, packageUrl } from "../../../components/labels";
+import { pageMetadata } from "../../../server/metadata";
 import { publicRead, webRuntime } from "../../../server/runtime";
 
 const loadReport = cache(async (id: string) => {
@@ -15,12 +17,13 @@ const loadReport = cache(async (id: string) => {
   return reportEnvelopeSchema.parse(await response.json());
 });
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { report } = await loadReport((await params).id);
-  return {
-    title: `${report.artifact.name}@${report.artifact.version}`,
-    description: `${labels[report.outcome]} loading observations across ${report.matrix.images.length} pinned runtimes. ${report.coverageComplete ? "Planned coverage complete." : "Coverage has limits."}`,
-    robots: { index: false, follow: true },
-  };
+  const { report, status } = await loadReport((await params).id);
+  return pageMetadata(
+    `${report.artifact.name}@${report.artifact.version} runtime evidence`,
+    `${labels[report.outcome]} loading observations across ${report.matrix.images.length} pinned runtimes. ${report.coverageComplete ? "Planned coverage complete." : "Coverage has limits."} Loading success does not prove functional correctness.`,
+    `/reports/${report.id}`,
+    status.current && (await reportIsDiscoverable(webRuntime().catalog.db, report.id)),
+  );
 }
 function Result({ cell }: { cell: ReportCell | undefined }) {
   return cell ? (

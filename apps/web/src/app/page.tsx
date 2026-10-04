@@ -1,8 +1,23 @@
 import { searchResponseSchema } from "@compatlab/contracts";
 import { packageUrl, readError } from "../components/labels";
 import { Search } from "../components/search";
+import { recentReports } from "../server/discovery";
+import { pageMetadata } from "../server/metadata";
 import { publicRead } from "../server/runtime";
 
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, unknown>>;
+}) {
+  const query = await searchParams;
+  return pageMetadata(
+    "npm loading evidence for Node.js, Bun and Deno",
+    "Check how exact public npm packages install and load across pinned JavaScript runtimes. Explore free reports with evidence, coverage and reproducible inputs.",
+    "/",
+    Object.keys(query).length === 0,
+  );
+}
 export default async function Home({
   searchParams,
 }: {
@@ -12,6 +27,7 @@ export default async function Home({
   const query = typeof params.q === "string" ? params.q.slice(0, 200) : "";
   let packages: ReturnType<typeof searchResponseSchema.parse>["packages"] = [];
   let error = "";
+  const recent = await recentReports();
   if (query) {
     const response = await publicRead(`/api/v1/search?${new URLSearchParams({ q: query })}`);
     if (response.ok) packages = searchResponseSchema.parse(await response.json()).packages;
@@ -66,6 +82,22 @@ export default async function Home({
           </p>
         </article>
       </section>
+      {recent.length > 0 && (
+        <section className="page recent-reports" aria-labelledby="recent-reports-title">
+          <h2 id="recent-reports-title">Recently tested packages</h2>
+          <p>Open the stored loading observations and inspect their coverage.</p>
+          <ul className="recent-report-list">
+            {recent.map((report) => (
+              <li key={report.id}>
+                <a href={`/reports/${report.id}`}>
+                  {report.name}
+                  <span className="version">{report.version}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="cli-callout">
         <div>
           <p className="eyebrow">Open source by design</p>
