@@ -8,6 +8,8 @@ Type=simple
 User=root
 WorkingDirectory=/opt/compatlab/current
 EnvironmentFile=/etc/compatlab/worker.env
+ExecStartPre=/usr/sbin/modprobe br_netfilter
+ExecStartPre=/usr/sbin/sysctl -w net.bridge.bridge-nf-call-iptables=1 net.bridge.bridge-nf-call-ip6tables=1
 ExecStart=/opt/compatlab-node/bin/node services/worker/dist/remote/bin.js
 Restart=on-failure
 RestartSec=10

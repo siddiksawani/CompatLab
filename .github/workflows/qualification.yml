@@ -70,6 +70,9 @@ jobs:
           sudo /opt/compatlab-node/bin/node scripts/sandbox-smoke.mjs
           sudo /opt/compatlab-node/bin/node scripts/worker-smoke.mjs
           mkdir -p test-results
+          # Keep Docker's bridge module loaded while removing only its filter.
+          sudo rmmod br_netfilter
+          test ! -e /proc/sys/net/bridge/bridge-nf-call-iptables
           sudo python3 scripts/worker-service-qualification.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
