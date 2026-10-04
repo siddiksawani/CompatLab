@@ -7,7 +7,7 @@ CREATE TABLE probe_revisions (
   revoked_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(owner_user_id,repository_link_id,digest),
-  FOREIGN KEY(repository_link_id,owner_user_id) REFERENCES repository_links(id,user_id) ON DELETE SET NULL
+  FOREIGN KEY(repository_link_id,owner_user_id) REFERENCES repository_links(id,user_id) ON DELETE SET NULL(repository_link_id)
 );
 CREATE FUNCTION preserve_probe_revision() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

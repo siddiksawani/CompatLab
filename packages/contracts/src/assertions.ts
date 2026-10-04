@@ -9,7 +9,7 @@ export const assertionPathSchema = z
   .refine(
     (value) =>
       value.split("/").length <= 8 &&
-      !value.split("/").some((part) => part === "." || part === ".."),
+      !value.split("/").some((part) => part === "." || part === ".." || part === "node_modules"),
   );
 export const assertionCapabilitiesSchema = z.strictObject({
   network: z.literal("none"),

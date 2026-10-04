@@ -188,7 +188,10 @@ it("revokes retained assertions under deployed web grants when links or accounts
       [revisionId, userId, linkId, assertionDigest(bundle), JSON.stringify(bundle)],
     );
     if (removeAccount) await web.pool.query("DELETE FROM auth_users WHERE id=$1", [userId]);
-    else await web.pool.query("UPDATE repository_links SET revoked_at=now() WHERE id=$1", [linkId]);
+    else {
+      await web.pool.query("UPDATE repository_links SET revoked_at=now() WHERE id=$1", [linkId]);
+      await web.pool.query("DELETE FROM repository_links WHERE id=$1", [linkId]);
+    }
     const retained = (
       await control.pool.query("SELECT owner_user_id,revoked_at FROM probe_revisions WHERE id=$1", [
         revisionId,

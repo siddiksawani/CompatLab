@@ -242,6 +242,15 @@ it("counts revoked revisions toward retention limits and prevents operator retri
     input.commit = index.toString(16).padStart(40, "0");
     await registerAssertion(catalog.db, await authority(), input, registry);
   }
+  await catalog.db.delete(repositoryLinks).where(eq(repositoryLinks.id, linkId));
+  linkId = randomUUID();
+  await catalog.db.insert(repositoryLinks).values({
+    id: linkId,
+    userId: user.userId,
+    repositoryId: "51",
+    installationId: "9",
+    fullName: "owner/package",
+  });
   await expect(
     registerAssertion(
       catalog.db,

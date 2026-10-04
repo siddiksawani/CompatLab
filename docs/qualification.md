@@ -26,7 +26,7 @@ Browser and database fixtures are authored evidence for their respective layers.
 
 The initial catalog saturation drill submits 40 distinct requests concurrently through four independent pools against PostgreSQL on the testing devbox. It admits 20 and throttles 20 without exceeding the queue bound. The observed batch took 3,437 ms, with p50 2,137 ms, p95 3,300 ms and a subsequent status query of 7 ms. This includes SSH tunnel latency and is a modest admission burst, not a sustained throughput benchmark. The configured `admission_v2` limits are 20 queued globally, 2 active and 10 new scans/hour per anonymous requester, and a 5-minute package/version cooldown. Do not raise them on this evidence alone.
 
-The off-host backup drill transferred a 64,666-byte encrypted synthetic catalog from the development machine to the separate Linux devbox, retrieved it, and verified reports, exact locks, audits and migration checksums on a second fresh PostgreSQL instance. The complete drill took 6,833 ms, including 2,017 ms for authenticated decryption, fresh-instance startup, restore and comparison. Archive SHA-256: `ff5f4115afaaf20c1471e7d209dea68d7c3b6f90ec9f90e3de231a6d0f2f8cf0`. CI repeats the transport/encryption/restore regression using disposable loopback SSH. The corpus assessment will be recorded here after the release-qualification workflow completes.
+The off-host backup drill transferred a 64,666-byte encrypted synthetic catalog from the development machine to the separate Linux devbox, retrieved it, and verified reports, exact locks, audits and migration checksums on a second fresh PostgreSQL instance. The complete drill took 6,833 ms, including 2,017 ms for authenticated decryption, fresh-instance startup, restore and comparison. Archive SHA-256: `ff5f4115afaaf20c1471e7d209dea68d7c3b6f90ec9f90e3de231a6d0f2f8cf0`. CI repeats the transport/encryption/restore regression using disposable loopback SSH.
 
 ## Corpus review
 
@@ -49,6 +49,16 @@ Representative reports were inspected alongside every package's summary:
 | `hash-wasm@4.12.0`, `xxhash-wasm@1.1.0` | Roots load across the selected profiles; no claim is made that their hashing APIs were behaviorally asserted |
 
 Each shard uploads full report envelopes plus per-package timing, queue wait, coverage, outcome and cell duration/failure summaries. [The corpus workflow](https://github.com/siddiksawani/CompatLab/actions/runs/37156014403) passed all ten shards. CI artifact retention is 14 days; the reviewed summary remains in Git. A changing npm registry or unavailable tarball is an explicit failed qualification, not permission to substitute an unrecorded artifact.
+
+## Maintainer extension qualification
+
+PRs 12–14 add optional GitHub accounts, repository authority, monitoring, controlled rescans, comparisons, alerts, named assertions and local pre-publication CI checks. They retain the public MVP gates above. The demand prerequisite was waived explicitly; no customer interviews or production integration checks are implied.
+
+The PR 14 regression run passes 250 unit tests, 121 PostgreSQL tests and 48 browser checks across Chromium, Firefox, WebKit and mobile. Database tests include the deployed role grants, account/link revocation, immutable assertion revisions, retry and rescan identity, capability exclusion and invalid result rejection. Browser checks show named failures separately from passing automatic loading and confirm that viewing retained reports schedules no work.
+
+At commit `05665b8`, the [Linux/runsc qualification](https://github.com/siddiksawani/CompatLab/actions/runs/37166822546) passed twenty assertion scenarios across the four pinned runtimes: success, assertion failure, fake stdout with early exit, timeout, and read-only fixtures with network denial. The CI archive path verified hashes and caller-supplied provenance, disabled installer scripts, private/traversal archive rejection, safe symlink handling and no-follow input reads. The private worker test also passed after killing and replacing a live worker, reusing its sealed snapshot, and producing sixteen automatic groups plus four named assertion results with reproduction downloads. These checks remain required on later PR revisions.
+
+The [assertion threat review](assertion-threat-model.md) records the additional authority, source and execution boundaries. Package and probe code still share a process; `probe_verified` is evidence of a named observation and is not tamper-proof attestation.
 
 ## Release boundary
 

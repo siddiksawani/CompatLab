@@ -62,6 +62,13 @@ it("rejects colliding fixture paths and aggregate payloads beyond the bundle lim
   expect(() =>
     validateAssertionBundle(
       assertionBundle("fixture", "export default ()=>{}", {
+        "node_modules/fixture/index.js": "export default 'shadowed'",
+      }),
+    ),
+  ).toThrow();
+  expect(() =>
+    validateAssertionBundle(
+      assertionBundle("fixture", "export default ()=>{}", {
         "probe.mjs/child.txt": "collision",
       }),
     ),

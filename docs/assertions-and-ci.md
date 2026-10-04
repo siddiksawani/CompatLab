@@ -38,7 +38,7 @@ export default async function () {
 }
 ```
 
-The default function may be synchronous or async. Normal completion without throwing records an observed pass; its return value is ignored. Bare imports use the prepared package's sealed `node_modules`. Only the entry and declared fixture files are copied. No repository build, package installation or code execution occurs in the web process.
+The default function may be synchronous or async. Normal completion without throwing records an observed pass; its return value is ignored. Bare imports use the prepared package's sealed `node_modules`; assertion paths cannot introduce a shadowing `node_modules` directory. Only the entry and declared fixture files are copied. No repository build, package installation or code execution occurs in the web process.
 
 Supply a terminal previous scan ID beside the registered assertion to request a controlled rescan. The exact package version must match the manifest, and live repository authority is required again. An observation accepts one assertion revision; it runs once per runtime in a fresh process on the same actual dependency snapshot as that observation's automatic groups. Existing cooldowns, account quotas and the fifteen-minute scan deadline apply. Repeating the same parent/revision request reuses its child; different inputs return a conflict. Use the child's scan ID for another observation.
 

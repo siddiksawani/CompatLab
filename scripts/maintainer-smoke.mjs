@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { access, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runCli } from "../apps/cli/dist/cli.js";
 import { ciReportSchema, parseReproductionInputs } from "../packages/contracts/dist/index.js";
 import {
   assertionDigest,
@@ -40,7 +41,27 @@ try {
     provenanceFile,
     artifactFile: join(base, "fixtures/package.tgz"),
   };
-  const report = ciReportSchema.parse(await checkCiPackage("compatlab-ci-fixture@1.0.0", options));
+  const output = [],
+    errors = [];
+  const exitCode = await runCli(
+    [
+      "ci",
+      "compatlab-ci-fixture@1.0.0",
+      "--artifact",
+      options.artifactFile,
+      "--provenance",
+      provenanceFile,
+      "--state-dir",
+      state,
+      "--json",
+    ],
+    {
+      stdout: (text) => output.push(text),
+      stderr: (text) => errors.push(text),
+    },
+  );
+  assert.equal(exitCode, 0, errors.join(""));
+  const report = ciReportSchema.parse(JSON.parse(output.join("")));
   assert.equal(report.artifact.kind, "ci_artifact");
   assert.deepEqual(report.artifact.provenance, provenance);
   assert.equal(
