@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Maintainers — coming soon",
+  robots: { index: false, follow: true },
   description:
     "Planned tools for npm package authors to follow releases and investigate runtime changes.",
 };

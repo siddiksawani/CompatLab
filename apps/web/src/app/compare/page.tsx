@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readError } from "../../components/labels";
 import { publicRead } from "../../server/runtime";
 
-export const metadata = { title: "Compare reports" };
+export const metadata = { title: "Compare reports", robots: { index: false, follow: true } };
 export default async function ComparisonPage({
   searchParams,
 }: {

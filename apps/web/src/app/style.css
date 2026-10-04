@@ -371,6 +371,23 @@ nav a {
   color: #d5f3de;
   padding: 28px;
 }
+.recent-report-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+}
+.recent-report-list a {
+  display: block;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+  background: white;
+}
 .site-footer {
   width: min(1200px, 100%);
   margin: 36px auto 0;
