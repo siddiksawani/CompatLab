@@ -55,3 +55,5 @@ No live GitHub App is created by these tests. Before enabling accounts publicly,
 References: [Better Auth GitHub](https://better-auth.com/docs/authentication/github), [Better Auth options](https://better-auth.com/docs/reference/options), [GitHub App user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app).
 
 Release monitoring, controlled rescans, comparisons and optional email are described in [monitoring](monitoring.md). Background reconciliation uses the encrypted account credentials with live repository checks; an expired browser session does not stop a configured monitor. Revocation does.
+
+Commit-pinned behavioral assertions and pre-publication CI checks are documented in [assertions and CI](assertions-and-ci.md). Public assertion revisions remain with the reports after account deletion; personal ownership links are removed.

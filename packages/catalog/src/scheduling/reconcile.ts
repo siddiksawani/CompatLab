@@ -1,6 +1,7 @@
 import type { ProbePlan } from "@compatlab/contracts";
 import { PreparationError, planProbes, runtimeProfile } from "@compatlab/engine";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { allowedAssertion } from "../assertions/policy.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
 import { queueFinalReports } from "../reports/aggregate.js";
@@ -47,7 +48,10 @@ export async function advanceScan(
     await finishQueued(tx, scan.id, "runner_unavailable");
     return;
   }
-  if (!(await allowedSelection(tx, prep.artifactId, scan.matrixId))) {
+  if (
+    !(await allowedSelection(tx, prep.artifactId, scan.matrixId)) ||
+    !(await allowedAssertion(tx, scan.assertionRevisionId))
+  ) {
     await tx
       .update(scans)
       .set({
@@ -184,6 +188,22 @@ export async function advanceScan(
             .returning({ id: runs.id });
           if (run) await tx.insert(jobs).values({ kind: "run", runId: run.id, scanId: scan.id });
         }
+    if (scan.assertionRevisionId)
+      for (const image of images) {
+        const [run] = await tx
+          .insert(runs)
+          .values({
+            scanId: scan.id,
+            matrixId: scan.matrixId,
+            imageId: image.id,
+            probeGroup: "root",
+            mode: "esm",
+            assertionRevisionId: scan.assertionRevisionId,
+          })
+          .onConflictDoNothing()
+          .returning({ id: runs.id });
+        if (run) await tx.insert(jobs).values({ kind: "run", runId: run.id, scanId: scan.id });
+      }
   }
   if (prep.state === "ready") {
     const pending = (

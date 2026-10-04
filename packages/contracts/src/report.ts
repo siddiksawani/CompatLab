@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertionDefinitionSchema } from "./assertions.js";
 import { probeModeSchema } from "./harness.js";
 import { localReportSchema } from "./local-report.js";
 import { probePlanSchema } from "./plan.js";
@@ -63,7 +64,7 @@ export const evidencePhaseSchema = z.enum([
 export const normalizedFailureSchema = z.strictObject({
   classification: failureClassificationSchema,
   phase: evidencePhaseSchema,
-  origin: z.enum(["package", "prerequisite", "policy", "infrastructure"]),
+  origin: z.enum(["package", "prerequisite", "policy", "infrastructure", "assertion"]),
   retryable: z.boolean(),
   source: z.enum([
     "captured_error_code",
@@ -124,6 +125,20 @@ export const reportCellSchema = z.strictObject({
     .max(4),
 });
 export type ReportCell = z.infer<typeof reportCellSchema>;
+export const assertionCellSchema = z.strictObject({
+  runId: z.uuid().nullable(),
+  profileId: z.string().max(64),
+  classifierRevision: z.literal("assertion_classifier_v1"),
+  outcome: compatibilityOutcomeSchema,
+  evidenceLevel: z.enum(["static_only", "probe_verified"]),
+  durationMs: z.number().nonnegative(),
+  failure: normalizedFailureSchema.nullable(),
+});
+export const assertionReportSchema = z.strictObject({
+  definition: assertionDefinitionSchema,
+  cells: z.array(assertionCellSchema).min(1).max(16),
+});
+export type AssertionCell = z.infer<typeof assertionCellSchema>;
 export const hostedReportSchema = z.strictObject({
   schemaVersion: z.literal(1),
   id: z.uuid(),
@@ -156,6 +171,7 @@ export const hostedReportSchema = z.strictObject({
   evidenceLevel: z.enum(["static_only", "smoke_tested"]),
   coverageComplete: z.boolean(),
   cells: z.array(reportCellSchema).min(4).max(64),
+  assertions: z.array(assertionReportSchema).max(1).optional(),
   limitations: z.array(z.string().max(512)).max(16),
 });
 export type HostedReport = z.infer<typeof hostedReportSchema>;

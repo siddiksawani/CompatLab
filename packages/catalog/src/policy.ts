@@ -39,7 +39,7 @@ export async function findCachedReport(
     JOIN matrices m ON m.id = s.matrix_id
     WHERE v.id = ${lookup.artifactId} AND m.id = ${lookup.matrixId}
       AND r.classifier_revision = ${lookup.classifierRevision}
-      AND s.state IN ('completed', 'inconclusive')
+      AND s.state IN ('completed', 'inconclusive') AND s.assertion_revision_id IS NULL
       AND r.invalidated_at IS NULL AND r.replaced_by IS NULL AND ${selectionAllowed}
     ORDER BY r.created_at DESC, r.id LIMIT 1`);
   return result.rows[0] ?? null;

@@ -6,6 +6,8 @@ The local engine resolves and prepares public npm artifacts with scripts disable
 
 ## Development
 
+[Named assertions and CI artifacts](docs/assertions-and-ci.md) extend the maintainer workflow. Assertions use commit-pinned offline fixtures and separate behavioral evidence. The Linux/runsc CLI can check a pre-publication archive with a distinct source identity and caller-supplied provenance.
+
 Optional [maintainer accounts](docs/maintainers.md) use GitHub App login, encrypted OAuth tokens, live repository authority checks, revocation and account quotas. Configure the App before enabling sign-in; public reports remain anonymous.
 
 Use Node.js **24.21.0** from `.node-version` and pnpm **12.8.1** from `package.json`.
@@ -35,14 +37,15 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 
 | Path | Implemented responsibility |
 |---|---|
-| `apps/cli` | Prerequisites, checks, reproduction, SSH administration and backup encryption |
+| `apps/cli` | Prerequisites, checks, CI archives, reproduction, SSH administration and backup encryption |
 | `apps/web` | Anonymous discovery, scan requests, durable progress and report pages |
 | `packages/engine` | Registry resolution, analysis, planning and bounded probe orchestration |
 | `packages/catalog` | PostgreSQL identities, admission, leases, result validation, recovery and cache lookup |
 | `packages/contracts` | Canonical vocabulary and bounded completion validation |
 | `services/worker` | Preparation, sealed storage, runtime supervision and local evidence storage |
 | `services/control` | Private WireGuard-bound worker API and reconciliation |
-| `harnesses` | Root and sequential batch loading/checkpoint protocol |
+| `harnesses` | Automatic loading and separate named assertion completion protocols |
+| `services/maintainer` | Release reconciliation, comparison and independently retried email |
 | `runtime-images` | Digest-pinned minimal runtime image recipe |
 | `fixtures` | Authored module/protocol and preparation archive fixtures |
 | `infra` | Pinned service packaging, worker provisioning, backup and recovery configuration |

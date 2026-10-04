@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Assertions } from "./assertions";
 import { Monitors } from "./monitors";
 
 type AccountState = {
@@ -155,6 +156,7 @@ export function Account() {
             ))}
           </ul>
           <Monitors repositories={account.repositories ?? []} />
+          <Assertions repositories={account.repositories ?? []} />
           <h2>Revoke or delete</h2>
           <p>
             Revoking removes stored GitHub tokens and signs out all sessions. Deleting also removes

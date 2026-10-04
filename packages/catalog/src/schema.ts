@@ -108,6 +108,7 @@ export const scans = pgTable("scans", {
   accountKey: text("account_key"),
   observationRevision: integer("observation_revision").notNull().default(0),
   previousScanId: uuid("previous_scan_id"),
+  assertionRevisionId: uuid("assertion_revision_id"),
   requesterExpiresAt: time("requester_expires_at").notNull(),
   admissionPolicy: text("admission_policy").notNull(),
   progressRevision: integer("progress_revision").notNull().default(0),
@@ -127,6 +128,7 @@ export const runs = pgTable("runs", {
   imageId: uuid("image_id").notNull(),
   probeGroup: text("probe_group").$type<"root" | "subpaths">().notNull(),
   mode: text("mode").$type<"esm" | "commonjs">().notNull(),
+  assertionRevisionId: uuid("assertion_revision_id"),
   rawEvidence: jsonb("raw_evidence").$type<Record<string, unknown>>(),
   logs: jsonb("logs").$type<Record<string, unknown>>(),
   logsExpireAt: time("logs_expire_at"),
@@ -182,4 +184,6 @@ export const serviceControls = pgTable("service_controls", {
   singleton: boolean("singleton").primaryKey().default(true),
   admissionPaused: boolean("admission_paused").notNull().default(false),
 });
+
+export * from "./assertions/schema.js";
 export * from "./monitoring/schema.js";

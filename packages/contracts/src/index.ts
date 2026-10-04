@@ -1,3 +1,5 @@
+export * from "./assertions.js";
+export * from "./ci.js";
 export * from "./comparison.js";
 export * from "./harness.js";
 export * from "./jobs.js";

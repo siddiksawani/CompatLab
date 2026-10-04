@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { CiArtifact } from "@compatlab/contracts";
 import type { ResolvedArtifact } from "../registry/client.js";
 import { RegistryError } from "../registry/errors.js";
 import { JsonStructureLimit } from "../registry/json-limits.js";
@@ -31,6 +32,16 @@ export class PreparationError extends Error {
   }
 }
 
+export const CI_FILE_SPEC = "file:/input/artifact.tgz";
+export type ExecutionArtifact = ResolvedArtifact | CiArtifact;
+function ciSource(value: unknown) {
+  return (
+    value === CI_FILE_SPEC ||
+    value === "file:../input/artifact.tgz" ||
+    value === "file:///input/artifact.tgz"
+  );
+}
+
 export type LockedDependency = {
   location: string;
   version: string;
@@ -45,15 +56,16 @@ export const MAX_LOCK_BYTES = 16 * 1024 * 1024;
 
 export function validateLock(
   bytes: Uint8Array,
-  artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl">,
+  artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl"> | CiArtifact,
 ): ValidatedLock {
   return preparationBoundary(() => inspectLock(bytes, artifact));
 }
 
 function inspectLock(
   bytes: Uint8Array,
-  artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl">,
+  artifact: Pick<ResolvedArtifact, "name" | "version" | "integrity" | "tarballUrl"> | CiArtifact,
 ): ValidatedLock {
+  const ci = "kind" in artifact && artifact.kind === "ci_artifact";
   if (bytes.byteLength > MAX_LOCK_BYTES)
     fail("preparation_limit_exceeded", "The lock exceeds 16 MiB.");
   new JsonStructureLimit().write(bytes);
@@ -70,7 +82,9 @@ function inspectLock(
     !isRecord(project) ||
     !isRecord(project.dependencies) ||
     Object.keys(project.dependencies).length !== 1 ||
-    project.dependencies[artifact.name] !== artifact.version
+    (ci
+      ? !ciSource(project.dependencies[artifact.name])
+      : project.dependencies[artifact.name] !== artifact.version)
   )
     return fail(
       "package_manifest_invalid",
@@ -97,7 +111,11 @@ function inspectLock(
       hasInstallScript: entry.hasInstallScript === true,
     };
     if (!dependency.bundled) {
-      dependency.resolved = registryTarballUrl(entry.resolved);
+      if (ci && location === `node_modules/${artifact.name}`) {
+        if (!ciSource(entry.resolved))
+          return fail("dependency_source_unsupported", "The CI root source changed.");
+        dependency.resolved = CI_FILE_SPEC;
+      } else dependency.resolved = registryTarballUrl(entry.resolved);
       dependency.integrity = artifactIntegrity(entry.integrity);
       verified.add(location);
     } else if (entry.resolved !== undefined || entry.integrity !== undefined) {
@@ -126,7 +144,7 @@ function inspectLock(
     !root ||
     root.bundled ||
     root.version !== artifact.version ||
-    root.resolved !== registryTarballUrl(artifact.tarballUrl)
+    root.resolved !== ("kind" in artifact ? CI_FILE_SPEC : registryTarballUrl(artifact.tarballUrl))
   )
     return fail("package_manifest_invalid", "The root lock identity changed during resolution.");
   if (root.integrity !== artifactIntegrity(artifact.integrity))

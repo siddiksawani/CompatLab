@@ -1,10 +1,18 @@
-import { randomUUID } from "node:crypto";
-import { lstat, mkdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
+  type AssertionBundle,
+  type AssertionEvidence,
+  type CiArtifact,
+  type CiReport,
+  ciArtifactSchema,
+  ciProvenanceSchema,
+  ciReportSchema,
   type LocalReport,
   localReportSchema,
   MAX_REPORT_BYTES,
+  MAX_SCAN_LOG_BYTES,
   PROBE_HARNESS_REVISION,
   PROBE_LIMITS,
   PROBE_POLICY_REVISION,
@@ -16,16 +24,19 @@ import {
 import {
   artifactIntegrity,
   assertPackageName,
+  type ExecutionArtifact,
   executePlan,
   executionSummary,
   isExactVersion,
   MAX_LOCK_BYTES,
   manifestObservations,
+  matchingVersions,
   planProbes,
   RegistryClient,
   type ResolvedArtifact,
   registryTarballUrl,
   runtimeProfile,
+  validateAssertionBundle,
   validateLock,
 } from "@compatlab/engine";
 import { docker } from "./command.js";
@@ -71,6 +82,51 @@ export async function checkPackage(spec: string, options: LocalOptions): Promise
     });
   } finally {
     await supervisor.close();
+  }
+}
+
+export async function checkCiPackage(
+  spec: string,
+  options: LocalOptions & { artifactFile: string; provenanceFile: string },
+): Promise<CiReport> {
+  const { name, version } = parsePackageSpec(spec);
+  const state = await localState(options.stateDirectory);
+  const provenance = ciProvenanceSchema.parse(
+    parseBoundedJson(await readBoundedFile(resolve(options.provenanceFile), 16384), 16384),
+  );
+  const bytes = await readBoundedFile(resolve(options.artifactFile), 32 * 1024 ** 2);
+  const artifact = ciArtifactSchema.parse({
+    kind: "ci_artifact",
+    name,
+    version,
+    provenance,
+    bytes: bytes.length,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+    integrity: `sha512-${createHash("sha512").update(bytes).digest("base64")}`,
+  });
+  const supervisor = await ExecutionSupervisor.open(state);
+  let staging: string | undefined;
+  try {
+    staging = join(state, "jobs", randomUUID());
+    await mkdir(staging, { mode: 0o700 });
+    const archive = join(staging, "artifact.tgz");
+    await writeFile(archive, bytes, { flag: "wx", mode: 0o444 });
+    return await supervisor.withScan(async (scanId) => {
+      const images = await localImages(state);
+      await installerImages();
+      const signal = deadline(options.signal);
+      const snapshot = await supervisor.prepareCi(artifact, archive, scanId, signal);
+      return scanSnapshot(snapshot, images, state, signal, supervisor, scanId, {
+        method: "prepared",
+        previousGeneration: null,
+      });
+    });
+  } finally {
+    try {
+      await supervisor.close();
+    } finally {
+      if (staging) await rm(staging, { recursive: true, force: true });
+    }
   }
 }
 
@@ -127,16 +183,34 @@ export async function reproduceReport(
         )
           throw new TypeError("The report snapshot identity changed.");
       }
-      return await scanSnapshot(snapshot, report.images, state, signal, supervisor, scanId, {
-        method: options.rebuild ? "rebuilt_from_lock" : "verified_reuse",
-        previousGeneration: report.snapshot.generation,
-      });
+      return await scanSnapshot(
+        snapshot,
+        report.images,
+        state,
+        signal,
+        supervisor,
+        scanId,
+        {
+          method: options.rebuild ? "rebuilt_from_lock" : "verified_reuse",
+          previousGeneration: report.snapshot.generation,
+        },
+        "kind" in report ? report.assertion : report.assertion?.bundle,
+      );
     });
   } finally {
     await supervisor.close();
   }
 }
 
+async function scanSnapshot(
+  snapshot: PreparedSnapshot<CiArtifact>,
+  images: RuntimeImage[],
+  state: string,
+  signal: AbortSignal,
+  supervisor: ExecutionSupervisor,
+  scanId: string,
+  reproduction: LocalReport["reproduction"],
+): Promise<CiReport>;
 async function scanSnapshot(
   snapshot: PreparedSnapshot,
   images: RuntimeImage[],
@@ -145,7 +219,18 @@ async function scanSnapshot(
   supervisor: ExecutionSupervisor,
   scanId: string,
   reproduction: LocalReport["reproduction"],
-): Promise<LocalReport> {
+  assertion?: AssertionBundle,
+): Promise<LocalReport>;
+async function scanSnapshot(
+  snapshot: PreparedSnapshot<ExecutionArtifact>,
+  images: RuntimeImage[],
+  state: string,
+  signal: AbortSignal,
+  supervisor: ExecutionSupervisor,
+  scanId: string,
+  reproduction: LocalReport["reproduction"],
+  assertion?: AssertionBundle,
+): Promise<LocalReport | CiReport> {
   const manifest = await readBoundedFile(
     join(snapshot.workspace, "node_modules", snapshot.artifact.name, "package.json"),
     2 * 1024 ** 2,
@@ -160,15 +245,33 @@ async function scanSnapshot(
     join(state, "locks", `${snapshot.lock.digest}.json`),
     await readBoundedFile(join(snapshot.workspace, "package-lock.json"), MAX_LOCK_BYTES),
   );
-  const { name, version, integrity, tarballUrl } = snapshot.artifact;
-  const report: LocalReport = {
+  if (assertion) {
+    assertion = validateAssertionBundle(assertion);
+    if (
+      assertion.manifest.packageName !== snapshot.artifact.name ||
+      !matchingVersions([snapshot.artifact.version], assertion.manifest.packageRange).length
+    )
+      throw new TypeError("Assertion does not select this package version.");
+  }
+  const ci = "kind" in snapshot.artifact;
+  const artifact =
+    "kind" in snapshot.artifact
+      ? snapshot.artifact
+      : {
+          name: snapshot.artifact.name,
+          version: snapshot.artifact.version,
+          integrity: snapshot.artifact.integrity,
+          tarballUrl: snapshot.artifact.tarballUrl,
+        };
+  const initial = {
     schemaVersion: 1,
     id: randomUUID(),
     createdAt: new Date().toISOString(),
     evidenceLevel: "static_only",
     harnessRevision: PROBE_HARNESS_REVISION,
     policyRevision: PROBE_POLICY_REVISION,
-    artifact: { name, version, integrity, tarballUrl },
+    artifact,
+    ...(assertion ? { assertion: { bundle: assertion, evidence: [] } } : {}),
     snapshot: {
       id: snapshot.id,
       generation: snapshot.generation,
@@ -188,12 +291,54 @@ async function scanSnapshot(
     deadlineReached: false,
     cancelled: false,
   };
-  const evidenceBytes = MAX_REPORT_BYTES - Buffer.byteLength(JSON.stringify(report)) - 64;
+  const report = ci ? ciReportSchema.parse(initial) : localReportSchema.parse(initial);
+  const evidenceBytes =
+    MAX_REPORT_BYTES - Buffer.byteLength(JSON.stringify(report)) - (assertion ? 1024 ** 2 : 64);
   report.groups = await executePlan(plan, images, backend, signal, evidenceBytes);
   Object.assign(report, executionSummary(report.groups, signal));
+  if ("assertion" in report && report.assertion) {
+    let logsRemaining =
+      MAX_SCAN_LOG_BYTES -
+      report.groups.reduce(
+        (sum, g) =>
+          sum +
+          g.sessions.reduce(
+            (n, s) => n + Buffer.byteLength(s.logs.stdout) + Buffer.byteLength(s.logs.stderr),
+            0,
+          ),
+        0,
+      );
+    for (const image of images) {
+      if (signal.aborted) break;
+      let evidence: AssertionEvidence;
+      try {
+        evidence = await supervisor.assertion(
+          snapshot,
+          image,
+          report.assertion.bundle,
+          scanId,
+          signal,
+        );
+      } catch (error) {
+        if (signal.aborted && error === signal.reason) break;
+        throw error;
+      }
+      for (const stream of ["stdout", "stderr"] as const) {
+        const bytes = Buffer.from(evidence.session.logs[stream]);
+        evidence.session.logs[stream] = new TextDecoder().decode(
+          bytes.subarray(0, Math.max(0, logsRemaining)),
+          { stream: true },
+        );
+        evidence.session.logs[`${stream}Truncated`] ||= bytes.length > logsRemaining;
+        logsRemaining -= Math.min(bytes.length, Math.max(0, logsRemaining));
+      }
+      report.assertion.evidence.push(evidence);
+    }
+    Object.assign(report, executionSummary(report.groups, signal));
+  }
   const bytes = Buffer.from(JSON.stringify(report));
   if (bytes.length > MAX_REPORT_BYTES) throw new TypeError("The local report exceeds 20 MiB.");
-  localReportSchema.parse(report);
+  (ci ? ciReportSchema : localReportSchema).parse(report);
   await mkdir(join(state, "reports"), { recursive: true, mode: 0o700 });
   await storeImmutable(join(state, "reports", `${report.id}.json`), bytes);
   return report;

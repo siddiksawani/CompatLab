@@ -1,5 +1,5 @@
 import { z } from "zod";
-export const COMPARISON_REVISION = "meaningful_changes_v1";
+export const COMPARISON_REVISION = "meaningful_changes_v2";
 export const reportComparisonSchema = z.strictObject({
   schemaVersion: z.literal(1),
   revision: z.literal(COMPARISON_REVISION),

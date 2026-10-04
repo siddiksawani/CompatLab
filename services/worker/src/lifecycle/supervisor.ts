@@ -1,14 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { lstat } from "node:fs/promises";
 import { join } from "node:path";
-import type { RuntimeImage } from "@compatlab/contracts";
-import type { ResolvedArtifact, SandboxBackend } from "@compatlab/engine";
+import type { AssertionBundle, CiArtifact, RuntimeImage } from "@compatlab/contracts";
+import type { ExecutionArtifact, ResolvedArtifact, SandboxBackend } from "@compatlab/engine";
 import {
   assertPreparationHost,
   type PreparedSnapshot,
   prepareArtifact,
+  prepareCiArtifact,
 } from "../preparation/prepare.js";
-import { createProbeBackend } from "../runtime/backend.js";
+import { createProbeBackend, runAssertion } from "../runtime/backend.js";
 import { CapacityPool, readHostCapacity } from "./capacity.js";
 import { acquireHostLease } from "./lease.js";
 import { collectSnapshots, recoverResources, snapshotInventory } from "./recovery.js";
@@ -127,8 +128,30 @@ export class ExecutionSupervisor {
       scanId,
     );
   }
+  async prepareCi(artifact: CiArtifact, archive: string, scanId: string, signal: AbortSignal) {
+    const combined = this.signal(signal, scanId);
+    return this.track(
+      this.capacity.run("preparation", scanId, combined, async () => {
+        await collectSnapshots(
+          this.stateDirectory,
+          this.protectedSnapshots,
+          6 * 1024 ** 3,
+          this.authorizeEviction,
+        );
+        const snapshot = await prepareCiArtifact(
+          artifact,
+          archive,
+          join(this.stateDirectory, "snapshots"),
+          combined,
+        );
+        this.pinSnapshot(snapshot.id, scanId);
+        return snapshot;
+      }),
+      scanId,
+    );
+  }
   async backend(
-    snapshot: PreparedSnapshot,
+    snapshot: PreparedSnapshot<ExecutionArtifact>,
     images: readonly RuntimeImage[],
     scanId: string,
   ): Promise<SandboxBackend> {
@@ -147,6 +170,28 @@ export class ExecutionSupervisor {
         );
       },
     };
+  }
+  async assertion(
+    snapshot: PreparedSnapshot<ExecutionArtifact>,
+    image: RuntimeImage,
+    bundle: AssertionBundle,
+    scanId: string,
+    signal: AbortSignal,
+  ) {
+    this.pinSnapshot(snapshot.id, scanId);
+    const combined = this.signal(signal, scanId);
+    return this.track(
+      this.capacity.run("runtime", scanId, combined, () =>
+        runAssertion(
+          snapshot.workspace,
+          join(this.stateDirectory, "jobs"),
+          image,
+          bundle,
+          combined,
+        ),
+      ),
+      scanId,
+    );
   }
   async close(): Promise<void> {
     if (this.closed) return;

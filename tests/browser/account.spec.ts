@@ -128,3 +128,92 @@ test("maintainers create monitors, pause alerts and follow immutable comparisons
   await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("maintainers register and revoke a commit-pinned assertion with clear limits", async ({
+  page,
+}) => {
+  const linkId = "d15fa6fc-7e02-43f5-8e37-6c1471a86c19",
+    id = "af19e1a0-cebd-49ca-9e28-f22a6ab575df";
+  await page.route("**/api/maintainer/account", (route) =>
+    route.fulfill({
+      json: {
+        enabled: true,
+        user: { name: "fixture", email: "fixture@example.com" },
+        repositories: [
+          {
+            id: linkId,
+            fullName: "owner/package",
+            revokedAt: null,
+            verifiedAt: "2026-10-04T00:00:00Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/maintainer/monitors", (route) =>
+    route.fulfill({ json: { emailAvailable: false, monitors: [], notifications: [] } }),
+  );
+  let created = false,
+    revokedAt: string | null = null;
+  await page.route("**/api/maintainer/assertions", async (route) => {
+    if (route.request().method() === "POST") {
+      expect(route.request().postDataJSON()).toEqual({
+        repositoryLinkId: linkId,
+        commit: "a".repeat(40),
+        manifestPath: ".compatlab/manifest.json",
+      });
+      created = true;
+      await route.fulfill({ json: { id } });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        assertions: created
+          ? [
+              {
+                id,
+                digest: "b".repeat(64),
+                repositoryLinkId: linkId,
+                repository: "owner/package",
+                commit: "a".repeat(40),
+                revokedAt,
+                manifest: {
+                  schemaVersion: 1,
+                  name: "example-behavior",
+                  packageName: "fixture",
+                  packageRange: "*",
+                  entry: "probe.mjs",
+                  timeoutMs: 1000,
+                  capabilities: {
+                    network: "none",
+                    filesystem: "read_only_workspace_and_bounded_temporary_output",
+                    processes: "bounded",
+                  },
+                  fixtures: [],
+                  expectedBehavior: "The documented example succeeds.",
+                },
+              },
+            ]
+          : [],
+      },
+    });
+  });
+  await page.route("**/api/maintainer/assertions/revoke", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({ id });
+    revokedAt = "2026-10-04T00:00:00Z";
+    await route.fulfill({ json: { revoked: true } });
+  });
+  await page.goto("/account");
+  await page.getByLabel("Full commit SHA").fill("a".repeat(40));
+  await page.getByRole("button", { name: "Register assertion", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "example-behavior" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Pinned source commit" })).toHaveAttribute(
+    "href",
+    `https://github.com/owner/package/commit/${"a".repeat(40)}`,
+  );
+  await page.getByRole("button", { name: "Revoke assertion", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Run assertion in a new observation" }),
+  ).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

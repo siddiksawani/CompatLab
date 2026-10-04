@@ -1,4 +1,6 @@
+import { assertionPassed } from "@compatlab/engine";
 import {
+  checkCiPackage,
   checkPackage,
   type DoctorReport,
   inspectDocker,
@@ -10,6 +12,7 @@ import { runBackup } from "./backup.js";
 
 const usage = `Usage: compatlab doctor [--json]
        compatlab check package@exact-version [--matrix initial_v1] [--state-dir PATH] [--json]
+       compatlab ci package@exact-version --artifact FILE --provenance FILE [--state-dir PATH] [--json]
        compatlab reproduce report.json [--rebuild] [--lockfile PATH] [--state-dir PATH] [--json]
        compatlab admin --help
        compatlab backup encrypt|decrypt INPUT OUTPUT KEY_FILE
@@ -19,7 +22,11 @@ Execution requires a local Linux amd64/runsc host with root privileges.
 Reproduction verifies the retained snapshot; --rebuild creates a new generation from the retained lock.
 `;
 type CliIO = { stdout: (text: string) => void; stderr: (text: string) => void };
-type Operations = { check: typeof checkPackage; reproduce: typeof reproduceReport };
+type Operations = {
+  check: typeof checkPackage;
+  reproduce: typeof reproduceReport;
+  ci?: typeof checkCiPackage;
+};
 
 export async function runCli(
   args: readonly string[],
@@ -50,7 +57,14 @@ export async function runCli(
     }
     return report.prerequisitesAvailable ? 0 : 1;
   }
-  let options: { stateDirectory: string; json: boolean; rebuild: boolean; lockFile?: string };
+  let options: {
+    stateDirectory: string;
+    json: boolean;
+    rebuild: boolean;
+    lockFile?: string;
+    artifactFile?: string;
+    provenanceFile?: string;
+  };
   try {
     options = argumentsForScan(args);
   } catch {
@@ -66,13 +80,19 @@ export async function runCli(
     if (!input) return 2;
     const execution = { stateDirectory: options.stateDirectory, ...(signal ? { signal } : {}) };
     const report =
-      args[0] === "check"
-        ? await operations.check(input, execution)
-        : await operations.reproduce(input, {
+      args[0] === "ci"
+        ? await (operations.ci ?? checkCiPackage)(input, {
             ...execution,
-            rebuild: options.rebuild,
-            ...(options.lockFile ? { lockFile: options.lockFile } : {}),
-          });
+            artifactFile: options.artifactFile ?? "",
+            provenanceFile: options.provenanceFile ?? "",
+          })
+        : args[0] === "check"
+          ? await operations.check(input, execution)
+          : await operations.reproduce(input, {
+              ...execution,
+              rebuild: options.rebuild,
+              ...(options.lockFile ? { lockFile: options.lockFile } : {}),
+            });
     if (options.json) io.stdout(`${JSON.stringify(report, null, 2)}\n`);
     else {
       io.stdout(
@@ -84,9 +104,18 @@ export async function runCli(
           `${group.profileId} ${group.group}/${group.mode}: ${group.coverage.observed}/${group.coverage.planned} observed, ${failures} failed, ${group.coverage.interrupted} interrupted, ${group.coverage.untested} untested\n`,
         );
       }
+      if ("assertion" in report && report.assertion)
+        for (const result of report.assertion.evidence)
+          io.stdout(
+            `Assertion ${report.assertion.bundle.manifest.name} / ${result.profileId}: ${assertionPassed(result) ? "pass" : "not passed"}\n`,
+          );
       io.stdout(`Report: ${options.stateDirectory}/reports/${report.id}.json\n`);
     }
-    return !report.deadlineReached &&
+    return (!("assertion" in report) ||
+      !report.assertion ||
+      (report.assertion.evidence.length === report.images.length &&
+        report.assertion.evidence.every(assertionPassed))) &&
+      !report.deadlineReached &&
       !report.cancelled &&
       report.groups.every(
         (group) =>
@@ -101,11 +130,22 @@ export async function runCli(
 }
 
 function argumentsForScan(args: readonly string[]) {
-  if ((args[0] !== "check" && args[0] !== "reproduce") || !args[1] || args[1].startsWith("-"))
+  if (
+    (args[0] !== "check" && args[0] !== "reproduce" && args[0] !== "ci") ||
+    !args[1] ||
+    args[1].startsWith("-")
+  )
     throw new TypeError();
-  if (args[0] === "check") parsePackageSpec(args[1]);
+  if (args[0] === "check" || args[0] === "ci") parsePackageSpec(args[1]);
   else if (/^https?:/i.test(args[1])) throw new TypeError();
-  const options: { stateDirectory: string; json: boolean; rebuild: boolean; lockFile?: string } = {
+  const options: {
+    stateDirectory: string;
+    json: boolean;
+    rebuild: boolean;
+    lockFile?: string;
+    artifactFile?: string;
+    provenanceFile?: string;
+  } = {
     stateDirectory: "/var/lib/compatlab",
     json: false,
     rebuild: false,
@@ -119,6 +159,7 @@ function argumentsForScan(args: readonly string[]) {
     else if (key === "--rebuild" && args[0] === "reproduce") options.rebuild = true;
     else if (
       key === "--state-dir" ||
+      (args[0] === "ci" && (key === "--artifact" || key === "--provenance")) ||
       (key === "--matrix" && args[0] === "check") ||
       (key === "--lockfile" && args[0] === "reproduce")
     ) {
@@ -127,8 +168,11 @@ function argumentsForScan(args: readonly string[]) {
       if (key === "--matrix" && value !== "initial_v1") throw new TypeError();
       if (key === "--state-dir") options.stateDirectory = value;
       if (key === "--lockfile") options.lockFile = value;
+      if (key === "--artifact") options.artifactFile = value;
+      if (key === "--provenance") options.provenanceFile = value;
     } else throw new TypeError();
   }
   if (options.lockFile && !options.rebuild) throw new TypeError();
+  if (args[0] === "ci" && (!options.artifactFile || !options.provenanceFile)) throw new TypeError();
   return options;
 }

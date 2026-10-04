@@ -2,6 +2,7 @@ import type { ScanState } from "@compatlab/contracts";
 import type { ResolvedArtifact } from "@compatlab/engine";
 import { and, count, desc, eq, exists, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { allowedAssertion } from "./assertions/policy.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "./database.js";
 import { allowedSelection, findCachedReport } from "./policy.js";
 import {
@@ -36,7 +37,9 @@ const optionsSchema = z.strictObject({
     .default([]),
   classifierRevision: revisionSchema,
   retry: adminActionSchema.extend({ scanId: uuidSchema }).optional(),
-  rescan: z.strictObject({ previousScanId: uuidSchema }).optional(),
+  rescan: z
+    .strictObject({ previousScanId: uuidSchema, assertionRevisionId: uuidSchema.optional() })
+    .optional(),
 });
 export type AdmissionOptions = z.input<typeof optionsSchema>;
 export type AdmissionResult =
@@ -74,6 +77,8 @@ export async function admitScanInTransaction(
   const observed = await observeArtifact(tx, artifact);
   if (observed.integrityAnomaly) return { kind: "blocked", reason: "artifact_integrity_changed" };
   const selected = await allowedSelection(tx, observed.id, options.matrixId);
+  if (!(await allowedAssertion(tx, options.rescan?.assertionRevisionId ?? null)))
+    return { kind: "blocked", reason: "policy_or_matrix" };
   if (!selected) return { kind: "blocked", reason: "policy_or_matrix" };
   if (options.retry) {
     const previous = (
@@ -98,10 +103,18 @@ export async function admitScanInTransaction(
     if (!parent)
       throw new TypeError("Rescan requires a matching terminal observation and confirmed cleanup.");
     const [child] = await tx
-      .select({ scanId: scans.id, preparationId: scans.preparationId })
+      .select({
+        scanId: scans.id,
+        preparationId: scans.preparationId,
+        assertionId: scans.assertionRevisionId,
+      })
       .from(scans)
       .where(eq(scans.previousScanId, parent.id));
-    if (child) return { kind: "existing", ...child };
+    if (child) {
+      if (child.assertionId !== (options.rescan.assertionRevisionId ?? null))
+        throw new TypeError("Rescan inputs conflict.");
+      return { kind: "existing", scanId: child.scanId, preparationId: child.preparationId };
+    }
   }
   const cached = options.rescan
     ? null
@@ -112,7 +125,11 @@ export async function admitScanInTransaction(
       });
   if (cached) return { kind: "cached", ...cached };
   const [existing] = await tx
-    .select({ scanId: scans.id, preparationId: preparations.id })
+    .select({
+      scanId: scans.id,
+      preparationId: preparations.id,
+      assertionId: scans.assertionRevisionId,
+    })
     .from(scans)
     .innerJoin(preparations, eq(scans.preparationId, preparations.id))
     .where(
@@ -125,9 +142,9 @@ export async function admitScanInTransaction(
     .orderBy(desc(scans.requestedAt))
     .limit(1);
   if (existing)
-    return options.rescan
+    return options.rescan || existing.assertionId
       ? { kind: "throttled", reason: "artifact_active", retryAfterSeconds: 30 }
-      : { kind: "existing", ...existing };
+      : { kind: "existing", scanId: existing.scanId, preparationId: existing.preparationId };
   if (
     (
       await tx.execute<{ paused: boolean }>(
@@ -219,6 +236,7 @@ export async function admitScanInTransaction(
         or(
           and(
             inArray(preparations.state, ["pending", "preparing"]),
+            options.rescan?.assertionRevisionId ? sql`false` : undefined,
             exists(
               tx
                 .select({ id: jobs.id })
@@ -235,6 +253,9 @@ export async function admitScanInTransaction(
           and(
             eq(preparations.state, "ready"),
             eq(preparations.snapshotAvailable, true),
+            options.rescan?.assertionRevisionId
+              ? sql`EXISTS(SELECT 1 FROM workers aw WHERE aw.id=${preparations.ownerWorkerId} AND aw.capabilities->>'assertionRevision'='assertion_v1')`
+              : sql`true`,
             isNotNull(preparations.snapshotId),
             isNotNull(preparations.installedManifest),
             eq(workers.state, "healthy"),
@@ -275,6 +296,7 @@ export async function admitScanInTransaction(
       matrixId: options.matrixId,
       observationRevision,
       previousScanId: options.rescan?.previousScanId ?? null,
+      assertionRevisionId: options.rescan?.assertionRevisionId ?? null,
       requesterKey: options.requesterKey,
       accountKey: options.accountKey ?? null,
       requesterExpiresAt: new Date(now.getTime() + 7 * 86400_000),

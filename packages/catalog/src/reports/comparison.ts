@@ -1,6 +1,7 @@
 import { assertPackageName, compareReports } from "@compatlab/engine";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
+import { assertionSelectionAllowed } from "../assertions/policy.js";
 import type { CatalogDatabase } from "../database.js";
 import { selectionAllowed } from "../policy.js";
 import { PublicRequestError } from "../public/security.js";
@@ -44,7 +45,7 @@ export async function reportHistory(db: CatalogDatabase, name: string, before?: 
       createdAt: string;
       current: boolean;
     }>(
-      sql`SELECT r.id,s.id AS "scanId",v.version,m.revision AS "matrixRevision",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",r.created_at AS "createdAt",(r.invalidated_at IS NULL AND r.replaced_by IS NULL AND (${selectionAllowed})) AS current FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id WHERE p.name=${name} ${cursor ? sql`AND (r.created_at,r.id)<(${new Date(cursor.at)},${cursor.id}::uuid)` : sql``} ORDER BY r.created_at DESC,r.id DESC LIMIT 51`,
+      sql`SELECT r.id,s.id AS "scanId",v.version,m.revision AS "matrixRevision",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",r.created_at AS "createdAt",(r.invalidated_at IS NULL AND r.replaced_by IS NULL AND (${selectionAllowed} AND ${assertionSelectionAllowed})) AS current FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id WHERE p.name=${name} ${cursor ? sql`AND (r.created_at,r.id)<(${new Date(cursor.at)},${cursor.id}::uuid)` : sql``} ORDER BY r.created_at DESC,r.id DESC LIMIT 51`,
     )
   ).rows;
   const items = rows

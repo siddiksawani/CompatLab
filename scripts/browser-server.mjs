@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { cp } from "node:fs/promises";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
+import { assertionResult, seedAssertion } from "../fixtures/browser/assertions.mjs";
 import { prepared, runEvidence } from "../packages/catalog/.browser-fixtures/execution-fixtures.js";
 import {
   actor,
@@ -34,6 +35,7 @@ const owner = await registerWorker(
   catalog.db,
   {
     platform: "linux_amd64_glibc",
+    assertionRevision: "assertion_v1",
     preparationProfiles: [PREPARATION_PROFILE_REVISION],
     imageDigests: [0, 1, 2, 3].map((index) => image(index).imageId),
     harnessRevision: "load_v2",
@@ -60,14 +62,23 @@ const fixtureServer = createServer(async (request, response) => {
   try {
     if (request.url === "/reset") {
       await catalog.pool.query(
-        "TRUNCATE audit_events,blocks,reports,jobs,runs,scans,preparations,package_versions,packages CASCADE",
+        "TRUNCATE auth_users,probe_revisions,audit_events,blocks,reports,jobs,runs,scans,preparations,package_versions,packages CASCADE",
       );
     } else if (request.url === "/execute") {
       sessionId = randomUUID();
       await catalog.pool.query(
         "UPDATE workers SET recovery_required=true,state='drained',session_id=NULL",
       );
-      await readyWorker(catalog.db, owner.token, { sessionId, snapshotIds: [] });
+      const snapshots = (
+        await catalog.pool.query(
+          "SELECT snapshot_id FROM preparations WHERE owner_worker_id=$1 AND snapshot_available",
+          [owner.workerId],
+        )
+      ).rows;
+      await readyWorker(catalog.db, owner.token, {
+        sessionId,
+        snapshotIds: snapshots.map((row) => row.snapshot_id),
+      });
       for (let count = 0; count < 64; count++) {
         const job = await claimJob(catalog.db, owner.token, { sessionId });
         if (!job) break;
@@ -79,7 +90,8 @@ const fixtureServer = createServer(async (request, response) => {
             version: job.artifact.version,
             exports: { ".": "./index.js", "./util": "./util.js" },
           });
-        } else {
+        } else if (job.kind === "assertion") result = assertionResult(job);
+        else {
           const evidence = runEvidence(job);
           for (const session of evidence.sessions)
             session.logs.stdout =
@@ -95,6 +107,11 @@ const fixtureServer = createServer(async (request, response) => {
       }
       await reconcileCatalog(catalog.db);
       await aggregatePendingReports(catalog.db);
+    } else if (request.url === "/assertion") {
+      const scanId = await seedAssertion(catalog);
+      await reconcileCatalog(catalog.db);
+      response.end(JSON.stringify({ scanId }));
+      return;
     } else if (request.url === "/invalidate") {
       const rows = (await catalog.pool.query("SELECT id FROM reports")).rows;
       for (const row of rows)

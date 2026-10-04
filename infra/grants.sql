@@ -11,6 +11,7 @@ GRANT UPDATE (observed_tags,tags_observed_at,integrity_anomaly) ON package_versi
 GRANT INSERT ON jobs,runs,reports,audit_events TO compatlab_control;
 GRANT UPDATE ON workers,preparations,scans,jobs,runs,reports TO compatlab_control;
 GRANT DELETE ON audit_events TO compatlab_control;
+GRANT SELECT,INSERT,UPDATE ON probe_revisions TO compatlab_web;
 REVOKE SELECT ON monitors,monitor_releases,notifications,notification_deliveries FROM compatlab_operator,compatlab_control;
 GRANT SELECT,INSERT,UPDATE,DELETE ON monitors,monitor_releases,notifications,notification_deliveries TO compatlab_web;
 REVOKE SELECT ON auth_users,auth_sessions,auth_accounts,auth_verifications FROM compatlab_operator,compatlab_control;

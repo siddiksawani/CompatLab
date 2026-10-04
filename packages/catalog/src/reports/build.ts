@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  assertionEvidenceSchema,
   CLASSIFIER_REVISION,
   type HostedReport,
   hostedReportSchema,
@@ -9,6 +10,8 @@ import {
   probePlanSchema,
 } from "@compatlab/contracts";
 import {
+  assertionDefinition,
+  classifyAssertion,
   classifyCell,
   classifyDiagnostic,
   combineOutcomes,
@@ -16,6 +19,7 @@ import {
   sanitizeJson,
 } from "@compatlab/engine";
 import { eq } from "drizzle-orm";
+import { probeRevisions } from "../assertions/schema.js";
 import type { CatalogTransaction } from "../database.js";
 import {
   jobs,
@@ -95,6 +99,7 @@ export async function buildReport(
           : null;
         const stored = evidence.find(
           (item) =>
+            item.run.assertionRevisionId === null &&
             item.run.imageId === image.id &&
             item.run.probeGroup === group &&
             item.run.mode === mode,
@@ -198,6 +203,32 @@ export async function buildReport(
       "Runtime error codes are captured observations and can also be thrown by package code.",
     ],
   };
+  if (row.scan.assertionRevisionId) {
+    const [revision] = await tx
+      .select()
+      .from(probeRevisions)
+      .where(eq(probeRevisions.id, row.scan.assertionRevisionId));
+    if (!revision) throw new Error("Assertion revision missing.");
+    report.assertions = [
+      {
+        definition: assertionDefinition(revision.bundle),
+        cells: images.map((image) => {
+          const stored = evidence.find(
+            (item) => item.run.imageId === image.id && item.run.assertionRevisionId === revision.id,
+          );
+          return classifyAssertion(
+            image.definition.profileId,
+            stored?.run.id ?? null,
+            stored?.run.rawEvidence ? assertionEvidenceSchema.parse(stored.run.rawEvidence) : null,
+            preparationFailure ?? terminalFailure ?? classifyDiagnostic(stored?.job.attemptSummary),
+          );
+        }),
+      },
+    ];
+    report.limitations.push(
+      "Named assertions are separate observations. Their failures may originate in the probe or package, and only their stated behavior was tested.",
+    );
+  }
   if (Buffer.byteLength(JSON.stringify(report)) > MAX_REPORT_BYTES)
     throw new TypeError("Normalized report exceeds its evidence budget.");
   return hostedReportSchema.parse(report);
