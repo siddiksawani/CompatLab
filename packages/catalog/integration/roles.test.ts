@@ -3,7 +3,14 @@ import { readFile } from "node:fs/promises";
 import { assertionDigest } from "@compatlab/engine";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { assertionBundle } from "../../../tests/assertion-fixtures.js";
-import { admitScan, applyRetention, openCatalog, setAdmissionPaused } from "../src/index.js";
+import {
+  admitScan,
+  applyRetention,
+  openCatalog,
+  reconcileCatalog,
+  setAdmissionPaused,
+  setWorkerGuard,
+} from "../src/index.js";
 import { actor, artifact, database, migrateCatalog, options, seedMatrix } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
@@ -105,6 +112,20 @@ it("audits direct operator writes and prevents forged database audit origins", a
     actor: `database:${roles[2]}`,
     details: { claimedActor: "claimed-user", databaseRole: roles[2] },
   });
+});
+it("limits guard administration to the operator and lets control maintain its state", async () => {
+  await setAdmissionPaused(operator.db, false, actor);
+  await expect(setWorkerGuard(web.db, true, actor)).rejects.toThrow();
+  await expect(setWorkerGuard(control.db, true, actor)).rejects.toThrow();
+  await setWorkerGuard(operator.db, true, actor);
+  await reconcileCatalog(control.db);
+  expect(await admitScan(web.db, artifact(), options(matrixId))).toMatchObject({
+    reason: "worker_unavailable",
+  });
+  await expect(web.pool.query("UPDATE worker_availability SET paused=false")).rejects.toThrow(
+    "permission denied",
+  );
+  await setWorkerGuard(operator.db, false, actor);
 });
 it("separates maintainer credentials from control and operator access", async () => {
   const userId = randomUUID();

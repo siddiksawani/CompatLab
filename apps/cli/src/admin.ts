@@ -24,12 +24,14 @@ import {
   schema,
   setAdmissionPaused,
   setMatrixEnabled,
+  setWorkerGuard,
   setWorkerState,
 } from "@compatlab/catalog";
 import { z } from "zod";
 
 export const adminUsage = `Usage: compatlab admin status | migrate | retention
        compatlab admin pause | resume
+       compatlab admin worker-guard-enable | worker-guard-disable
        compatlab admin worker-register capabilities.json
        compatlab admin worker-drain | worker-resume | worker-quarantine | worker-revoke UUID
        compatlab admin worker-retire UUID --confirm-host-destroyed
@@ -50,6 +52,8 @@ const counts: Record<string, number> = {
   retention: 0,
   pause: 0,
   resume: 0,
+  "worker-guard-enable": 0,
+  "worker-guard-disable": 0,
   "worker-register": 1,
   "worker-drain": 1,
   "worker-resume": 1,
@@ -141,6 +145,10 @@ export async function runAdmin(
         break;
       case "retention":
         result = await applyRetention(db, actor);
+        break;
+      case "worker-guard-enable":
+      case "worker-guard-disable":
+        await setWorkerGuard(db, command === "worker-guard-enable", actor);
         break;
       case "backup-record":
         await auditBackup(db, id, Number(positionals[1]), actor);

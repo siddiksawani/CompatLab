@@ -1,7 +1,7 @@
 import { RegistryClient } from "@compatlab/engine";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createPublicApi, migrateCatalog, schema } from "../src/index.js";
-import { artifact, database, seedMatrix } from "./fixtures.js";
+import { createPublicApi, migrateCatalog, schema, setWorkerGuard } from "../src/index.js";
+import { actor, artifact, database, seedMatrix } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
 let api: ReturnType<typeof createPublicApi>;
@@ -46,6 +46,7 @@ afterAll(async () => {
   await catalog?.dispose();
 });
 beforeEach(async () => {
+  await catalog.pool.query("UPDATE service_controls SET worker_guard_enabled=false");
   await catalog.pool.query(
     "TRUNCATE audit_events,blocks,reports,jobs,runs,scans,matrix_members,matrices,runtime_images,preparations,workers,package_versions,packages CASCADE",
   );
@@ -68,6 +69,14 @@ function post(value: unknown, headers: Record<string, string> = {}) {
   );
 }
 describe("public discovery and scan admission", () => {
+  it("reports worker outages as temporary service unavailability, not a client quota", async () => {
+    await setWorkerGuard(catalog.db, true, actor);
+    const response = await post({ name: source.name, version: source.version });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("60");
+    expect(await response.json()).toMatchObject({ reason: "worker_unavailable" });
+    expect(await catalog.db.select().from(schema.scans)).toEqual([]);
+  });
   it("looks up ten search results in one database query", async () => {
     searchSize = 10;
     const execute = vi.spyOn(catalog.db, "execute");

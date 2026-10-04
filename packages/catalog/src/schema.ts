@@ -183,6 +183,7 @@ export const auditEvents = pgTable("audit_events", {
 export const serviceControls = pgTable("service_controls", {
   singleton: boolean("singleton").primaryKey().default(true),
   admissionPaused: boolean("admission_paused").notNull().default(false),
+  workerGuardEnabled: boolean("worker_guard_enabled").notNull().default(false),
 });
 
 export * from "./assertions/schema.js";

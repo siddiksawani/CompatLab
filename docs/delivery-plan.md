@@ -35,6 +35,8 @@ On October 4, 2026, the maintainer deferred the public maintainer workflow. The 
 
 ## Repository workflow
 
+Production follow-ups use separate PRs for worker-outage admission/service hardening, production infrastructure/automatic deployment, and search discoverability. The user authorized deployment on October 4, 2026 using the [VPS and isolated home-worker design](deployment.md). Existing workloads on both machines must remain unaffected.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.

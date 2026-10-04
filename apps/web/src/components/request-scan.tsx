@@ -26,11 +26,13 @@ export function RequestScan({
       });
       if (!response.ok) {
         setMessage(
-          response.status === 429
-            ? `The scan limit has been reached. Try again in ${response.headers.get("retry-after") || "30"} seconds.`
-            : response.status === 403
-              ? "This artifact or runtime profile is unavailable under the current service policy."
-              : "A scan could not be requested. Please try again shortly.",
+          response.status === 503
+            ? "Scan requests are temporarily paused. Existing reports remain available."
+            : response.status === 429
+              ? `The scan limit has been reached. Try again in ${response.headers.get("retry-after") || "30"} seconds.`
+              : response.status === 403
+                ? "This artifact or runtime profile is unavailable under the current service policy."
+                : "A scan could not be requested. Please try again shortly.",
         );
         return;
       }

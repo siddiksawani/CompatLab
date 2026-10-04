@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { copyFile, mkdir, rm, statfs, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readdir, rm, statfs, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,16 @@ import { type RuntimeState, runtimeOutcome } from "./outcome.js";
 import { OutputVolume } from "./output.js";
 
 type Limits = { entryMs: number; batchMs: number };
+async function readableHarness(directory: string): Promise<void> {
+  await chmod(directory, 0o755);
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) await readableHarness(path);
+    else if (entry.isFile()) await chmod(path, 0o444);
+    else throw new TypeError("Harness inputs must be regular files.");
+  }
+}
+
 export async function createProbeBackend(
   workspace: string,
   stateDirectory: string,
@@ -133,6 +143,7 @@ async function runSession(
         flag: "wx",
       },
     );
+    await readableHarness(harness);
     output = await OutputVolume.create(join(directory, "output"));
     let progressAt = performance.now();
     const readCheckpoint = async () => {

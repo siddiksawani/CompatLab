@@ -2,6 +2,7 @@ export * from "./admin.js";
 export * from "./admission.js";
 export { createMaintainerService } from "./auth/runtime.js";
 export { maintainerConfig } from "./auth/security.js";
+export * from "./availability.js";
 export * from "./database.js";
 export * from "./migrate.js";
 export { compareMonitorReports } from "./monitoring/compare.js";

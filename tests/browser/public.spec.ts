@@ -6,6 +6,26 @@ import { finish, fixture, requestScan } from "./helpers.js";
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
 });
+test("explains temporary scan pauses without navigating away", async ({ page }) => {
+  await page.route("**/api/v1/scans", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      headers: { "retry-after": "60" },
+      body: JSON.stringify({
+        kind: "throttled",
+        reason: "worker_unavailable",
+        retryAfterSeconds: 60,
+      }),
+    }),
+  );
+  await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0");
+  await page.getByRole("button", { name: "Request a scan", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Scan requests are temporarily paused. Existing reports remain available.",
+  );
+  await expect(page).toHaveURL(/\/packages\?/);
+});
 for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) {
   test(`anonymous discovery and refresh recovery: ${name}`, async ({ page, request }) => {
     await page.goto("/");
