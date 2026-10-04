@@ -11,6 +11,9 @@
     }
   }
   servers {
+    trusted_proxies static {$CLOUDFLARE_CIDRS}
+    trusted_proxies_strict
+    client_ip_headers CF-Connecting-IP
     timeouts {
       read_header 5s
       read_body 10s
@@ -30,11 +33,14 @@
   header Strict-Transport-Security "max-age=31536000"
   reverse_proxy web:3000 {
     header_up X-CompatLab-Proxy-Token {$PROXY_SECRET}
-    header_up X-CompatLab-Client-IP {remote_host}
+    header_up X-CompatLab-Client-IP {client_ip}
     header_up -Forwarded
     transport http {
       dial_timeout 3s
       response_header_timeout 15s
     }
   }
+}
+{$PUBLIC_WWW_DOMAIN} {
+  redir https://{$CANONICAL_DOMAIN}{uri} permanent
 }

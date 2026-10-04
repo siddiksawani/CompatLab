@@ -39,6 +39,32 @@ export async function setAdmissionPaused(
       .values({ ...actor, action: paused ? "admission_paused" : "admission_resumed", details: {} });
   });
 }
+export async function setDeploymentPause(
+  db: CatalogDatabase,
+  release: string,
+  paused: boolean,
+  rawActor: AdminAction,
+) {
+  const actor = adminActionSchema.parse(rawActor);
+  z.string()
+    .regex(/^[a-f0-9]{40}$/)
+    .parse(release);
+  z.boolean().parse(paused);
+  return catalogTransaction(db, async (tx) => {
+    const changed = await tx.execute(sql`
+      UPDATE service_controls SET deployment_release=${paused ? release : null}
+      WHERE singleton AND (deployment_release=${release} OR (${paused} AND deployment_release IS NULL))
+      RETURNING singleton
+    `);
+    if (!changed.rows.length)
+      throw new TypeError("Deployment pause belongs to a different release.");
+    await tx.insert(auditEvents).values({
+      ...actor,
+      action: paused ? "deployment_started" : "deployment_finished",
+      details: { release },
+    });
+  });
+}
 export async function setWorkerState(
   db: CatalogDatabase,
   workerId: string,
@@ -315,7 +341,7 @@ export async function operationStatus(db: CatalogDatabase) {
       sql`SELECT id,state,accepting_jobs AS "acceptingJobs",capacity,last_seen_at AS "lastSeenAt",recovery_required AS "recoveryRequired",revoked_at AS "revokedAt",(SELECT count(*)::int FROM jobs j WHERE j.worker_id=w.id AND j.cleanup_required) AS "cleanupPending" FROM workers w ORDER BY created_at DESC LIMIT 100`,
     ),
     db.execute(
-      sql`SELECT pg_database_size(current_database())::text AS "databaseBytes",(SELECT admission_paused FROM service_controls WHERE singleton) AS "admissionPaused",(SELECT count(*)::int FROM scans WHERE requested_at>now()-interval '24 hours' AND state='failed_infrastructure') AS "infrastructureFailures24h",(SELECT count(*)::int FROM scans WHERE requested_at>now()-interval '24 hours') AS "scans24h",(SELECT count(*)::int FROM preparations WHERE snapshot_available) AS "availableSnapshots",(SELECT max(created_at) FROM audit_events WHERE action='backup_uploaded') AS "lastBackupAt"`,
+      sql`SELECT pg_database_size(current_database())::text AS "databaseBytes",(SELECT admission_paused FROM service_controls WHERE singleton) AS "admissionPaused",(SELECT deployment_release FROM service_controls WHERE singleton) AS "deploymentRelease",(SELECT count(*)::int FROM scans WHERE requested_at>now()-interval '24 hours' AND state='failed_infrastructure') AS "infrastructureFailures24h",(SELECT count(*)::int FROM scans WHERE requested_at>now()-interval '24 hours') AS "scans24h",(SELECT count(*)::int FROM preparations WHERE snapshot_available) AS "availableSnapshots",(SELECT max(coalesce((details->>'capturedAt')::timestamptz,created_at)) FROM audit_events WHERE action='backup_uploaded') AS "lastBackupAt"`,
     ),
     db.execute(
       sql`SELECT (SELECT count(*)::int FROM runs WHERE logs IS NOT NULL AND logs_expire_at<now()) AS "expiredLogs",(SELECT count(*)::int FROM scans WHERE requester_key IS NOT NULL AND requester_expires_at<now()) AS "expiredRequesters",(SELECT count(*)::int FROM audit_events WHERE created_at<now()-interval '180 days') AS "expiredAudits"`,
@@ -341,15 +367,23 @@ export async function auditBackup(
   digest: string,
   bytes: number,
   rawActor: AdminAction,
+  capturedAt = new Date().toISOString(),
 ) {
   const actor = adminActionSchema.parse(rawActor);
   z.string()
     .regex(/^[a-f0-9]{64}$/)
     .parse(digest);
   z.number().int().positive().max(Number.MAX_SAFE_INTEGER).parse(bytes);
+  z.iso.datetime().parse(capturedAt);
+  if (new Date(capturedAt).getTime() > Date.now() + 60_000)
+    throw new TypeError("Backup capture time cannot be in the future.");
   await catalogTransaction(db, async (tx) => {
+    const existing = await tx.execute(
+      sql`SELECT id FROM audit_events WHERE action='backup_uploaded' AND details->>'digest'=${digest} LIMIT 1`,
+    );
+    if (existing.rows.length) return;
     await tx
       .insert(auditEvents)
-      .values({ ...actor, action: "backup_uploaded", details: { digest, bytes } });
+      .values({ ...actor, action: "backup_uploaded", details: { digest, bytes, capturedAt } });
   });
 }

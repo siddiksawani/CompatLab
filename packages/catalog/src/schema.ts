@@ -184,6 +184,7 @@ export const serviceControls = pgTable("service_controls", {
   singleton: boolean("singleton").primaryKey().default(true),
   admissionPaused: boolean("admission_paused").notNull().default(false),
   workerGuardEnabled: boolean("worker_guard_enabled").notNull().default(false),
+  deploymentRelease: text("deployment_release"),
 });
 
 export * from "./assertions/schema.js";

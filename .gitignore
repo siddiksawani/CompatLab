@@ -13,3 +13,4 @@ test-results/
 playwright-report/
 next-env.d.ts
 .browser-fixtures/
+__pycache__/

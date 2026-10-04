@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for changes to Cloudflare origin networks
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/compatlab/current
+ExecStart=/usr/bin/python3 infra/origin.py check infra/cloudflare-ips.json
+UMask=0077
+TimeoutStartSec=60
+

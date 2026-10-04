@@ -20,7 +20,7 @@ await writeFile(
   join(directory, "worker-capabilities.json"),
   JSON.stringify(
     {
-      capacity: 3,
+      capacity: 1,
       capabilities: {
         platform: "linux_amd64_glibc",
         preparationProfiles: [PREPARATION_PROFILE_REVISION],

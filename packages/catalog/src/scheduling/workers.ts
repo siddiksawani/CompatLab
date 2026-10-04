@@ -80,6 +80,50 @@ export async function registerWorker(
     return { workerId: worker.id, token };
   });
 }
+export async function updateWorkerDefinition(
+  db: CatalogDatabase,
+  workerId: string,
+  capabilities: unknown,
+  capacity: number,
+  rawActor: AdminAction,
+) {
+  const id = z.uuid().parse(workerId);
+  const definition = workerCapabilitiesSchema.parse(capabilities);
+  const actor = adminActionSchema.parse(rawActor);
+  z.number().int().min(1).max(3).parse(capacity);
+  await catalogTransaction(db, async (tx) => {
+    const [worker] = await tx.select().from(workers).where(eq(workers.id, id));
+    if (!worker || worker.revokedAt || worker.state === "quarantined")
+      throw new TypeError("Worker is revoked or quarantined.");
+    const gate = await tx.execute(
+      sql`SELECT deployment_release FROM service_controls WHERE singleton`,
+    );
+    const busy = await tx.execute(
+      sql`SELECT id FROM scans WHERE state IN ('requested','preparing','running','aggregating') LIMIT 1`,
+    );
+    const leases = await tx.execute(
+      sql`SELECT id FROM jobs WHERE state IN ('leased','running') OR cleanup_required LIMIT 1`,
+    );
+    if (!gate.rows[0]?.deployment_release || busy.rows.length || leases.rows.length)
+      throw new TypeError(
+        "Pause deployment and finish all work before replacing worker capabilities.",
+      );
+    await tx
+      .update(workers)
+      .set({
+        capabilities: definition,
+        capacity,
+        recoveryRequired: true,
+        lastSeenAt: null,
+      })
+      .where(eq(workers.id, id));
+    await tx.insert(auditEvents).values({
+      ...actor,
+      action: "worker_definition_updated",
+      details: { workerId: id, capacity },
+    });
+  });
+}
 export async function readyWorker(db: CatalogDatabase, token: string, rawSession: unknown) {
   const { sessionId, snapshotIds } = workerInventorySchema
     .partial({ snapshotIds: true })
