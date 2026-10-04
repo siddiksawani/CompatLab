@@ -2,6 +2,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tarfile
@@ -27,6 +28,39 @@ def manifest(sha):
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_rejects_bundle_without_execution_assets(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in release.BUNDLE_FILES:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("qualified content")
+            release.validate_bundle(root)
+            for name in ("harnesses/probe.mjs", "harnesses/assertion.mjs", "runtime-images/Dockerfile"):
+                path = root / name
+                path.unlink()
+                with self.assertRaisesRegex(ValueError, "Incomplete release bundle"):
+                    release.validate_bundle(root)
+                path.write_text("qualified content")
+
+    def test_execution_asset_changes_require_worker_rollout(self):
+        previous = Path.cwd()
+        with tempfile.TemporaryDirectory() as temporary:
+            try:
+                os.chdir(temporary)
+                for name in ("harnesses/probe.mjs", "harnesses/assertion.mjs", "runtime-images/Dockerfile"):
+                    path = Path(name)
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text("original")
+                original = release.source_digest(release.WORKER_INPUTS)
+                for name in ("harnesses/probe.mjs", "harnesses/assertion.mjs", "runtime-images/Dockerfile"):
+                    path = Path(name)
+                    path.write_text("changed")
+                    self.assertNotEqual(original, release.source_digest(release.WORKER_INPUTS))
+                    path.write_text("original")
+            finally:
+                os.chdir(previous)
+
     def test_rejects_unexpected_registry_and_mutable_image(self):
         value = manifest("1" * 40)
         release.validate_manifest(value, "1" * 40)

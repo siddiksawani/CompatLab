@@ -56,6 +56,29 @@ try {
     maxBuffer: 16 * 1024 ** 2,
   });
   const images = await values(join(release, "release.env"));
+  const executionAssets = [
+    "harnesses/probe.mjs",
+    "harnesses/assertion.mjs",
+    "runtime-images/Dockerfile",
+  ];
+  const packagedAssets = await docker(
+    "run",
+    "--rm",
+    "--network",
+    "none",
+    "--read-only",
+    images.COMPATLAB_CONTROL_IMAGE,
+    "node",
+    "--input-type=module",
+    "-e",
+    `import { readFile } from 'node:fs/promises';
+     await import('./services/worker/dist/index.js');
+     console.log(JSON.stringify(await Promise.all(${JSON.stringify(executionAssets)}.map(path => readFile(path, 'utf8')))));`,
+  );
+  assert.deepEqual(
+    JSON.parse(packagedAssets.stdout),
+    await Promise.all(executionAssets.map((path) => readFile(path, "utf8"))),
+  );
   await docker("network", "create", prefix);
   await container(
     `${prefix}-db`,
@@ -253,6 +276,7 @@ try {
       "Caddy 2.11.7",
       "WireGuard-bound control",
       "restricted operator CLI",
+      "packaged worker execution assets",
     ],
     checks: [
       "readiness",

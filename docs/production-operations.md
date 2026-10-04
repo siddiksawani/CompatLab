@@ -6,6 +6,8 @@ This runbook describes the deployment tooling. See the separate launch record fo
 
 Every merge to `main` starts **Production release** in GitHub Actions. It qualifies the merged commit, publishes three digest-pinned GHCR images and a `production-<commit>` GitHub release, then invokes the restricted VPS deployment account. Qualification can take tens of minutes. Production continues serving the previous release while these checks run. A failed check prevents publication/deployment.
 
+The control image also supplies the worker bundle, including runtime-image recipes and both probe harnesses. Deployment qualification compares those packaged files with the reviewed source and imports the packaged worker. Missing execution assets block publication and installation; changes to them require a worker rollout.
+
 The deployment key can request only `deploy <40-character commit>`. The VPS checks that the commit is still the head of `main`, downloads the matching manifest and bounded archive, checks its digest, and validates archive paths. The deployment lock serializes requests. Web-only releases leave the worker alone. Worker changes stage on the dedicated VM, pause new admission, let existing scans finish, update its immutable matrix/capabilities, restart, and wait for a reconciled heartbeat. An operator's admission pause, worker drain, revocation or quarantine is never automatically cleared.
 
 The VPS keeps release directories under `/opt/compatlab/releases`; `/opt/compatlab/current` identifies the running application. Its `manifest.json` records the source commit and image digests. `worker-release` records the worker's separate installed commit. Deployment replaces containers, so a brief interruption is possible.

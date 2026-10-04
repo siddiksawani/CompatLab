@@ -21,6 +21,8 @@ ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/packages ./packages
 COPY --from=build --chown=node:node /app/services ./services
+COPY --from=build --chown=node:node /app/harnesses ./harnesses
+COPY --from=build --chown=node:node /app/runtime-images ./runtime-images
 COPY --from=build --chown=node:node /app/apps/cli ./apps/cli
 COPY --from=build --chown=node:node /app/package.json ./package.json
 USER node
