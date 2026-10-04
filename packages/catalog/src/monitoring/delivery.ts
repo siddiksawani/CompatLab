@@ -27,7 +27,7 @@ export async function deliverNotification(
   const token = randomUUID();
   const claimed = await catalogTransaction(db, async (tx) => {
     await tx.execute(
-      sql`UPDATE notification_deliveries SET state='uncertain',last_error='retry_window_expired',lease_token=NULL,lease_expires_at=NULL WHERE id IN (SELECT id FROM notification_deliveries WHERE state IN ('pending','sending') AND first_attempt_at<=clock_timestamp()-interval '23 hours' LIMIT 100)`,
+      sql`UPDATE notification_deliveries SET state='uncertain',last_error='retry_window_expired',lease_token=NULL,lease_expires_at=NULL WHERE id IN (SELECT id FROM notification_deliveries WHERE state IN ('pending','sending') AND first_attempt_at<=clock_timestamp()-interval '23 hours' AND (lease_expires_at IS NULL OR lease_expires_at<=clock_timestamp()) LIMIT 100)`,
     );
     await tx.execute(
       sql`UPDATE notification_deliveries SET state='uncertain',last_error='attempts_exhausted',lease_token=NULL,lease_expires_at=NULL WHERE id IN (SELECT id FROM notification_deliveries WHERE state IN ('pending','sending') AND attempt>=16 AND (lease_expires_at IS NULL OR lease_expires_at<=clock_timestamp()) LIMIT 100)`,

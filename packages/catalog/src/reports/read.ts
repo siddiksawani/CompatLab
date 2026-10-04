@@ -149,14 +149,7 @@ export function createReportApi(db: CatalogDatabase) {
         : response;
     } catch (error) {
       if (error instanceof PublicRequestError) return json({ error: error.code }, error.status);
-      if (
-        error instanceof InvalidIdentifier ||
-        error instanceof URIError ||
-        error instanceof z.ZodError ||
-        error instanceof SyntaxError ||
-        error instanceof TypeError
-      )
-        return json({ error: "invalid_identifier" }, 400);
+      if (error instanceof InvalidIdentifier) return json({ error: "invalid_identifier" }, 400);
       reportControlError("report_read_failed");
       return json({ error: "temporarily_unavailable" }, 503, { "retry-after": "5" });
     } finally {

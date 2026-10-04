@@ -520,3 +520,43 @@ it("allows pausing when email delivery has been disabled by the operator", async
   expect(denied).not.toHaveBeenCalled();
   expect((await catalog.db.select().from(monitors))[0]?.enabled).toBe(false);
 });
+
+it("rejects conflicting immutable monitor settings instead of pretending they were saved", async () => {
+  const id = await create();
+  expect(await create()).toBe(id);
+  await expect(create("any_evidence_change")).rejects.toMatchObject({
+    status: 409,
+    code: "monitor_identity_conflict",
+  });
+});
+it("lets an active sender record success across retry-window cleanup and opt-out", async () => {
+  await notified();
+  const [monitor] = await catalog.db.select().from(monitors);
+  if (!monitor) throw new Error("Expected monitor.");
+  const otherSender = vi.fn<typeof fetch>();
+  const providerId = randomUUID();
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => {
+    await catalog.pool.query(
+      "UPDATE notification_deliveries SET first_attempt_at=now()-interval '23 hours'",
+    );
+    expect(await deliverNotification(catalog.db, email, authorize, otherSender)).toBe(false);
+    await monitoringMutation(
+      catalog.db,
+      config(),
+      user,
+      request("monitors/update"),
+      { id: monitor.id, enabled: false, emailEnabled: false },
+      authorize,
+      registry,
+      true,
+    );
+    expect((await catalog.db.select().from(notificationDeliveries))[0]?.state).toBe("sending");
+    return Response.json({ id: providerId });
+  });
+  await deliverNotification(catalog.db, email, authorize, fetcher);
+  expect(otherSender).not.toHaveBeenCalled();
+  expect((await catalog.db.select().from(notificationDeliveries))[0]).toMatchObject({
+    state: "sent",
+    providerId,
+  });
+});

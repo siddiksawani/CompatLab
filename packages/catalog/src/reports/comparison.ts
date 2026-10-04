@@ -21,12 +21,18 @@ export async function readComparison(db: CatalogDatabase, before: string, after:
   };
 }
 export async function reportHistory(db: CatalogDatabase, name: string, before?: string) {
-  assertPackageName(name);
-  const cursor = before
-    ? z
-        .strictObject({ at: z.iso.datetime(), id: z.uuid() })
-        .parse(JSON.parse(Buffer.from(before, "base64url").toString("utf8")))
-    : null;
+  let cursor: { at: string; id: string } | null;
+  try {
+    assertPackageName(name);
+    if (before && before.length > 512) throw new TypeError("Cursor exceeds its bound.");
+    cursor = before
+      ? z
+          .strictObject({ at: z.iso.datetime(), id: z.uuid() })
+          .parse(JSON.parse(Buffer.from(before, "base64url").toString("utf8")))
+      : null;
+  } catch {
+    throw new PublicRequestError(400, "invalid_identifier");
+  }
   const rows = (
     await db.execute<{
       id: string;

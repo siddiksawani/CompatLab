@@ -104,7 +104,11 @@ export async function monitoringMutation(
             eq(monitors.matrixId, config.matrixId),
           ),
         );
-      if (existing) return { id: existing.id };
+      if (existing) {
+        if (existing.repositoryLinkId !== input.repositoryLinkId || existing.rule !== input.rule)
+          throw new PublicRequestError(409, "monitor_identity_conflict");
+        return { id: existing.id };
+      }
       const [total] = await tx
         .select({ count: count() })
         .from(monitors)
@@ -171,7 +175,7 @@ export async function monitoringMutation(
         .where(eq(monitors.id, monitor.id));
       if (!settings.enabled || !settings.emailEnabled)
         await tx.execute(
-          sql`UPDATE notification_deliveries d SET state='cancelled',lease_token=NULL,lease_expires_at=NULL FROM notifications n WHERE n.id=d.notification_id AND n.monitor_id=${monitor.id} AND d.state IN ('pending','sending')`,
+          sql`UPDATE notification_deliveries d SET state='cancelled',lease_token=NULL,lease_expires_at=NULL FROM notifications n WHERE n.id=d.notification_id AND n.monitor_id=${monitor.id} AND d.state IN ('pending','sending') AND (d.lease_expires_at IS NULL OR d.lease_expires_at<=clock_timestamp())`,
         );
     });
     return { updated: true };
