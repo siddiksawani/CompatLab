@@ -11,7 +11,9 @@ test("publishes canonical pages and excludes query and operational surfaces", as
 }) => {
   await page.goto("/");
   const origin = new URL(page.url()).origin;
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `${origin}/`);
+  const canonical = page.locator('link[rel="canonical"]');
+  await expect(canonical).toHaveAttribute("href", /^http/);
+  expect(new URL((await canonical.getAttribute("href")) ?? "").href).toBe(`${origin}/`);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
