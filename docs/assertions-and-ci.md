@@ -2,6 +2,8 @@
 
 Named assertions add an explicit behavioral observation to an existing package report. Automatic root and subpath loading results keep their own outcome and `smoke_tested` evidence. A completed named assertion records `probe_verified` with a separate pass or fail; interrupted or invalid completion cannot earn that label. A failing assertion can reflect a probe error as well as package behavior.
 
+Completed failures use the neutral `assertion` origin. This identifies the failed observation without attributing its cause to the package or to the probe author. Supervisor and infrastructure failures retain their existing origins.
+
 ## Register and run a probe
 
 Sign in, link the package's public GitHub repository and open **Named assertions** on `/account`. Commit a manifest, an `.mjs` entry and any offline fixtures. Register the full 40-character commit SHA and the manifest path from the repository root. Moving branches and tags are rejected. The package's published repository metadata must match the authorized repository, and at least one published version must match the range.

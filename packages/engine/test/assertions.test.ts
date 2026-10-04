@@ -45,7 +45,7 @@ it("never promotes incomplete, crashed or forged stdout observations", () => {
   expect(classifyAssertion(fail.profileId, null, fail)).toMatchObject({
     outcome: "fail",
     evidenceLevel: "probe_verified",
-    failure: { classification: "probe_assertion_failed" },
+    failure: { classification: "probe_assertion_failed", origin: "assertion" },
   });
   const interrupted = structuredClone(ok);
   interrupted.session.stopReason = "entry_timeout";

@@ -64,7 +64,7 @@ export const evidencePhaseSchema = z.enum([
 export const normalizedFailureSchema = z.strictObject({
   classification: failureClassificationSchema,
   phase: evidencePhaseSchema,
-  origin: z.enum(["package", "prerequisite", "policy", "infrastructure"]),
+  origin: z.enum(["package", "prerequisite", "policy", "infrastructure", "assertion"]),
   retryable: z.boolean(),
   source: z.enum([
     "captured_error_code",

@@ -122,8 +122,11 @@ export async function checkCiPackage(
       });
     });
   } finally {
-    await supervisor.close();
-    if (staging) await rm(staging, { recursive: true, force: true });
+    try {
+      await supervisor.close();
+    } finally {
+      if (staging) await rm(staging, { recursive: true, force: true });
+    }
   }
 }
 

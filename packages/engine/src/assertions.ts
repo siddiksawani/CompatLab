@@ -104,7 +104,7 @@ export function classifyAssertion(
       ? {
           classification: "probe_assertion_failed",
           phase: "probe_assertion",
-          origin: "package",
+          origin: "assertion",
           retryable: false,
           source: "harness_observation",
           message: sanitizeText(observed.error.message).slice(0, 1024),

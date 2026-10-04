@@ -56,6 +56,7 @@ export function compareReports(before: HostedReport, after: HostedReport): Repor
     limitations: [
       "Changed inputs do not establish that a package change caused a result.",
       "Timing, timestamps, logs and free-text error messages do not trigger alerts.",
+      "Comparisons do not establish general functional correctness or package safety.",
       "Only identical named assertion revisions are compared as behavior; changed revisions are disclosed as inputs.",
     ],
   };

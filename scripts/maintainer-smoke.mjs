@@ -187,8 +187,10 @@ try {
       const cell = classifyAssertion(image.profileId, null, result);
       if (name === "pass" || name === "isolation")
         assert.equal(assertionPassed(result), true, JSON.stringify(result));
-      else if (name === "fail") assert.equal(cell.outcome, "fail", JSON.stringify(result));
-      else {
+      else if (name === "fail") {
+        assert.equal(cell.outcome, "fail", JSON.stringify(result));
+        assert.equal(cell.failure?.origin, "assertion");
+      } else {
         assert.equal(assertionPassed(result), false);
         assert.equal(cell.evidenceLevel, "static_only");
       }
