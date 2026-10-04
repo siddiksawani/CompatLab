@@ -32,6 +32,8 @@ describe("CLI", () => {
 
   it.each([
     ["check", "some-package"],
+    ["ci", "package@1.0.0"],
+    ["ci", "package@1.0.0", "--artifact", "a.tgz"],
     ["doctor", "--unsafe-local"],
     ["doctor", "--json", "extra"],
   ])("rejects unsupported arguments without invoking Docker: %j", async (...args) => {
@@ -87,4 +89,17 @@ describe("CLI", () => {
     });
     expect(output).toContain("Usage: compatlab doctor");
   });
+});
+
+it("refuses CI archive execution when runsc prerequisites are unavailable", async () => {
+  const ci = vi.fn();
+  expect(
+    await runCli(
+      ["ci", "fixture@1.0.0", "--artifact", "fixture.tgz", "--provenance", "provenance.json"],
+      setup(),
+      async () => ({ ...report, prerequisitesAvailable: false }),
+      { check: vi.fn(), reproduce: vi.fn(), ci },
+    ),
+  ).toBe(3);
+  expect(ci).not.toHaveBeenCalled();
 });

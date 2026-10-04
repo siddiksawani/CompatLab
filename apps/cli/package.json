@@ -9,6 +9,7 @@
   "dependencies": {
     "@compatlab/catalog": "workspace:*",
     "@compatlab/worker": "workspace:*",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "@compatlab/engine": "workspace:*"
   }
 }

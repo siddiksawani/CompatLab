@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertionBundleSchema, assertionEvidenceSchema } from "./assertions.js";
 import { localReportSchema } from "./local-report.js";
 import { type ProbePlan, probePlanSchema } from "./plan.js";
 import { probeGroupResultSchema } from "./probes.js";
@@ -18,6 +19,7 @@ export const preparationClassificationSchema = z.enum([
 
 export const workerCapabilitiesSchema = z.strictObject({
   platform: z.literal("linux_amd64_glibc"),
+  assertionRevision: z.literal("assertion_v1").optional(),
   preparationProfiles: z.array(z.string().min(1).max(128)).min(1).max(16),
   imageDigests: z
     .array(z.string().regex(/^sha256:[a-f0-9]{64}$/))
@@ -74,6 +76,24 @@ export const jobAssignmentSchema = z.discriminatedUnion("kind", [
       .nonnegative()
       .max(4 * 1024 ** 2),
   }),
+  z.strictObject({
+    ...assignment,
+    kind: z.literal("assertion"),
+    snapshot: localReportSchema.shape.snapshot,
+    image: runtimeImageSchema,
+    bundle: assertionBundleSchema,
+    revisionDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    maxEvidenceBytes: z
+      .number()
+      .int()
+      .min(1024)
+      .max(20 * 1024 ** 2),
+    maxLogBytes: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(4 * 1024 ** 2),
+  }),
 ]);
 export const preparationResultSchema = z.strictObject({
   kind: z.literal("preparation"),
@@ -97,6 +117,7 @@ export const infrastructureFailureSchema = z.enum([
 ]);
 export const jobResultSchema = z.discriminatedUnion("kind", [
   preparationResultSchema,
+  z.strictObject({ kind: z.literal("assertion"), evidence: assertionEvidenceSchema }),
   z.strictObject({ kind: z.literal("run"), evidence: probeGroupResultSchema }),
   z.strictObject({
     kind: z.literal("failure"),
@@ -116,9 +137,16 @@ export type JobAssignment = z.infer<typeof jobAssignmentSchema>;
 export type JobResult = z.infer<typeof jobResultSchema>;
 export type PreparationResult = z.infer<typeof preparationResultSchema>;
 
-export function jobEvidenceBudget(plan: ProbePlan, metadata: unknown, runtimeCount: number) {
+export function jobEvidenceBudget(
+  plan: ProbePlan,
+  metadata: unknown,
+  runtimeCount: number,
+  assertion = false,
+) {
   const reserved = new TextEncoder().encode(JSON.stringify({ plan, metadata })).length + 1024 ** 2;
-  const maxEvidenceBytes = Math.floor((20 * 1024 ** 2 - reserved) / (runtimeCount * 4));
+  const maxEvidenceBytes = Math.floor(
+    (20 * 1024 ** 2 - reserved) / (runtimeCount * (assertion ? 5 : 4)),
+  );
   if (
     !Number.isInteger(runtimeCount) ||
     runtimeCount < 1 ||
@@ -126,5 +154,8 @@ export function jobEvidenceBudget(plan: ProbePlan, metadata: unknown, runtimeCou
     maxEvidenceBytes < 8192
   )
     throw new TypeError("The scan has insufficient evidence space.");
-  return { maxEvidenceBytes, maxLogBytes: Math.floor((4 * 1024 ** 2) / (runtimeCount * 4)) };
+  return {
+    maxEvidenceBytes,
+    maxLogBytes: Math.floor((4 * 1024 ** 2) / (runtimeCount * (assertion ? 5 : 4))),
+  };
 }

@@ -26,7 +26,8 @@
     "db:migrate": "node scripts/migrate-catalog.mjs",
     "web:build": "pnpm build && pnpm --filter @compatlab/web build",
     "web:dev": "pnpm build && pnpm --filter @compatlab/web dev",
-    "test:browser": "tsc -p tsconfig.browser-fixtures.json && playwright test"
+    "test:browser": "tsc -p tsconfig.browser-fixtures.json && playwright test",
+    "test:maintainers": "node scripts/maintainer-smoke.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -3,6 +3,8 @@ import { assertPackageName, matchingVersions, type RegistryClient } from "@compa
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { admitScanInTransaction } from "../admission.js";
+import { allowedAssertion } from "../assertions/policy.js";
+import { probeRevisions } from "../assertions/schema.js";
 import type { Principal } from "../auth/github.js";
 import { accountRequesterKey } from "../auth/security.js";
 import { type CatalogDatabase, catalogTransaction } from "../database.js";
@@ -182,7 +184,11 @@ export async function monitoringMutation(
   }
   if (path === "/api/maintainer/rescan") {
     const input = z
-      .strictObject({ previousScanId: z.uuid(), repositoryLinkId: z.uuid() })
+      .strictObject({
+        previousScanId: z.uuid(),
+        repositoryLinkId: z.uuid(),
+        assertionRevisionId: z.uuid().optional(),
+      })
       .parse(body);
     if (!config.scansEnabled) throw new PublicRequestError(503, "scans_paused");
     const row = (
@@ -196,12 +202,41 @@ export async function monitoringMutation(
     assertRepository(artifact.manifest, authority.proof.fullName);
     return catalogTransaction(db, async (tx) => {
       await assertLinkedAuthority(tx, authority);
+      if (input.assertionRevisionId) {
+        const [revision] = await tx
+          .select()
+          .from(probeRevisions)
+          .where(
+            and(
+              eq(probeRevisions.id, input.assertionRevisionId),
+              eq(probeRevisions.ownerUserId, user.userId),
+              eq(probeRevisions.repositoryLinkId, input.repositoryLinkId),
+            ),
+          );
+        if (
+          !revision ||
+          !(await allowedAssertion(tx, revision.id)) ||
+          revision.bundle.manifest.packageName !== row.name ||
+          !matchingVersions([row.version], revision.bundle.manifest.packageRange).length
+        )
+          throw new PublicRequestError(403, "probe_not_authorized");
+      }
+      const child = (
+        await tx.execute<{ assertionId: string | null }>(
+          sql`SELECT assertion_revision_id AS "assertionId" FROM scans WHERE previous_scan_id=${input.previousScanId}`,
+        )
+      ).rows[0];
+      if (child && child.assertionId !== (input.assertionRevisionId ?? null))
+        throw new PublicRequestError(409, "rescan_inputs_conflict");
       return admitScanInTransaction(tx, artifact, {
         matrixId: row.matrixId,
         ...requesterIdentity(request, config),
         accountKey: accountRequesterKey(config.requesterSecret, user.githubId),
         classifierRevision: CLASSIFIER_REVISION,
-        rescan: { previousScanId: input.previousScanId },
+        rescan: {
+          previousScanId: input.previousScanId,
+          ...(input.assertionRevisionId ? { assertionRevisionId: input.assertionRevisionId } : {}),
+        },
       });
     });
   }

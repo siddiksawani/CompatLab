@@ -222,13 +222,20 @@ export async function retryInfrastructure(
   const actor = adminActionSchema.parse(rawActor),
     id = uuidSchema.parse(scanId);
   const [row] = await db
-    .select({ matrixId: scans.matrixId, name: packages.name, artifact: packageVersions })
+    .select({
+      matrixId: scans.matrixId,
+      name: packages.name,
+      artifact: packageVersions,
+      assertionRevisionId: scans.assertionRevisionId,
+    })
     .from(scans)
     .innerJoin(preparations, eq(preparations.id, scans.preparationId))
     .innerJoin(packageVersions, eq(packageVersions.id, preparations.artifactId))
     .innerJoin(packages, eq(packages.id, packageVersions.packageId))
     .where(eq(scans.id, id));
   if (!row) throw new TypeError("Scan not found.");
+  if (row.assertionRevisionId)
+    throw new TypeError("Named assertions require a maintainer-authorized controlled rescan.");
   return admitScan(
     db,
     { ...row.artifact, name: row.name },

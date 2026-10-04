@@ -7,6 +7,8 @@ import {
   workerSessionSchema,
 } from "@compatlab/contracts";
 import { and, eq, sql } from "drizzle-orm";
+import { allowedAssertion, assertionSelectionAllowed } from "../assertions/policy.js";
+import { probeRevisions } from "../assertions/schema.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection, selectionAllowed } from "../policy.js";
 import {
@@ -43,7 +45,7 @@ export async function claimJob(
       LEFT JOIN runs r ON r.id=j.run_id LEFT JOIN runtime_images ri ON ri.id=r.image_id
       WHERE j.state='queued' AND NOT j.cleanup_required AND j.attempt < 3 AND j.available_at <= ${now}
         AND s.state IN ('requested','preparing','running') AND (s.deadline_at IS NULL OR s.deadline_at > ${now})
-        AND ${selectionAllowed} AND m.platform=${caps.platform}
+        AND ${selectionAllowed} AND ${assertionSelectionAllowed} AND (s.assertion_revision_id IS NULL OR ${caps.assertionRevision ?? null}::text='assertion_v1') AND m.platform=${caps.platform}
         AND m.harness_revision=${caps.harnessRevision} AND m.plan_revision=${caps.planRevision} AND m.policy_revision=${caps.policyRevision}
         AND (SELECT count(*) FROM jobs WHERE state IN ('leased','running')) < ${SCHEDULER_POLICY.globalJobs}
         AND (SELECT count(*) FROM jobs WHERE state IN ('leased','running') AND worker_id=${worker.id}) < ${worker.capacity}
@@ -152,6 +154,36 @@ async function assignment(
   if (!run) throw new Error("Run image missing.");
   const prep = row.preparation;
   if (!row.scan.plan) throw new Error("Run plan missing.");
+  const snapshot = {
+    id: prep.snapshotId,
+    generation: prep.snapshotGeneration,
+    lockDigest: prep.lockDigest,
+    treeDigest: prep.treeDigest,
+    profileRevision: prep.profileRevision,
+    installerImage: prep.installerImage,
+  };
+  const budget = jobEvidenceBudget(
+    row.scan.plan,
+    prep.metadata,
+    row.matrix.runtimeCount,
+    !!row.scan.assertionRevisionId,
+  );
+  if (run.run.assertionRevisionId) {
+    const [revision] = await tx
+      .select()
+      .from(probeRevisions)
+      .where(eq(probeRevisions.id, run.run.assertionRevisionId));
+    if (!revision) throw new Error("Assertion input missing.");
+    return jobAssignmentSchema.parse({
+      ...common,
+      kind: "assertion",
+      image: run.image,
+      snapshot,
+      bundle: revision.bundle,
+      revisionDigest: revision.digest,
+      ...budget,
+    });
+  }
   return jobAssignmentSchema.parse({
     ...common,
     kind: "run",
@@ -167,7 +199,7 @@ async function assignment(
       profileRevision: prep.profileRevision,
       installerImage: prep.installerImage,
     },
-    ...jobEvidenceBudget(row.scan.plan, prep.metadata, row.matrix.runtimeCount),
+    ...budget,
   });
 }
 export async function renewJob(db: CatalogDatabase, token: string, rawAttempt: unknown) {
@@ -176,7 +208,10 @@ export async function renewJob(db: CatalogDatabase, token: string, rawAttempt: u
     const worker = await activeWorker(tx, token, attempt.sessionId);
     const now = await databaseNow(tx);
     const { job, scan, preparation } = await currentAttempt(tx, worker.id, attempt, now);
-    if (!(await allowedSelection(tx, preparation.artifactId, scan.matrixId)))
+    if (
+      !(await allowedSelection(tx, preparation.artifactId, scan.matrixId)) ||
+      !(await allowedAssertion(tx, scan.assertionRevisionId))
+    )
       throw new SchedulingError("stale_attempt", "The execution policy changed.");
     const expiry = new Date(
       Math.min(now.getTime() + 30_000, job.deadlineAt?.getTime() ?? now.getTime()),

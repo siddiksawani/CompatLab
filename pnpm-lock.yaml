@@ -190,6 +190,9 @@ importers:
       '@compatlab/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@compatlab/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@compatlab/worker':
         specifier: workspace:*
         version: link:../../services/worker

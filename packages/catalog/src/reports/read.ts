@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  assertionEvidenceSchema,
   hostedReportSchema,
   probeGroupResultSchema,
   probeSessionSchema,
@@ -8,6 +9,8 @@ import {
 import { boundedText, displayIdentifier, sanitizeJson, sanitizeText } from "@compatlab/engine";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { assertionSelectionAllowed } from "../assertions/policy.js";
+import { probeRevisions } from "../assertions/schema.js";
 import type { CatalogDatabase, CatalogReader } from "../database.js";
 import { selectionAllowed } from "../policy.js";
 import { PublicRequestError } from "../public/security.js";
@@ -32,7 +35,7 @@ export async function reportHeader(db: CatalogReader, reportId: string) {
       previousScanId: string | null;
       previousReportId: string | null;
     }>(sql`SELECT r.id,r.scan_id AS "scanId",r.invalidated_at AS "invalidatedAt",r.invalidation_reason AS "invalidationReason",r.replaced_by AS "replacedBy",
-    prep.snapshot_available AS "snapshotAvailable",(${selectionAllowed}) AS "policyAllowed",r.created_at AS "createdAt",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",(SELECT id FROM reports pr WHERE pr.scan_id=s.previous_scan_id AND pr.replaced_by IS NULL ORDER BY pr.created_at DESC LIMIT 1) AS "previousReportId"
+    prep.snapshot_available AS "snapshotAvailable",(${selectionAllowed} AND ${assertionSelectionAllowed}) AS "policyAllowed",r.created_at AS "createdAt",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",(SELECT id FROM reports pr WHERE pr.scan_id=s.previous_scan_id AND pr.replaced_by IS NULL ORDER BY pr.created_at DESC LIMIT 1) AS "previousReportId"
     FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id
     JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id
     WHERE r.id=${reportId}`)
@@ -120,7 +123,13 @@ export async function readReportLogs(db: CatalogDatabase, reportId: string, runI
 export async function reproductionReport(db: CatalogDatabase, reportId: string) {
   const report = await reportPayload(db, reportId);
   if (!report?.preparation.snapshot) return null;
+  const [input] = await db
+    .select({ bundle: probeRevisions.bundle })
+    .from(scans)
+    .innerJoin(probeRevisions, eq(probeRevisions.id, scans.assertionRevisionId))
+    .where(eq(scans.id, report.scanId));
   return reproductionInputsSchema.parse({
+    ...(input ? { assertion: input.bundle } : {}),
     schemaVersion: 1,
     kind: "reproduction_inputs",
     reportId: report.id,
@@ -227,9 +236,17 @@ export function createReportApi(db: CatalogDatabase) {
     if (part === "evidence") {
       const runId = identifier(url.searchParams.get("runId"));
       const [row] = await db
-        .select({ raw: runs.rawEvidence })
+        .select({ raw: runs.rawEvidence, assertionId: runs.assertionRevisionId })
         .from(runs)
         .where(and(eq(runs.id, runId), eq(runs.scanId, status.scanId)));
+      if (row?.assertionId)
+        return json({
+          schemaVersion: 1,
+          kind: "assertion",
+          runId,
+          sanitization: "display_v1",
+          evidence: row.raw ? sanitizeJson(assertionEvidenceSchema.parse(row.raw)) : null,
+        });
       const raw = row?.raw ? probeGroupResultSchema.parse(row.raw) : null;
       const evidence = raw
         ? { ...probeGroupResultSchema.parse(sanitizeJson(raw)), entries: raw.entries }

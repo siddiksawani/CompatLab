@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertionBundleSchema, assertionEvidenceSchema } from "./assertions.js";
 import { probePlanSchema } from "./plan.js";
 import { PROBE_HARNESS_REVISION, PROBE_POLICY_REVISION, probeGroupResultSchema } from "./probes.js";
 import { runtimeMatrixSchema } from "./runtime.js";
@@ -34,12 +35,19 @@ export const localReportSchema = z.strictObject({
   groups: z.array(probeGroupResultSchema).max(64),
   deadlineReached: z.boolean(),
   cancelled: z.boolean(),
+  assertion: z
+    .strictObject({
+      bundle: assertionBundleSchema,
+      evidence: z.array(assertionEvidenceSchema).max(16),
+    })
+    .optional(),
 });
 export type LocalReport = z.infer<typeof localReportSchema>;
 
 export const reproductionInputsSchema = z.strictObject({
   schemaVersion: z.literal(1),
   kind: z.literal("reproduction_inputs"),
+  assertion: assertionBundleSchema.optional(),
   reportId: z.uuid(),
   artifact: localReportSchema.shape.artifact,
   snapshot: localReportSchema.shape.snapshot,

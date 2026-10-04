@@ -1,6 +1,12 @@
 import { join } from "node:path";
 import { type JobAssignment, type JobResult, jobResultSchema } from "@compatlab/contracts";
-import { executePlan, manifestObservations, PreparationError } from "@compatlab/engine";
+import {
+  assertionDigest,
+  executePlan,
+  manifestObservations,
+  matchingVersions,
+  PreparationError,
+} from "@compatlab/engine";
 import { docker } from "../command.js";
 import { CleanupError } from "../lifecycle/cleanup.js";
 import type { ExecutionSupervisor } from "../lifecycle/supervisor.js";
@@ -69,6 +75,25 @@ export async function executeAssignment(
         snapshot.installerImage !== job.snapshot.installerImage
       )
         throw new TypeError("The assigned snapshot is unavailable or changed.");
+      if (job.kind === "assertion") {
+        if (
+          assertionDigest(job.bundle) !== job.revisionDigest ||
+          job.bundle.manifest.packageName !== job.artifact.name ||
+          !matchingVersions([job.artifact.version], job.bundle.manifest.packageRange).length
+        )
+          throw new TypeError("Assertion input identity mismatch.");
+        const evidence = await supervisor.assertion(snapshot, job.image, job.bundle, scope, signal);
+        let remaining = job.maxLogBytes;
+        for (const stream of ["stdout", "stderr"] as const) {
+          const bytes = Buffer.from(evidence.session.logs[stream]);
+          evidence.session.logs[stream] = new TextDecoder().decode(bytes.subarray(0, remaining), {
+            stream: true,
+          });
+          evidence.session.logs[`${stream}Truncated`] ||= bytes.length > remaining;
+          remaining -= Math.min(bytes.length, remaining);
+        }
+        return { kind: "assertion", evidence };
+      }
       const runtime = job.plan.runtimes.find(
         (runtime) => runtime.profileId === job.image.profileId,
       );

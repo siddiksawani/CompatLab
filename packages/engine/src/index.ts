@@ -1,3 +1,4 @@
+export * from "./assertions.js";
 export * from "./classification/cells.js";
 export * from "./classification/failures.js";
 export * from "./classification/text.js";

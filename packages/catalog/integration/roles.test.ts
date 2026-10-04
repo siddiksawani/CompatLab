@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { assertionDigest } from "@compatlab/engine";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { assertionBundle } from "../../../tests/assertion-fixtures.js";
 import { admitScan, applyRetention, openCatalog, setAdmissionPaused } from "../src/index.js";
 import { actor, artifact, database, migrateCatalog, options, seedMatrix } from "./fixtures.js";
 
@@ -166,4 +168,36 @@ it("keeps monitor destinations private while allowing the deployed scheduler rol
   expect((await web.pool.query("SELECT id FROM monitors WHERE id=$1", [monitorId])).rowCount).toBe(
     0,
   );
+});
+it("revokes retained assertions under deployed web grants when links or accounts are removed", async () => {
+  for (const removeAccount of [false, true]) {
+    const userId = randomUUID(),
+      linkId = randomUUID(),
+      revisionId = randomUUID();
+    await web.pool.query(
+      "INSERT INTO auth_users(id,name,email,email_verified) VALUES($1,'maintainer',$2,true)",
+      [userId, `${userId}@example.com`],
+    );
+    await web.pool.query(
+      "INSERT INTO repository_links(id,user_id,repository_id,installation_id,full_name) VALUES($1,$2,'902','92','owner/package')",
+      [linkId, userId],
+    );
+    const bundle = assertionBundle();
+    await web.pool.query(
+      "INSERT INTO probe_revisions(id,owner_user_id,repository_link_id,digest,bundle) VALUES($1,$2,$3,$4,$5)",
+      [revisionId, userId, linkId, assertionDigest(bundle), JSON.stringify(bundle)],
+    );
+    if (removeAccount) await web.pool.query("DELETE FROM auth_users WHERE id=$1", [userId]);
+    else await web.pool.query("UPDATE repository_links SET revoked_at=now() WHERE id=$1", [linkId]);
+    const retained = (
+      await control.pool.query("SELECT owner_user_id,revoked_at FROM probe_revisions WHERE id=$1", [
+        revisionId,
+      ])
+    ).rows[0];
+    expect(retained.revoked_at).not.toBeNull();
+    expect(retained.owner_user_id).toBe(removeAccount ? null : userId);
+    await expect(
+      control.pool.query("UPDATE probe_revisions SET revoked_at=NULL WHERE id=$1", [revisionId]),
+    ).rejects.toThrow();
+  }
 });

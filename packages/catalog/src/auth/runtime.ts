@@ -4,6 +4,12 @@ import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { assertionOverview, registerAssertion, revokeAssertion } from "../assertions/registry.js";
+import {
+  AssertionSourceError,
+  assertionSourceRequestSchema,
+  fetchAssertionBundle,
+} from "../assertions/source.js";
 import { type CatalogDatabase, catalogTransaction } from "../database.js";
 import type { LinkedAuthority } from "../monitoring/authority.js";
 import { monitoringMutation, monitoringOverview } from "../monitoring/settings.js";
@@ -242,6 +248,8 @@ export function createMaintainerService(
             : [],
         });
       }
+      if (path === "/api/maintainer/assertions" && request.method === "GET")
+        return privateJson(await assertionOverview(db, (await requirePrincipal(request)).userId));
       if (path === "/api/maintainer/monitors" && request.method === "GET") {
         const user = await requirePrincipal(request);
         return privateJson(await monitoringOverview(db, user.userId, config.emailEnabled === true));
@@ -249,6 +257,22 @@ export function createMaintainerService(
       if (request.method !== "POST") return privateJson({ error: "not_found" }, 404);
       const body = await readAdmissionBody(request, publicConfig.origin);
       const user = await requirePrincipal(request, true);
+      if (path === "/api/maintainer/assertions") {
+        const input = assertionSourceRequestSchema.parse(body);
+        const authority = await authorizeLink(user.userId, input.repositoryLinkId, request);
+        const bundle = await fetchAssertionBundle(
+          authority.proof.fullName,
+          input.commit,
+          input.manifestPath,
+          await accessToken(request),
+          fetcher,
+        );
+        return privateJson(await registerAssertion(db, authority, bundle, registry), 201);
+      }
+      if (path === "/api/maintainer/assertions/revoke")
+        return privateJson(
+          await revokeAssertion(db, user.userId, z.strictObject({ id: z.uuid() }).parse(body).id),
+        );
       if (path.startsWith("/api/maintainer/monitors") || path === "/api/maintainer/rescan")
         return privateJson(
           await monitoringMutation(
@@ -289,6 +313,8 @@ export function createMaintainerService(
     } catch (error) {
       if (error instanceof PublicRequestError)
         return privateJson({ error: error.code }, error.status);
+      if (error instanceof AssertionSourceError)
+        return privateJson({ error: "invalid_assertion_source" }, 400);
       if (error instanceof z.ZodError || error instanceof SyntaxError)
         return privateJson({ error: "invalid_request" }, 400);
       reportControlError("maintainer_request_failed");

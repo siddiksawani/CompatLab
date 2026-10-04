@@ -56,7 +56,7 @@ export function compareReports(before: HostedReport, after: HostedReport): Repor
     limitations: [
       "Changed inputs do not establish that a package change caused a result.",
       "Timing, timestamps, logs and free-text error messages do not trigger alerts.",
-      "This compares loading evidence, not functional correctness or package safety.",
+      "Only identical named assertion revisions are compared as behavior; changed revisions are disclosed as inputs.",
     ],
   };
   const add = (subject: string, a: unknown, b: unknown, regression = false) => {
@@ -110,8 +110,25 @@ export function compareReports(before: HostedReport, after: HostedReport): Repor
       );
     }
   }
+  for (const left of before.assertions ?? []) {
+    const right = after.assertions?.find(
+      (item) => item.definition.digest === left.definition.digest,
+    );
+    if (!right) continue;
+    for (const a of left.cells) {
+      const b = right.cells.find((cell) => cell.profileId === a.profileId);
+      if (b)
+        add(
+          `Assertion ${left.definition.manifest.name}/${a.profileId}`,
+          { outcome: a.outcome, failure: failure(a.failure) },
+          { outcome: b.outcome, failure: failure(b.failure) },
+          a.outcome === "pass" && b.outcome === "fail",
+        );
+    }
+  }
   const inputs = (r: HostedReport) => ({
     artifact: r.artifact,
+    maintainer_assertions: (r.assertions ?? []).map((a) => a.definition.digest),
     dependency_lock: r.preparation.snapshot?.lockDigest ?? null,
     snapshot: r.preparation.snapshot?.id ?? null,
     tree: r.preparation.snapshot?.treeDigest ?? null,

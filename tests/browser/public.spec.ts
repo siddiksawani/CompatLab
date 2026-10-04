@@ -182,3 +182,29 @@ test("history, comparisons and badges read immutable evidence without scheduling
   expect(await (await fixture(request, "counts")).json()).toEqual(before);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+test("named failures remain separate from automatic loading evidence", async ({
+  page,
+  request,
+}) => {
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request);
+  const { scanId } = await (await fixture(request, "assertion")).json();
+  await page.goto(`/scans/${scanId}`);
+  await finish(page, request);
+  const section = page.getByRole("region", { name: "Named assertion results" });
+  await expect(section).toContainText("documented-behavior");
+  await expect(section).toContainText("probe verified");
+  await expect(section).toContainText("Expected behavior failed.");
+  await expect(page.getByText("Runtime evidence / smoke tested", { exact: true })).toBeVisible();
+  await expect(section.getByRole("link", { name: "Pinned source" })).toHaveAttribute(
+    "href",
+    `https://github.com/owner/package/commit/${"a".repeat(40)}`,
+  );
+  const before = await (await fixture(request, "counts")).json();
+  await page.reload();
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+  ).toBe(true);
+});

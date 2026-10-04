@@ -77,6 +77,13 @@ export default function Privacy() {
         provenance; invalidation marks the report as unsuitable for reuse. The operator audits the
         reason. Do not include sensitive content in a public issue.
       </p>
+      <h2>Public assertion revisions</h2>
+      <p>
+        Registered probes come from public GitHub commits. Their source, fixture hashes, approved
+        capabilities and results form retained public evidence. Revoking a probe or deleting an
+        account stops new execution; deletion removes account ownership and repository configuration
+        while keeping the historical revision and reports.
+      </p>
     </article>
   );
 }

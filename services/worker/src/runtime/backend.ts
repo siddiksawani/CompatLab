@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, rm, statfs, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import {
+  type AssertionBundle,
+  type AssertionEvidence,
   MAX_BATCH_BYTES,
   PROBE_LIMITS,
   type ProbeCheckpoint,
@@ -14,7 +16,12 @@ import {
   type RuntimeImage,
   type StopReason,
 } from "@compatlab/contracts";
-import { runtimeArguments, type SandboxBackend } from "@compatlab/engine";
+import {
+  assertionDigest,
+  runtimeArguments,
+  type SandboxBackend,
+  validateAssertionBundle,
+} from "@compatlab/engine";
 import { type CommandResult, docker, removeContainer, streamCommand } from "../command.js";
 import { readBoundedFile } from "../preparation/files.js";
 import { assertPreparationHost } from "../preparation/prepare.js";
@@ -55,6 +62,7 @@ async function runSession(
   jobs: string,
   limits: Limits,
   signal: AbortSignal,
+  assertion?: AssertionBundle,
 ): Promise<ProbeSession> {
   const started = performance.now();
   const directory = join(jobs, randomUUID());
@@ -103,13 +111,28 @@ async function runSession(
     const harness = join(directory, "harness");
     await mkdir(harness, { mode: 0o755 });
     await copyFile(
-      fileURLToPath(new URL("../../../../harnesses/probe.mjs", import.meta.url)),
-      join(harness, "probe.mjs"),
+      fileURLToPath(
+        new URL(`../../../../harnesses/${assertion ? "assertion" : "probe"}.mjs`, import.meta.url),
+      ),
+      join(harness, assertion ? "assertion.mjs" : "probe.mjs"),
     );
-    await writeFile(join(harness, "input.json"), JSON.stringify(input), {
-      mode: 0o644,
-      flag: "wx",
-    });
+    if (assertion)
+      for (const file of assertion.files) {
+        const path = join(harness, "source", file.path);
+        await mkdir(dirname(path), { recursive: true, mode: 0o755 });
+        await writeFile(path, Buffer.from(file.base64, "base64"), { mode: 0o644, flag: "wx" });
+      }
+    await writeFile(
+      join(harness, "input.json"),
+      JSON.stringify({
+        ...input,
+        ...(assertion ? { assertion: { entry: assertion.manifest.entry } } : {}),
+      }),
+      {
+        mode: 0o644,
+        flag: "wx",
+      },
+    );
     output = await OutputVolume.create(join(directory, "output"));
     let progressAt = performance.now();
     const readCheckpoint = async () => {
@@ -148,7 +171,10 @@ async function runSession(
         output: output.path,
         operation: "create",
       }),
-      ...runtimeArguments(image.kind, "/workspace/.compatlab/probe.mjs"),
+      ...runtimeArguments(
+        image.kind,
+        assertion ? "/workspace/.compatlab/assertion.mjs" : "/workspace/.compatlab/probe.mjs",
+      ),
     ]);
     controller.signal.throwIfAborted();
     const commandResult = streamCommand(
@@ -229,5 +255,40 @@ function logs(result: CommandResult): ProbeSession["logs"] {
     emittedBytes: result.emittedBytes,
     stdoutTruncated: result.stdoutTruncated,
     stderrTruncated: result.stderrTruncated,
+  };
+}
+
+export async function runAssertion(
+  workspace: string,
+  stateDirectory: string,
+  image: RuntimeImage,
+  raw: AssertionBundle,
+  signal: AbortSignal,
+): Promise<AssertionEvidence> {
+  const bundle = validateAssertionBundle(raw);
+  await assertPreparationHost();
+  await verifyRuntimeImages([image]);
+  const jobs = resolve(stateDirectory);
+  await mkdir(jobs, { recursive: true, mode: 0o700 });
+  const input: ProbeInput = {
+    schemaVersion: 2,
+    probeId: randomUUID(),
+    mode: "esm",
+    group: "root",
+    entries: [bundle.manifest.packageName],
+    startIndex: 0,
+  };
+  return {
+    profileId: image.profileId,
+    revisionDigest: assertionDigest(bundle),
+    session: await runSession(
+      input,
+      image,
+      workspace,
+      jobs,
+      { entryMs: bundle.manifest.timeoutMs, batchMs: PROBE_LIMITS.batchMs },
+      signal,
+      bundle,
+    ),
   };
 }

@@ -87,6 +87,25 @@ export default function Methodology() {
         after 30 days. Sealed worker snapshots have a bounded cache and can become unavailable
         before report metadata expires. Quarantine and invalidation appear on historical reports.
       </p>
+      <h2>Maintainer assertions and CI archives</h2>
+      <p>
+        Repository-authorized maintainers can register an exact commit and manifest, then run one
+        named assertion in a new observation. Source and offline fixtures are immutable and
+        read-only. The approved profile keeps network access disabled and applies the same runtime
+        resource limits. Assertions have separate outcomes; successful loading never becomes
+        behavioral verification.
+      </p>
+      <p>
+        Reproduction inputs include the retained assertion bundle when one was selected. The CLI
+        also supports pre-publication archives on a qualified Linux/runsc host. Those reports use a
+        distinct CI artifact identity with caller-supplied workflow provenance. There is no public
+        archive upload endpoint.
+      </p>
+      <p>
+        <a href="https://github.com/siddiksawani/CompatLab/blob/main/docs/assertions-and-ci.md">
+          Manifest format, examples and CI setup
+        </a>
+      </p>
     </article>
   );
 }

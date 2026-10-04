@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import {
+  type AssertionEvidence,
   infrastructureFailureSchema,
   type JobResult,
   jobEvidenceBudget,
@@ -11,8 +12,10 @@ import {
   preparationClassificationSchema,
   submissionSchema,
 } from "@compatlab/contracts";
-import { parseInstalledManifest, validateLock } from "@compatlab/engine";
+import { parseInstalledManifest, validateLock, verifyAssertionEvidence } from "@compatlab/engine";
 import { eq, sql } from "drizzle-orm";
+import { allowedAssertion } from "../assertions/policy.js";
+import { probeRevisions } from "../assertions/schema.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
 import {
@@ -48,14 +51,18 @@ export async function submitJobResult(db: CatalogDatabase, token: string, rawSub
       return { accepted: true, duplicate: true };
     }
     await activeWorker(tx, token, submission.sessionId);
-    if (!(await allowedSelection(tx, row.preparation.artifactId, row.scan.matrixId)))
+    if (
+      !(await allowedSelection(tx, row.preparation.artifactId, row.scan.matrixId)) ||
+      !(await allowedAssertion(tx, row.scan.assertionRevisionId))
+    )
       throw new SchedulingError("stale_attempt", "Execution policy no longer permits this result.");
     const result = submission.result;
     if (result.kind === "failure") await acceptFailure(tx, row, result, now, digest);
     else {
-      if (result.kind !== row.job.kind)
+      if ((result.kind === "assertion" ? "run" : result.kind) !== row.job.kind)
         throw new SchedulingError("invalid_result", "Result kind differs from the job.");
       if (result.kind === "preparation") await acceptPreparation(tx, row.preparation, result);
+      else if (result.kind === "assertion") await acceptAssertion(tx, row, result.evidence, now);
       else await acceptRun(tx, row, result.evidence, now);
       await tx
         .update(jobs)
@@ -182,7 +189,8 @@ async function acceptRun(
     .innerJoin(runtimeImages, eq(runtimeImages.id, runs.imageId))
     .innerJoin(matrices, eq(matrices.id, runs.matrixId))
     .where(eq(runs.id, row.job.runId));
-  if (!run) throw new Error("Run identity missing.");
+  if (!run || run.run.assertionRevisionId)
+    throw new SchedulingError("invalid_result", "Automatic run identity missing.");
   const plan = row.scan.plan.runtimes.find((candidate) => candidate.profileId === run.profileId);
   if (!plan) throw new SchedulingError("invalid_result", "Run profile differs from the plan.");
   const entries = (run.run.probeGroup === "root" ? [plan.root] : plan.entries)
@@ -197,7 +205,12 @@ async function acceptRun(
   )
     throw new SchedulingError("invalid_result", "Run evidence differs from the immutable plan.");
   const bytes = Buffer.from(JSON.stringify(evidence));
-  const budget = jobEvidenceBudget(row.scan.plan, row.preparation.metadata, run.runtimeCount);
+  const budget = jobEvidenceBudget(
+    row.scan.plan,
+    row.preparation.metadata,
+    run.runtimeCount,
+    !!row.scan.assertionRevisionId,
+  );
   parseBoundedJson(bytes, budget.maxEvidenceBytes);
   verifyEvidence(evidence);
   const logs = evidence.sessions.map((session) => ({ probeId: session.probeId, ...session.logs }));
@@ -302,4 +315,56 @@ function canonical(value: unknown): unknown {
         .map(([key, item]) => [key, canonical(item)]),
     );
   return value;
+}
+
+async function acceptAssertion(
+  tx: CatalogTransaction,
+  row: AttemptRow,
+  evidence: AssertionEvidence,
+  now: Date,
+) {
+  if (!row.job.runId || !row.scan.plan || !row.scan.assertionRevisionId)
+    throw new SchedulingError("invalid_result", "Assertion input missing.");
+  const [run] = await tx
+    .select({ run: runs, profileId: runtimeImages.profileId, runtimeCount: matrices.runtimeCount })
+    .from(runs)
+    .innerJoin(runtimeImages, eq(runtimeImages.id, runs.imageId))
+    .innerJoin(matrices, eq(matrices.id, runs.matrixId))
+    .where(eq(runs.id, row.job.runId));
+  const [revision] = await tx
+    .select()
+    .from(probeRevisions)
+    .where(eq(probeRevisions.id, row.scan.assertionRevisionId));
+  if (
+    !run ||
+    !revision ||
+    run.run.assertionRevisionId !== revision.id ||
+    evidence.revisionDigest !== revision.digest ||
+    evidence.profileId !== run.profileId
+  )
+    throw new SchedulingError("invalid_result", "Assertion identity mismatch.");
+  const budget = jobEvidenceBudget(row.scan.plan, row.preparation.metadata, run.runtimeCount, true);
+  parseBoundedJson(Buffer.from(JSON.stringify(evidence)), budget.maxEvidenceBytes);
+  try {
+    verifyAssertionEvidence(evidence, revision.bundle.manifest.packageName);
+  } catch {
+    throw new SchedulingError("invalid_result", "Assertion completion is inconsistent.");
+  }
+  const logs = evidence.session.logs;
+  if (Buffer.byteLength(logs.stdout) + Buffer.byteLength(logs.stderr) > budget.maxLogBytes)
+    throw new SchedulingError("invalid_result", "Assertion logs exceed their budget.");
+  await tx
+    .update(runs)
+    .set({
+      rawEvidence: storableText({
+        ...evidence,
+        session: { ...evidence.session, logs: { ...logs, stdout: "", stderr: "" } },
+      }),
+      logs: {
+        sessions: storableText([{ probeId: evidence.session.probeId, ...logs }]),
+        sanitization: "nul_replacement_v1",
+      },
+      logsExpireAt: new Date(now.getTime() + 30 * 86400_000),
+    })
+    .where(eq(runs.id, run.run.id));
 }

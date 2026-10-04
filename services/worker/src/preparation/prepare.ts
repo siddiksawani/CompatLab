@@ -1,10 +1,17 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { chown, lstat, mkdir, rm, statfs, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { PREPARATION_INSTALLER_IMAGE, PREPARATION_PROFILE_REVISION } from "@compatlab/contracts";
+import {
+  type CiArtifact,
+  ciArtifactSchema,
+  PREPARATION_INSTALLER_IMAGE,
+  PREPARATION_PROFILE_REVISION,
+} from "@compatlab/contracts";
 import {
   artifactIntegrity,
   assertPackageName,
+  CI_FILE_SPEC,
+  type ExecutionArtifact,
   isExactVersion,
   MAX_LOCK_BYTES,
   type PreparationClassification,
@@ -40,12 +47,12 @@ export const NPM_FLAGS = [
   "--progress=false",
 ] as const;
 
-export type PreparedSnapshot = {
+export type PreparedSnapshot<Artifact extends ExecutionArtifact = ResolvedArtifact> = {
   id: string;
   generation: string;
   directory: string;
   workspace: string;
-  artifact: ResolvedArtifact;
+  artifact: Artifact;
   profileRevision: typeof PREPARATION_PROFILE;
   installerImage: typeof INSTALLER_IMAGE;
   installerVersion: "11.19.0";
@@ -64,12 +71,38 @@ export async function prepareArtifact(
   signal?: AbortSignal,
   retainedLock?: Uint8Array,
 ): Promise<PreparedSnapshot> {
+  return prepareInput(artifact, stateDirectory, signal, retainedLock);
+}
+export async function prepareCiArtifact(
+  artifact: CiArtifact,
+  archive: string,
+  stateDirectory: string,
+  signal?: AbortSignal,
+): Promise<PreparedSnapshot<CiArtifact>> {
+  ciArtifactSchema.parse(artifact);
+  const bytes = await readBoundedFile(archive, 32 * 1024 ** 2);
+  if (
+    bytes.length !== artifact.bytes ||
+    createHash("sha256").update(bytes).digest("hex") !== artifact.sha256 ||
+    `sha512-${createHash("sha512").update(bytes).digest("base64")}` !== artifact.integrity
+  )
+    throw new TypeError("CI archive identity changed.");
+  return prepareInput(artifact, stateDirectory, signal, undefined, archive);
+}
+async function prepareInput<Artifact extends ExecutionArtifact>(
+  artifact: Artifact,
+  stateDirectory: string,
+  signal?: AbortSignal,
+  retainedLock?: Uint8Array,
+  archive?: string,
+): Promise<PreparedSnapshot<Artifact>> {
+  const ci = "kind" in artifact;
   signal?.throwIfAborted();
   assertPackageName(artifact.name);
   if (!isExactVersion(artifact.version))
     throw new TypeError("Preparation requires an exact version.");
   artifactIntegrity(artifact.integrity);
-  registryTarballUrl(artifact.tarballUrl);
+  if (!ci) registryTarballUrl(artifact.tarballUrl);
   if (retainedLock) validateLock(retainedLock, artifact);
   await assertPreparationHost();
   const id = randomUUID();
@@ -100,7 +133,7 @@ export async function prepareArtifact(
         name: "compatlab-consumer",
         version: "1.0.0",
         private: true,
-        dependencies: { [artifact.name]: artifact.version },
+        dependencies: { [artifact.name]: ci ? CI_FILE_SPEC : artifact.version },
       }),
       { mode: 0o644, flag: "wx" },
     );
@@ -137,18 +170,23 @@ export async function prepareArtifact(
         "dependency_install_failed",
         "A required locked dependency was not installed.",
       );
-    parseInstalledManifest(
+    const installedManifest = parseInstalledManifest(
       await readBoundedFile(
         join(workspace, "node_modules", artifact.name, "package.json"),
         2 * 1024 ** 2,
       ),
       artifact,
     );
+    if (ci && installedManifest.private === true)
+      throw new PreparationError(
+        "package_manifest_invalid",
+        "Private CI packages are not supported.",
+      );
     await rm(state, { recursive: true });
     deadline.throwIfAborted();
     await volume.seal();
     const generation = randomUUID();
-    const snapshot: PreparedSnapshot = {
+    const snapshot: PreparedSnapshot<Artifact> = {
       id,
       generation,
       directory,
@@ -171,12 +209,14 @@ export async function prepareArtifact(
         schemaVersion: 1,
         id,
         generation,
-        artifact: {
-          name: artifact.name,
-          version: artifact.version,
-          integrity: artifact.integrity,
-          tarballUrl: artifact.tarballUrl,
-        },
+        artifact: ci
+          ? artifact
+          : {
+              name: artifact.name,
+              version: artifact.version,
+              integrity: artifact.integrity,
+              tarballUrl: artifact.tarballUrl,
+            },
         profileRevision: PREPARATION_PROFILE,
         installerImage: INSTALLER_IMAGE,
         lockDigest: lock.digest,
@@ -198,6 +238,7 @@ export async function prepareArtifact(
         network,
         args,
         signal: deadline,
+        ...(archive ? { archive } : {}),
       });
       if (result.termination !== "completed")
         throw new PreparationError(
@@ -228,6 +269,7 @@ export async function prepareArtifact(
 
 export async function runInstaller(options: {
   name: string;
+  archive?: string;
   workspace: string;
   state: string;
   network: Pick<PreparationNetwork, "name" | "jobIp" | "proxyIp" | "quotaExceeded">;
@@ -279,6 +321,9 @@ export async function runInstaller(options: {
         `type=bind,src=${workspace},dst=/workspace`,
         "--mount",
         `type=bind,src=${state},dst=/state`,
+        ...(options.archive
+          ? ["--mount", `type=bind,src=${options.archive},dst=/input/artifact.tgz,readonly`]
+          : []),
         "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=64m",
         "--env=HOME=/state/home",
         "--env=NODE_OPTIONS=",

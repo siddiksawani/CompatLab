@@ -314,6 +314,53 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </details>
         )}
       </section>
+      {!!report.assertions?.length && (
+        <section className="report-section" aria-label="Named assertion results">
+          <h2>Named assertion results</h2>
+          <p>
+            These observations test only the stated behavior. Their outcomes are separate from
+            automatic loading above. A failure may originate in the probe or package.
+          </p>
+          {report.assertions.map(({ definition, cells }) => (
+            <div key={definition.digest}>
+              <h3>{definition.manifest.name}</h3>
+              <p>{definition.manifest.expectedBehavior}</p>
+              <p>
+                <a href={`https://github.com/${definition.repository}/commit/${definition.commit}`}>
+                  Pinned source
+                </a>{" "}
+                · <code>{definition.digest}</code>
+              </p>
+              <p>
+                Approved capabilities: no network; read-only package and fixture workspace; bounded
+                temporary/output storage and processes. Timeout: {definition.manifest.timeoutMs} ms.
+                Harness: {definition.harnessRevision}; policy: {definition.policyRevision}.
+              </p>
+              <ul>
+                {cells.map((cell) => (
+                  <li key={cell.profileId}>
+                    <strong>
+                      {cell.profileId}: {labels[cell.outcome]}
+                    </strong>{" "}
+                    · {cell.evidenceLevel.replaceAll("_", " ")}
+                    {cell.failure && (
+                      <p>
+                        <code>{cell.failure.classification}</code>: {cell.failure.message}
+                      </p>
+                    )}
+                    {cell.runId && (
+                      <p>
+                        <a href={`${base}/evidence?runId=${cell.runId}`}>Assertion evidence JSON</a>{" "}
+                        · <a href={`${base}/logs?runId=${cell.runId}`}>Retained logs</a>
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
       <section className="report-section" id="reproduction">
         <h2>Reproduce these inputs</h2>
         {report.preparation.snapshot ? (
