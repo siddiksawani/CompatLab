@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import subprocess
 import uuid
 
@@ -32,15 +33,22 @@ def main():
     result_path.parent.mkdir(exist_ok=True)
     result_path.unlink(missing_ok=True)
     try:
-        unit_path.write_bytes((root / "infra/compatlab-worker.service").read_bytes())
+        header, separator, service = (root / "infra/compatlab-worker.service").read_text().partition("[Service]\n")
+        if not separator:
+            raise ValueError("The production worker unit has no Service section.")
+        # Systemd dependencies cannot be removed by an empty drop-in assignment.
+        header = re.sub(r"^(After|Requires)=.*$", r"\1=docker.service", header, flags=re.MULTILINE)
+        unit_path.write_text(header + separator + service)
         overrides.mkdir()
         (overrides / "qualification.conf").write_text(
-            "[Unit]\nAfter=\nRequires=\nAfter=docker.service\nRequires=docker.service\n"
             "[Service]\nType=oneshot\nRestart=no\nTimeoutStartSec=900\nEnvironmentFile=\n"
             f"WorkingDirectory={str(root).replace('%', '%%')}\nExecStart=\n"
             f"ExecStart=/opt/compatlab-node/bin/node {quoted(root / 'scripts/rebuild-qualification.mjs')}\n"
         )
         run("systemctl", "daemon-reload")
+        dependencies = run("systemctl", "show", unit, "--property=Requires", "--value").split()
+        if "docker.service" not in dependencies or any(name.startswith("wg-quick@") for name in dependencies):
+            raise RuntimeError("Qualification must require Docker without the production WireGuard dependency.")
         try:
             run("systemctl", "start", unit, timeout=930)
         finally:
