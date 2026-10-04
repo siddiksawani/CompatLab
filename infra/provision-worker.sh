@@ -10,7 +10,7 @@ if [[ "$ID" != ubuntu || "$VERSION_ID" != 24.04 ]]; then
   exit 1
 fi
 apt-get update
-apt-get install --yes --no-install-recommends ca-certificates curl gnupg iproute2 iptables wireguard-tools e2fsprogs util-linux
+apt-get install --yes --no-install-recommends ca-certificates curl gnupg iproute2 iptables wireguard-tools e2fsprogs util-linux bzip2
 install -d -m 0755 /etc/apt/keyrings
 curl --fail --silent --show-error https://download.docker.com/linux/ubuntu/gpg --output /etc/apt/keyrings/docker.asc
 fingerprint=$(gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc | awk -F: '$1=="fpr"{print $10;exit}')

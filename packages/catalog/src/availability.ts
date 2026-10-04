@@ -33,7 +33,7 @@ export async function refreshWorkerAvailability(tx: CatalogTransaction, now: Dat
   const [controls] = await tx.select().from(serviceControls);
   if (!controls?.workerGuardEnabled) return;
   const matrices = (
-    await tx.execute<{ id: string; heartbeat: Date | null }>(sql`
+    await tx.execute<{ id: string; heartbeat: string | null }>(sql`
     SELECT m.id, (
       SELECT max(w.last_seen_at) FROM workers w
       WHERE w.state='healthy' AND w.accepting_jobs AND NOT w.recovery_required
@@ -55,23 +55,26 @@ export async function refreshWorkerAvailability(tx: CatalogTransaction, now: Dat
     const previous = (
       await tx.execute<{
         paused: boolean;
-        last_healthy_at: Date | null;
-        healthy_since: Date | null;
-        checked_at: Date;
+        last_healthy_at: string | null;
+        healthy_since: string | null;
+        checked_at: string;
       }>(sql`SELECT * FROM worker_availability WHERE matrix_id=${matrix.id}`)
     ).rows[0];
-    const lastHealthy = matrix.heartbeat ?? previous?.last_healthy_at ?? null;
+    const lastHeartbeat = matrix.heartbeat ?? previous?.last_healthy_at;
+    const lastHealthy = lastHeartbeat ? new Date(lastHeartbeat) : null;
     const continuous =
       previous &&
-      now.getTime() - previous.checked_at.getTime() <= WORKER_AVAILABILITY_POLICY.heartbeatMs;
+      now.getTime() - new Date(previous.checked_at).getTime() <=
+        WORKER_AVAILABILITY_POLICY.heartbeatMs;
     const healthySince = matrix.heartbeat
       ? continuous && previous.healthy_since
-        ? previous.healthy_since
+        ? new Date(previous.healthy_since)
         : now
       : null;
     const missedOutage =
       previous?.last_healthy_at &&
-      now.getTime() - previous.last_healthy_at.getTime() >= WORKER_AVAILABILITY_POLICY.pauseAfterMs;
+      now.getTime() - new Date(previous.last_healthy_at).getTime() >=
+        WORKER_AVAILABILITY_POLICY.pauseAfterMs;
     const paused =
       previous?.paused === false
         ? !!missedOutage ||

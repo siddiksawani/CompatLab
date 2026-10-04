@@ -67,7 +67,9 @@ export function createPublicApi(
           result.kind === "blocked"
             ? 403
             : result.kind === "throttled"
-              ? 429
+              ? ["worker_unavailable", "admission_paused"].includes(result.reason)
+                ? 503
+                : 429
               : result.kind === "admitted"
                 ? 202
                 : 200,
