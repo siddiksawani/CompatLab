@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 export function Copy({ value, label }: { value: string; label: string }) {
   const [message, setMessage] = useState("");
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
@@ -12,7 +14,7 @@ export function Copy({ value, label }: { value: string; label: string }) {
   }
   return (
     <div className="copy">
-      <button type="button" className="secondary" onClick={() => void copy()}>
+      <button type="button" className="secondary" disabled={!ready} onClick={() => void copy()}>
         {label}
       </button>
       <span className="fine" role="status">

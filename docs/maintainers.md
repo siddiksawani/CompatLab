@@ -1,6 +1,8 @@
 # Maintainer identity and repository authority
 
-GitHub sign-in is optional and disabled by default. Anonymous discovery, reports and one-off scans keep their public interfaces. Account and repository settings are at `/account`. Authentication uses Better Auth 1.7.7, its GitHub provider, PKCE and database-backed OAuth state.
+The public maintainer workflow is deferred. `/account` currently explains the planned tools and displays **Coming soon** without rendering account controls. Keep maintainer authentication and the monitoring service disabled. The implementation and configuration below are retained for a later activation review; they do not describe features available on the current website.
+
+GitHub sign-in is disabled by default. Anonymous discovery, reports and one-off scans keep their public interfaces. The account settings component is retained in the source but is not rendered by `/account`. Authentication uses Better Auth 1.7.7, its GitHub provider, PKCE and database-backed OAuth state.
 
 ## GitHub App configuration
 
@@ -44,11 +46,11 @@ Each account can retain at most ten repository links, including links revoked by
 
 `admission_v4` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.
 
-Account and anonymous requester keys expire after seven days. Deleting/recreating an account does not reset this short abuse-prevention window. The bounded maintenance job removes expired sessions/OAuth state, twenty-minute ingress buckets and seven-day webhook IDs. Account configuration stays until deletion; encrypted backups expire after seven days. The public privacy page describes these records.
+Account and anonymous requester keys expire after seven days. Deleting/recreating an account does not reset this short abuse-prevention window. The bounded maintenance job removes expired sessions/OAuth state, twenty-minute ingress buckets and seven-day webhook IDs. Account configuration stays until deletion; encrypted backups expire after seven days. Publish the account-specific privacy details before enabling accounts.
 
 ## Qualification and deployment checks
 
-PostgreSQL tests use the real Better Auth adapter with a mocked GitHub HTTP boundary: PKCE/state replay, encrypted storage/decryption, cookies, CSRF, unavailable token endpoints, fresh sessions, deletion, repository authority, signed/duplicate revocation, a revocation race and atomic quotas. Browser fixtures cover optional accounts, authority labels, stale-session recovery, accessibility and mobile layout.
+PostgreSQL tests use the real Better Auth adapter with a mocked GitHub HTTP boundary: PKCE/state replay, encrypted storage/decryption, cookies, CSRF, unavailable token endpoints, fresh sessions, deletion, repository authority, signed/duplicate revocation, a revocation race and atomic quotas. Browser tests currently cover the coming-soon explanation, absence of account requests, accessibility and responsive layout. Restore account interaction coverage when the workflow is reintroduced.
 
 No live GitHub App is created by these tests. Before enabling accounts publicly, verify one real login, installation, token refresh and revocation with the deployment's App. Public deployment remains a separate release decision.
 

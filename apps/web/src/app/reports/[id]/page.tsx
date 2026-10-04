@@ -160,12 +160,12 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           )}
         </aside>
       )}
-      <p>
+      <p className="report-links">
         Observation {status.observationRevision ?? 0} ·{" "}
         <a href={`/history?${new URLSearchParams({ name: report.artifact.name })}`}>
           Report history
         </a>{" "}
-        · <a href={`/account?rescan=${report.scanId}`}>Request a maintainer rescan</a>
+        · <a href="/account">Maintainer tools (coming soon)</a>
       </p>
       {status.previousReportId && (
         <p>
@@ -174,8 +174,8 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </a>
         </p>
       )}
-      <p>
-        <a href={`${webRuntime().config.origin}/reports/${report.id}`}>
+      <div className="report-sharing">
+        <a className="badge-preview" href={`/api/v1/badges/${report.id}.svg`}>
           <Image
             unoptimized
             width={600}
@@ -185,11 +185,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             alt={`Immutable loading evidence badge for ${report.artifact.name}`}
           />
         </a>
-      </p>
-      <Copy
-        label="Copy evidence badge Markdown"
-        value={`[![CompatLab loading evidence](${webRuntime().config.origin}/api/v1/badges/${report.id}.svg)](${webRuntime().config.origin}/reports/${report.id})`}
-      />
+        <Copy
+          label="Copy evidence badge Markdown"
+          value={`[![CompatLab loading evidence](${webRuntime().config.origin}/api/v1/badges/${report.id}.svg)](${webRuntime().config.origin}/reports/${report.id})`}
+        />
+      </div>
       <div className="report-summary">
         <div>
           <span className={`result ${report.outcome}`}>{labels[report.outcome]}</span>

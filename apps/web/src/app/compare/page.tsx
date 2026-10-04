@@ -1,20 +1,30 @@
 import { reportComparisonSchema, reportEnvelopeSchema } from "@compatlab/contracts";
 import { z } from "zod";
+import { readError } from "../../components/labels";
 import { publicRead } from "../../server/runtime";
+
+export const metadata = { title: "Compare reports" };
 export default async function ComparisonPage({
   searchParams,
 }: {
-  searchParams: Promise<{ before?: string; after?: string }>;
+  searchParams: Promise<{ before?: string | string[]; after?: string | string[] }>;
 }) {
   const query = await searchParams;
   const response = await publicRead(
-    `/api/v1/comparisons?${new URLSearchParams({ before: query.before ?? "", after: query.after ?? "" })}`,
+    `/api/v1/comparisons?${new URLSearchParams({ before: typeof query.before === "string" ? query.before : "", after: typeof query.after === "string" ? query.after : "" })}`,
   );
   if (!response.ok)
     return (
       <section className="page narrow">
         <h1>Comparison unavailable</h1>
-        <p>Select two reports for the same package.</p>
+        <p>
+          {[400, 404].includes(response.status)
+            ? "Select two reports for the same package."
+            : readError(response.status)}
+        </p>
+        <a className="button" href="/">
+          Explore packages
+        </a>
       </section>
     );
   const { comparison, beforeStatus, afterStatus } = z
@@ -26,6 +36,13 @@ export default async function ComparisonPage({
     .parse(await response.json());
   return (
     <section className="page">
+      <a
+        className="back"
+        href={`/history?${new URLSearchParams({ name: comparison.packageName })}`}
+      >
+        ← Report history
+      </a>
+      <p className="eyebrow">Evidence comparison</p>
       <h1>Compare {comparison.packageName}</h1>
       <p>
         <a href={`/reports/${comparison.beforeReportId}`}>{comparison.beforeVersion} report</a> →{" "}
@@ -48,7 +65,7 @@ export default async function ComparisonPage({
         establish what caused a change.
       </p>
       {comparison.inputs.length ? (
-        <dl>
+        <dl className="provenance">
           {comparison.inputs.map((item) => (
             <div key={item.field}>
               <dt>{item.field.replaceAll("_", " ")}</dt>
@@ -63,7 +80,7 @@ export default async function ComparisonPage({
       )}
       <h2>Evidence changes</h2>
       {comparison.changes.length ? (
-        <ul>
+        <ul className="change-list">
           {comparison.changes.map((item) => (
             <li key={item.subject}>
               <strong>{item.subject}</strong>

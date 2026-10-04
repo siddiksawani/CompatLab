@@ -1,7 +1,7 @@
 export const metadata = { title: "Use of the service" };
 export default function Terms() {
   return (
-    <article className="prose">
+    <article className="page prose">
       <p className="eyebrow">Operating policy</p>
       <h1>Use of the service</h1>
       <p>
