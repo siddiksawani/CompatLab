@@ -16,6 +16,8 @@ REPOSITORY = "siddiksawani/CompatLab"
 RELEASES = Path("/opt/compatlab/releases")
 MAX_ARCHIVE = 1024**3
 MAX_EXPANDED = 3 * 1024**3
+WORKER_INPUTS = ["pnpm-lock.yaml", "packages/contracts", "packages/engine", "services/worker", "harnesses", "runtime-images", "infra/provision-worker.sh", "infra/worker-images.mjs", "infra/compatlab-worker.service"]
+BUNDLE_FILES = ("apps/cli/dist/bin.js", "infra/compose.yaml", "infra/deploy.py", "services/worker/dist/remote/bin.js", "harnesses/probe.mjs", "harnesses/assertion.mjs", "runtime-images/Dockerfile")
 
 
 def commit(value):
@@ -113,6 +115,12 @@ def extract(archive, directory):
         source.extractall(directory, members=members, filter="data")
 
 
+def validate_bundle(directory):
+    for required in BUNDLE_FILES:
+        if not (directory / required).is_file():
+            raise ValueError(f"Incomplete release bundle: {required}")
+
+
 def stage(sha, releases=RELEASES):
     sha = commit(sha)
     releases.mkdir(parents=True, exist_ok=True)
@@ -138,9 +146,7 @@ def stage(sha, releases=RELEASES):
         app = temporary / "app"
         app.mkdir()
         extract(archive, app)
-        for required in ("apps/cli/dist/bin.js", "infra/compose.yaml", "infra/deploy.py", "services/worker/dist/remote/bin.js"):
-            if not (app / required).is_file():
-                raise ValueError("Incomplete release bundle.")
+        validate_bundle(app)
         atomic_write(app / "manifest.json", json.dumps(manifest))
         os.replace(app, destination)
     return destination, manifest
@@ -148,6 +154,7 @@ def stage(sha, releases=RELEASES):
 
 def manifest(directory, sha):
     directory = Path(directory)
+    validate_bundle(directory / "app")
     archive = directory / "app.tar.gz"
     value = {
         "schemaVersion": 1,
@@ -155,7 +162,7 @@ def manifest(directory, sha):
         "commit": commit(sha),
         "archiveDigest": digest_file(archive),
         "archiveBytes": archive.stat().st_size,
-        "workerRevision": source_digest(["pnpm-lock.yaml", "packages/contracts", "packages/engine", "services/worker", "infra/provision-worker.sh", "infra/worker-images.mjs", "infra/compatlab-worker.service"]),
+        "workerRevision": source_digest(WORKER_INPUTS),
         "migrationsDigest": source_digest(["packages/catalog/migrations", "infra/grants.sql"]),
         "hostRevision": digest_file("infra/provision-worker.sh"),
         "images": {component: (directory / f"{component}-image").read_text().strip() for component in ("web", "control", "proxy")},
