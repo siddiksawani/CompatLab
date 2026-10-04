@@ -2,6 +2,8 @@
 
 The Next.js application in `apps/web` provides public package search, exact-version selection, explicit scan admission, durable progress and report pages. Viewing a package or report never creates execution work. Published tags help select a version but are resolved before admission. Deprecated versions remain selectable with a notice.
 
+The Maintainers page explains the planned release monitoring, comparisons and offline behavioral checks and marks them **Coming soon**. It does not load account APIs or expose sign-in, repository linking, monitoring or assertion controls. Report links point to this explanation instead of offering unavailable rescans. Existing public history, comparisons and historical assertion evidence remain readable.
+
 ## Running the application
 
 Use the pinned Node/pnpm toolchain, install the workspace and apply the [catalog migrations](catalog.md#migrations-and-qualification). Copy `apps/web/.env.example` to `apps/web/.env.local`. Set `DATABASE_URL`, the exact `PUBLIC_ORIGIN`, an approved `PUBLIC_MATRIX_ID`, and a random 32-byte hex `REQUESTER_SECRET`. Generate secrets with `openssl rand -hex 32`. Keep public admission disabled until the operational release gates pass.
@@ -34,7 +36,7 @@ Pages use a per-response nonce CSP, escaped text, no remote scripts/fonts, and n
 
 ## Reports and progress
 
-Polling revalidates persisted revisions, backs off on failures, pauses in hidden tabs and resumes after navigation or refresh. Terminal execution can still be awaiting report assembly; polling continues until a report exists or assembly has exhausted its recovery budget. No artificial completion percentage is shown.
+Polling revalidates persisted revisions, backs off on failures, pauses in hidden tabs and resumes after navigation or refresh. Terminal execution can still be awaiting report assembly; polling continues until a report exists or assembly has exhausted its recovery budget. No artificial completion percentage is shown. Timestamps use a consistent `YYYY-MM-DD HH:mm UTC` display on the server and in the browser.
 
 Reports separate shared preparation, runtime/mode/group observations, omissions, coverage, provenance and evidence limitations. Desktop tables become labeled cards on narrow screens. Entry details and sanitized raw logs load on demand. Log expiry and invalidation remain visible. The machine-readable report, exact lock, reproduction descriptor and copyable CLI command retain the evidence's pinned inputs. A successful loading observation does not claim functional correctness or package safety.
 
@@ -51,5 +53,7 @@ COMPATLAB_TEST_DATABASE_URL=postgres://postgres:compatlab-test@127.0.0.1:55432/c
 The suite starts the production standalone server against a uniquely named database. A test-process-only registry interceptor and local fixture controller supply authored evidence; neither exists in the production application. These tests verify the web/catalog contract, not package execution or sandbox containment. The separate Linux/runsc gates supply that evidence.
 
 Chromium, Firefox, WebKit and mobile Chromium cover scoped/unscoped discovery, version selection, admission, refresh recovery, cached views without new work, inert malicious logs, expiry, invalidation and missing artifacts. Keyboard navigation, automated WCAG checks, mobile overflow checks and screenshots supplement manual review. On macOS, WebKit uses Option–Tab for link navigation. The required `Browser qualification` CI job runs all four projects on Linux and retains its screenshots/report for seven days.
+
+Layout checks cover 320, 390, 768, 1024, 1440, 1920 and 2560 pixel viewports, including long package names and URLs, expanded evidence, clipboard fallback, history/comparison forms, policy pages and unavailable states. They check page gutters and centering, horizontal overflow, overlapping controls and footer placement. Tablet reports use two columns of runtime cards; narrow screens use one.
 
 References: [Next.js self-hosting](https://nextjs.org/docs/app/guides/self-hosting), [nonce CSP](https://nextjs.org/docs/app/guides/content-security-policy), [Playwright accessibility testing](https://playwright.dev/docs/accessibility-testing), [Safari keyboard shortcuts](https://help.apple.com/safari/mac/8.0/en.lproj/cpsh003.html).

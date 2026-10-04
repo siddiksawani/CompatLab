@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto";
 
-const names = ["compatlab-browser-fixture", "@compatlab/browser-fixture"];
+const names = [
+  "compatlab-browser-fixture",
+  "@compatlab/browser-fixture",
+  `@compatlab/${"browser-layout-".repeat(12)}fixture`,
+];
 const original = globalThis.fetch;
 export function manifest(name, version) {
   return {
     name,
     version,
-    description: "A browser qualification fixture.",
+    description: name.includes("browser-layout-")
+      ? `Layout qualification with a long reference: https://example.com/${"a".repeat(300)}`
+      : "A browser qualification fixture.",
     ...(version === "2.0.0" ? { deprecated: "Use a maintained version." } : {}),
     dist: {
       integrity: `sha512-${createHash("sha512").update(name).digest("base64")}`,

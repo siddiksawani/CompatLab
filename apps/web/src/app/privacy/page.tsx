@@ -1,7 +1,7 @@
 export const metadata = { title: "Privacy and retention" };
 export default function Privacy() {
   return (
-    <article className="prose">
+    <article className="page prose">
       <p className="eyebrow">Operating policy</p>
       <h1>Privacy and retention</h1>
       <p>
@@ -39,29 +39,13 @@ export default function Privacy() {
           remain in those backups until they expire.
         </li>
       </ul>
+      <h2>Maintainer accounts</h2>
+      <p>
+        <a href="/account">Maintainer tools are coming soon.</a> GitHub sign-in, repository linking,
+        release monitoring and email alerts are not available on the public website. We will explain
+        their data handling and account controls before they become available.
+      </p>
       <h2>Service providers</h2>
-      <p>
-        Optional GitHub sign-in stores your GitHub user ID, username, verified email and linked
-        repository identities. OAuth tokens are encrypted in the database and never sent to
-        execution workers. Essential HttpOnly cookies maintain a session for up to seven days;
-        sessions do not retain your network address or user agent.
-      </p>
-      <p>
-        Signed-in scans retain a keyed GitHub account identifier for quotas for seven days. Account
-        rate-limit buckets expire after twenty minutes; signed GitHub webhook delivery IDs after
-        seven days. Expired sessions and OAuth state are removed by maintenance. You can revoke
-        links or delete your account in <a href="/account">account settings</a>. Deletion removes
-        sessions, tokens, repository links, monitors and notification destinations immediately.
-        Public reports remain available. Deleted account data may remain in encrypted backups for
-        seven days. GitHub also provides controls to revoke your App authorization or installation.
-      </p>
-      <p>
-        Release monitors retain selected version identities until deletion. Private alert history is
-        retained thirty days. Optional email sends your verified address and evidence links to
-        Resend only after you opt in. You can pause a monitor or stop email in account settings; an
-        email already in flight cannot be recalled. Background checks use encrypted GitHub
-        credentials and stop when authority is revoked.
-      </p>
       <p>
         Discovery requests public npm registry metadata. The control service may send fixed
         operational error names to an operator-configured Sentry endpoint. It does not send package
@@ -77,12 +61,11 @@ export default function Privacy() {
         provenance; invalidation marks the report as unsuitable for reuse. The operator audits the
         reason. Do not include sensitive content in a public issue.
       </p>
-      <h2>Public assertion revisions</h2>
+      <h2>Retained behavioral evidence</h2>
       <p>
-        Registered probes come from public GitHub commits. Their source, fixture hashes, approved
-        capabilities and results form retained public evidence. Revoking a probe or deleting an
-        account stops new execution; deletion removes account ownership and repository configuration
-        while keeping the historical revision and reports.
+        A report may include historical named assertions from public GitHub commits. Their source,
+        fixture hashes, approved capabilities and results remain part of the public evidence.
+        Registering new maintainer assertions through the website is not available yet.
       </p>
     </article>
   );

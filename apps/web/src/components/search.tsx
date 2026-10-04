@@ -30,9 +30,10 @@ export function Search({
       return;
     }
     const controller = new AbortController();
+    setLoading(true);
+    setResults([]);
+    setError("");
     const timer = setTimeout(async () => {
-      setLoading(true);
-      setError("");
       try {
         const response = await fetch(`/api/v1/search?${new URLSearchParams({ q: query })}`, {
           signal: controller.signal,
@@ -75,8 +76,8 @@ export function Search({
         {loading
           ? "Searching the public npm registry…"
           : error ||
-            (query
-              ? `${results.length} packages found`
+            (query.trim()
+              ? `${results.length} ${results.length === 1 ? "package" : "packages"} found`
               : "Public npm packages. No account required.")}
       </p>
       {results.length > 0 && (

@@ -11,11 +11,7 @@ export const labels: Record<CompatibilityOutcome, string> = {
 };
 export function observedDate(value: string | null) {
   return value
-    ? `${new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "UTC",
-      }).format(new Date(value))} UTC`
+    ? `${new Date(value).toISOString().slice(0, 16).replace("T", " ")} UTC`
     : "Time not retained";
 }
 export function packageUrl(name: string, version?: string) {

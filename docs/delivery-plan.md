@@ -31,6 +31,8 @@ PRs 7–11 close durable-control, public-interface and launch gates. Include Pos
 
 On October 3, 2026, the maintainer explicitly authorized completing PRs 8–14 without waiting for the customer-demand gate. The targets of ten developer/maintainer reviews and five concrete monitoring/probe requests remain product-validation work, not completed evidence. Before PR 14, review custom-probe authority, inputs and sandbox exposure. Optional private/team execution needs an additional external security review. Public deployment still requires the launch gates and its own release decision.
 
+On October 4, 2026, the maintainer deferred the public maintainer workflow. The website now presents its purpose and planned features as **Coming soon**, with account controls removed from the public page. The existing backend foundation and historical evidence remain in the repository for later work. Do not enable GitHub accounts or the monitoring service as part of the current public experience. The follow-up frontend slice fixes layouts across public pages and verifies phone, tablet and large-screen use.
+
 ## Repository workflow
 
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.

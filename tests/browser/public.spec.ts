@@ -1,29 +1,11 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { reportEnvelopeSchema } from "../../packages/contracts/dist/index.js";
+import { finish, fixture, requestScan } from "./helpers.js";
 
-async function fixture(request: APIRequestContext, operation: string) {
-  const response = await request.post(`http://127.0.0.1:3878/${operation}`, {
-    headers: { "x-compatlab-fixture": "browser_v1" },
-  });
-  expect(response.ok()).toBe(true);
-  return response;
-}
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
 });
-async function requestScan(page: Page, name: string) {
-  await page.goto(`/packages?${new URLSearchParams({ name, version: "1.0.0" })}`);
-  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Request a scan", exact: true }).click();
-  await expect(page).toHaveURL(/\/scans\/[a-f0-9-]+$/);
-  await expect(page.getByRole("heading", { name: "requested", exact: true })).toBeVisible();
-}
-async function finish(page: Page, request: APIRequestContext) {
-  await fixture(request, "execute");
-  await expect(page).toHaveURL(/\/reports\/[a-f0-9-]+$/);
-  await expect(page.getByRole("heading", { name: "Runtime matrix", exact: true })).toBeVisible();
-}
 for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) {
   test(`anonymous discovery and refresh recovery: ${name}`, async ({ page, request }) => {
     await page.goto("/");
@@ -56,6 +38,31 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     expect(await (await fixture(request, "counts")).json()).toEqual(before);
   });
 }
+test("scan admission waits for client initialization before accepting clicks", async ({ page }) => {
+  let release: () => void = () => {};
+  const scriptsReady = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await scriptsReady;
+    await route.continue();
+  });
+  try {
+    await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0", {
+      waitUntil: "commit",
+    });
+    const button = page.getByRole("button", { name: "Request a scan", exact: true });
+    await expect(button).toBeDisabled();
+    release();
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(page).toHaveURL(/\/scans\/[a-f0-9-]+$/);
+    await expect(page.getByRole("heading", { name: "requested", exact: true })).toBeVisible();
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
 test("evidence controls wait for client initialization before accepting clicks", async ({
   page,
   request,
@@ -76,8 +83,12 @@ test("evidence controls wait for client initialization before accepting clicks",
     await cell.locator("summary").click();
     const button = cell.getByRole("button", { name: "Load entry details", exact: true });
     await expect(button).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Copy report link", exact: true }),
+    ).toBeDisabled();
     release();
     await expect(button).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Copy report link", exact: true })).toBeEnabled();
     await button.click();
     await expect(cell.locator(".entry-list")).toContainText("compatlab-browser-fixture");
   } finally {

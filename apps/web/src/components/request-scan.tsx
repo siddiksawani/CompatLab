@@ -1,6 +1,6 @@
 "use client";
 import { admissionResponseSchema } from "@compatlab/contracts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function RequestScan({
   name,
@@ -13,6 +13,8 @@ export function RequestScan({
 }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   async function submit() {
     setBusy(true);
     setMessage("");
@@ -46,7 +48,7 @@ export function RequestScan({
   }
   return (
     <div>
-      <button type="button" disabled={!enabled || busy} onClick={() => void submit()}>
+      <button type="button" disabled={!enabled || busy || !ready} onClick={() => void submit()}>
         {busy ? "Requesting scan…" : "Request a scan"}
       </button>
       <p className="fine" role="status">

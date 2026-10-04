@@ -1,7 +1,7 @@
 export const metadata = { title: "Security and disclosure" };
 export default function Security() {
   return (
-    <article className="prose">
+    <article className="page prose">
       <p className="eyebrow">Operating policy</p>
       <h1>Security and disclosure</h1>
       <p>
