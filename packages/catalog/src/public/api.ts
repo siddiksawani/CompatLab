@@ -41,7 +41,12 @@ export function createPublicApi(
     inFlight++;
     try {
       const url = new URL(request.url);
-      if (/^\/api\/v1\/(reports|scans)\//.test(url.pathname)) return await reports(request);
+      if (
+        /^\/api\/v1\/(?:reports\/|scans\/|comparisons(?:\/|$)|history(?:\/|$)|badges\/)/.test(
+          url.pathname,
+        )
+      )
+        return await reports(request);
       if (url.pathname === "/api/v1/scans" && request.method === "POST") {
         const identity = requesterIdentity(request, config);
         const accountKey = await accountQuota?.(request);

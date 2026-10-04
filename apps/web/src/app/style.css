@@ -801,3 +801,19 @@ summary {
 .account-settings li button {
   margin: 8px 12px;
 }
+.evidence-badge {
+  max-width: 100%;
+  height: auto;
+}
+.account-settings select {
+  max-width: 100%;
+  padding: 0.6rem;
+}
+.account-settings input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+.page dd {
+  overflow-wrap: anywhere;
+  margin-left: 0;
+}

@@ -459,3 +459,23 @@ describe("public report reads", () => {
     expect(await aggregatePendingReports(catalog.db)).toEqual({ completed: 0, failed: 0 });
   });
 });
+
+it("distinguishes invalid read inputs from incompatible persisted reports", async () => {
+  const { scan } = await execution();
+  const id = randomUUID();
+  await catalog.db.insert(schema.reports).values({
+    id,
+    scanId: scan.scanId,
+    classifierRevision: "incompatible_fixture",
+    payload: { historical: true },
+  });
+  const api = createReportApi(catalog.db);
+  expect((await api(new Request(`http://localhost/api/v1/reports/${id}`))).status).toBe(503);
+  for (const path of [
+    "reports/not-a-uuid",
+    "history?name=invalid/name",
+    "history?name=valid-name&before=not-a-cursor",
+  ]) {
+    expect((await api(new Request(`http://localhost/api/v1/${path}`))).status).toBe(400);
+  }
+});

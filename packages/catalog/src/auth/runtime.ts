@@ -1,9 +1,12 @@
 import { createHmac } from "node:crypto";
+import { RegistryClient } from "@compatlab/engine";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, catalogTransaction } from "../database.js";
+import type { LinkedAuthority } from "../monitoring/authority.js";
+import { monitoringMutation, monitoringOverview } from "../monitoring/settings.js";
 import {
   type PublicConfig,
   PublicRequestError,
@@ -105,6 +108,7 @@ export function createMaintainerService(
   publicConfig: PublicConfig,
   rawConfig: MaintainerConfig,
   fetcher = fetch,
+  registry = new RegistryClient(),
 ) {
   const config = maintainerConfigSchema.parse(rawConfig);
   const auth = createGithubAuth(db, publicConfig, config);
@@ -137,20 +141,19 @@ export function createMaintainerService(
     if (!user) throw new PublicRequestError(401, "sign_in_required");
     return user;
   }
-  async function accessToken(request: Request) {
+  async function tokenForAccount(userId: string, accountId: string, headers?: Headers) {
     try {
-      const user = await requirePrincipal(request);
       const [account] = await db
         .select()
         .from(authAccounts)
-        .where(eq(authAccounts.id, user.accountId));
-      if (!account?.accessToken) throw new PublicRequestError(403, "github_sign_in_required");
+        .where(and(eq(authAccounts.id, accountId), eq(authAccounts.userId, userId)));
+      if (!account?.accessToken) throw new Error("Revoked account.");
       const result = await refreshFence.run(
         { id: account.id, accessToken: account.accessToken, refreshToken: account.refreshToken },
         () =>
           auth.api.getAccessToken({
-            headers: request.headers,
-            body: { accountId: user.accountId },
+            ...(headers ? { headers } : {}),
+            body: { accountId, ...(headers ? {} : { userId }) },
           }),
       );
       if (!result.accessToken) throw new Error("No token.");
@@ -158,6 +161,50 @@ export function createMaintainerService(
     } catch {
       throw new PublicRequestError(403, "github_sign_in_required");
     }
+  }
+  async function accessToken(request: Request) {
+    const user = await requirePrincipal(request);
+    return tokenForAccount(user.userId, user.accountId, request.headers);
+  }
+  async function authorizeLink(
+    userId: string,
+    linkId: string,
+    request?: Request,
+  ): Promise<LinkedAuthority> {
+    const [account] = await db
+      .select({
+        id: authAccounts.id,
+        githubId: authAccounts.accountId,
+        verified: authUsers.emailVerified,
+      })
+      .from(authAccounts)
+      .innerJoin(authUsers, eq(authUsers.id, authAccounts.userId))
+      .where(eq(authAccounts.userId, userId));
+    const [link] = await db
+      .select()
+      .from(repositoryLinks)
+      .where(and(eq(repositoryLinks.id, linkId), eq(repositoryLinks.userId, userId)));
+    if (!account?.verified || !link || link.revokedAt)
+      throw new PublicRequestError(403, "repository_authority_required");
+    const user = request ? await requirePrincipal(request, true) : undefined;
+    if (user && user.userId !== userId)
+      throw new PublicRequestError(403, "repository_authority_required");
+    const proof = await checkRepositoryAuthority(
+      db,
+      config,
+      account,
+      { repository: link.fullName, installationId: link.installationId },
+      await tokenForAccount(userId, account.id, request?.headers),
+      fetcher,
+    );
+    return {
+      userId,
+      accountId: account.id,
+      githubId: account.githubId,
+      linkId,
+      proof,
+      ...(user ? { sessionId: user.sessionId } : {}),
+    };
   }
   async function authorize(
     request: Request,
@@ -195,9 +242,26 @@ export function createMaintainerService(
             : [],
         });
       }
+      if (path === "/api/maintainer/monitors" && request.method === "GET") {
+        const user = await requirePrincipal(request);
+        return privateJson(await monitoringOverview(db, user.userId, config.emailEnabled === true));
+      }
       if (request.method !== "POST") return privateJson({ error: "not_found" }, 404);
       const body = await readAdmissionBody(request, publicConfig.origin);
       const user = await requirePrincipal(request, true);
+      if (path.startsWith("/api/maintainer/monitors") || path === "/api/maintainer/rescan")
+        return privateJson(
+          await monitoringMutation(
+            db,
+            publicConfig,
+            user,
+            request,
+            body,
+            (id) => authorizeLink(user.userId, id, request),
+            registry,
+            config.emailEnabled === true,
+          ),
+        );
       if (path === "/api/maintainer/repositories") {
         const authority = await authorize(request, user, repositoryRequestSchema.parse(body));
         return privateJson(await saveRepositoryLink(db, user, authority), 201);
@@ -269,6 +333,7 @@ export function createMaintainerService(
     requirePrincipal,
     authorize,
     accessToken,
+    authorizeLink,
     async quotaKey(request: Request) {
       const user = await principal(request);
       return user ? accountRequesterKey(publicConfig.requesterSecret, user.githubId) : undefined;

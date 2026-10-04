@@ -42,7 +42,7 @@ Each account can retain at most ten repository links, including links revoked by
 
 ## Quotas and retention
 
-`admission_v3` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.
+`admission_v4` retains twenty queued scans globally, two active and ten new scans per hour per requester, and a five-minute package/version cooldown. Signed-in requests count the union of matching address history and the stable keyed GitHub account ID. Changing addresses or signing in cannot weaken the anonymous limits. Cached or active equivalent work is reused.
 
 Account and anonymous requester keys expire after seven days. Deleting/recreating an account does not reset this short abuse-prevention window. The bounded maintenance job removes expired sessions/OAuth state, twenty-minute ingress buckets and seven-day webhook IDs. Account configuration stays until deletion; encrypted backups expire after seven days. The public privacy page describes these records.
 
@@ -53,3 +53,5 @@ PostgreSQL tests use the real Better Auth adapter with a mocked GitHub HTTP boun
 No live GitHub App is created by these tests. Before enabling accounts publicly, verify one real login, installation, token refresh and revocation with the deployment's App. Public deployment remains a separate release decision.
 
 References: [Better Auth GitHub](https://better-auth.com/docs/authentication/github), [Better Auth options](https://better-auth.com/docs/reference/options), [GitHub App user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app).
+
+Release monitoring, controlled rescans, comparisons and optional email are described in [monitoring](monitoring.md). Background reconciliation uses the encrypted account credentials with live repository checks; an expired browser session does not stop a configured monitor. Revocation does.

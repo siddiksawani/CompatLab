@@ -52,6 +52,29 @@ services:
     mem_limit: 512m
     cpus: 1
     logging: *logging
+  maintainer:
+    profiles: [maintainers]
+    image: ${COMPATLAB_CONTROL_IMAGE:?Set an immutable control image digest}
+    command: ["node", "services/maintainer/dist/bin.js"]
+    restart: unless-stopped
+    env_file:
+      - ${COMPATLAB_CONFIG_DIR}/web.env
+      - ${COMPATLAB_CONFIG_DIR}/notifications.env
+    depends_on:
+      postgres: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 1
+    healthcheck:
+      test: ["CMD", "node", "-e", "const fs=require('node:fs');process.exit(Date.now()-Number(fs.readFileSync('/tmp/compatlab-maintainer-health','utf8'))<360000?0:1)"]
+      interval: 60s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+    logging: *logging
   proxy:
     image: ${COMPATLAB_PROXY_IMAGE:?Set an immutable proxy image digest}
     restart: unless-stopped

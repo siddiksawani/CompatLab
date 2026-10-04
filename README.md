@@ -54,3 +54,5 @@ The smoke test builds a digest-pinned fixture image and checks ESM/CommonJS comp
 The [fourteen-PR delivery plan](docs/delivery-plan.md) covers the public MVP and gated maintainer workflows. The [architecture plan](docs/compatlab-build-plan.md), [PRD v1.1](compatlab_product_requirements_v1.1.md), and [research notes](docs/research-notes.md) define the design. The [original PRD](docs/archive/compatlab_product_requirements_v1.md) is preserved as historical reference.
 
 All project changes use feature branches and pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md) for checks and review expectations, and [SECURITY.md](SECURITY.md) for reporting security issues. The repository is maintained by [siddiksawani](https://github.com/siddiksawani) and licensed under [MIT](LICENSE).
+
+Maintainers can configure release reconciliation, compare immutable reports, request controlled rescans and opt into evidence-linked alerts. See [monitoring and deployment](docs/monitoring.md).

@@ -92,18 +92,24 @@ export async function authorityRevision(db: CatalogDatabase | CatalogTransaction
 export async function checkRepositoryAuthority(
   db: CatalogDatabase,
   config: MaintainerConfig,
-  principal: Principal,
+  principal: Pick<Principal, "githubId">,
   input: z.infer<typeof repositoryRequestSchema>,
   token: string,
   fetcher = fetch,
 ): Promise<RepositoryAuthority> {
+  const deadline = AbortSignal.timeout(30000);
+  const boundedFetch: typeof fetch = (url, init) =>
+    fetcher(url, {
+      ...init,
+      signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
+    });
   const request = repositoryRequestSchema.parse(input);
   const revision = await authorityRevision(db);
-  const user = z.object({ id: githubId }).parse(await githubJson("/user", token, fetcher));
+  const user = z.object({ id: githubId }).parse(await githubJson("/user", token, boundedFetch));
   if (String(user.id) !== principal.githubId)
     throw new PublicRequestError(403, "github_identity_changed");
   const repository = repositorySchema.parse(
-    await githubJson(`/repos/${request.repository}`, token, fetcher),
+    await githubJson(`/repos/${request.repository}`, token, boundedFetch),
   );
   if (
     repository.private ||
@@ -114,7 +120,7 @@ export async function checkRepositoryAuthority(
   let installed = false;
   for (let page = 1; page <= 5; page++) {
     const { installations } = installationsSchema.parse(
-      await githubJson(`/user/installations?per_page=100&page=${page}`, token, fetcher),
+      await githubJson(`/user/installations?per_page=100&page=${page}`, token, boundedFetch),
     );
     installed = installations.some(
       (item) =>
@@ -131,7 +137,7 @@ export async function checkRepositoryAuthority(
       await githubJson(
         `/user/installations/${request.installationId}/repositories?per_page=100&page=${page}`,
         token,
-        fetcher,
+        boundedFetch,
       ),
     );
     accessible = repositories.some((item) => item.id === repository.id && !item.private);

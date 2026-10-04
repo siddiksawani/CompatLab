@@ -8,13 +8,15 @@ import {
 import { boundedText, displayIdentifier, sanitizeJson, sanitizeText } from "@compatlab/engine";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { CatalogDatabase } from "../database.js";
+import type { CatalogDatabase, CatalogReader } from "../database.js";
 import { selectionAllowed } from "../policy.js";
+import { PublicRequestError } from "../public/security.js";
 import { scanProgress } from "../scheduling/reconcile.js";
 import { preparations, reports, runs, scans } from "../schema.js";
 import { reportControlError } from "../telemetry.js";
+import { readComparison, reportBadge, reportHistory } from "./comparison.js";
 
-export async function reportHeader(db: CatalogDatabase, reportId: string) {
+export async function reportHeader(db: CatalogReader, reportId: string) {
   z.uuid().parse(reportId);
   const [row] = (
     await db.execute<{
@@ -26,8 +28,11 @@ export async function reportHeader(db: CatalogDatabase, reportId: string) {
       snapshotAvailable: boolean;
       policyAllowed: boolean;
       createdAt: string;
+      observationRevision: number;
+      previousScanId: string | null;
+      previousReportId: string | null;
     }>(sql`SELECT r.id,r.scan_id AS "scanId",r.invalidated_at AS "invalidatedAt",r.invalidation_reason AS "invalidationReason",r.replaced_by AS "replacedBy",
-    prep.snapshot_available AS "snapshotAvailable",(${selectionAllowed}) AS "policyAllowed",r.created_at AS "createdAt"
+    prep.snapshot_available AS "snapshotAvailable",(${selectionAllowed}) AS "policyAllowed",r.created_at AS "createdAt",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",(SELECT id FROM reports pr WHERE pr.scan_id=s.previous_scan_id AND pr.replaced_by IS NULL ORDER BY pr.created_at DESC LIMIT 1) AS "previousReportId"
     FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id
     JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id
     WHERE r.id=${reportId}`)
@@ -42,14 +47,14 @@ export async function reportHeader(db: CatalogDatabase, reportId: string) {
   };
 }
 
-async function reportPayload(db: CatalogDatabase, reportId: string) {
+async function reportPayload(db: CatalogReader, reportId: string) {
   const [row] = await db
     .select({ payload: reports.payload })
     .from(reports)
     .where(eq(reports.id, reportId));
   return row ? hostedReportSchema.parse(row.payload) : null;
 }
-export async function readReport(db: CatalogDatabase, reportId: string) {
+export async function readReport(db: CatalogReader, reportId: string) {
   const status = await reportHeader(db, reportId);
   if (!status) return null;
   const report = await reportPayload(db, reportId);
@@ -129,6 +134,9 @@ export async function reproductionReport(db: CatalogDatabase, reportId: string) 
 
 export function createReportApi(db: CatalogDatabase) {
   let inFlight = 0;
+  let comparing = false,
+    readWindow = 0,
+    reads = 0;
   return async (request: Request): Promise<Response> => {
     if (inFlight >= 4) return json({ error: "busy" }, 503, { "retry-after": "2" });
     inFlight++;
@@ -140,8 +148,8 @@ export function createReportApi(db: CatalogDatabase) {
         ? new Response(null, { status: response.status, headers: response.headers })
         : response;
     } catch (error) {
-      if (error instanceof InvalidIdentifier || error instanceof URIError)
-        return json({ error: "invalid_identifier" }, 400);
+      if (error instanceof PublicRequestError) return json({ error: error.code }, error.status);
+      if (error instanceof InvalidIdentifier) return json({ error: "invalid_identifier" }, 400);
       reportControlError("report_read_failed");
       return json({ error: "temporarily_unavailable" }, 503, { "retry-after": "5" });
     } finally {
@@ -151,6 +159,44 @@ export function createReportApi(db: CatalogDatabase) {
 
   async function handleRead(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    if (/^\/api\/v1\/(comparisons|history|badges)(?:\/|$)/.test(url.pathname)) {
+      const window = Math.floor(Date.now() / 60000);
+      if (readWindow !== window) {
+        readWindow = window;
+        reads = 0;
+      }
+      if (++reads > 600) return json({ error: "read_limit" }, 429, { "retry-after": "60" });
+      if (url.pathname === "/api/v1/comparisons") {
+        if (comparing) return json({ error: "busy" }, 503, { "retry-after": "2" });
+        comparing = true;
+        try {
+          const result = await readComparison(
+            db,
+            identifier(url.searchParams.get("before")),
+            identifier(url.searchParams.get("after")),
+          );
+          return result ? json(result) : json({ error: "not_found" }, 404);
+        } finally {
+          comparing = false;
+        }
+      }
+      if (url.pathname === "/api/v1/history") {
+        const cursor = url.searchParams.get("before");
+        if (cursor && cursor.length > 512) throw new InvalidIdentifier();
+        return json(
+          await reportHistory(db, url.searchParams.get("name") ?? "", cursor ?? undefined),
+        );
+      }
+      const badge = /^\/api\/v1\/badges\/([^/]+)\.svg$/.exec(url.pathname);
+      if (badge) {
+        const svg = await reportBadge(db, identifier(badge[1]));
+        return svg
+          ? new Response(svg, {
+              headers: { ...headers, "content-type": "image/svg+xml; charset=utf-8" },
+            })
+          : json({ error: "not_found" }, 404);
+      }
+    }
     const progress = /^\/api\/v1\/scans\/([^/]+)$/.exec(url.pathname);
     if (progress) {
       const id = identifier(progress[1]);

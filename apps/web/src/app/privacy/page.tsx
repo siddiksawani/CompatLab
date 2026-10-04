@@ -51,9 +51,16 @@ export default function Privacy() {
         rate-limit buckets expire after twenty minutes; signed GitHub webhook delivery IDs after
         seven days. Expired sessions and OAuth state are removed by maintenance. You can revoke
         links or delete your account in <a href="/account">account settings</a>. Deletion removes
-        sessions, tokens and repository links immediately. Public reports remain available. Deleted
-        account data may remain in encrypted backups for seven days. GitHub also provides controls
-        to revoke your App authorization or installation.
+        sessions, tokens, repository links, monitors and notification destinations immediately.
+        Public reports remain available. Deleted account data may remain in encrypted backups for
+        seven days. GitHub also provides controls to revoke your App authorization or installation.
+      </p>
+      <p>
+        Release monitors retain selected version identities until deletion. Private alert history is
+        retained thirty days. Optional email sends your verified address and evidence links to
+        Resend only after you opt in. You can pause a monitor or stop email in account settings; an
+        email already in flight cannot be recalled. Background checks use encrypted GitHub
+        credentials and stop when authority is revoked.
       </p>
       <p>
         Discovery requests public npm registry metadata. The control service may send fixed

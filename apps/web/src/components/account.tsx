@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Monitors } from "./monitors";
 
 type AccountState = {
   enabled: boolean;
@@ -65,7 +66,7 @@ export function Account() {
   }
   return (
     <section aria-label="Account settings" className="account-settings">
-      <p role="status" aria-live="polite">
+      <p role="status" aria-label="Account status" aria-live="polite">
         {message || (!account ? "Loading account…" : "")}
       </p>
       {account && !account.enabled && (
@@ -153,6 +154,7 @@ export function Account() {
               </li>
             ))}
           </ul>
+          <Monitors repositories={account.repositories ?? []} />
           <h2>Revoke or delete</h2>
           <p>
             Revoking removes stored GitHub tokens and signs out all sessions. Deleting also removes

@@ -159,3 +159,26 @@ test("missing artifacts cannot request work", async ({ page, request }) => {
   await expect(page.getByRole("button", { name: "Request a scan", exact: true })).toHaveCount(0);
   expect(await (await fixture(request, "counts")).json()).toEqual({ scans: 0, jobs: 0 });
 });
+test("history, comparisons and badges read immutable evidence without scheduling work", async ({
+  page,
+  request,
+}) => {
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request);
+  const id = new URL(page.url()).pathname.split("/").at(-1);
+  const before = await (await fixture(request, "counts")).json();
+  await page.getByRole("link", { name: "Report history", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "compatlab-browser-fixture report history" }),
+  ).toBeVisible();
+  await page.getByLabel("Earlier report ID").fill(id ?? "");
+  await page.getByLabel("Later report ID").fill(id ?? "");
+  await page.getByRole("button", { name: "Compare reports" }).click();
+  await expect(
+    page.getByText("No meaningful evidence changes. Timing and log differences are ignored."),
+  ).toBeVisible();
+  const badge = await request.get(`/api/v1/badges/${id}.svg`);
+  expect(await badge.text()).toContain("loading evidence");
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
