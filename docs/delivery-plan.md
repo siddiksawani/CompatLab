@@ -41,6 +41,8 @@ PR 24 follows the homepage feedback with explicit outcome counts, recent-report 
 
 PR 25 fixes package selection when npm serves a selected-version manifest as `text/plain`. The bounded JSON parser and artifact validation still apply; regression tests cover valid and invalid plain-text responses and browser version selection.
 
+PR 26 corrects local replay setup: report commands invoke the built source CLI, prerequisites precede copying, and hosted replay explicitly requires operator-supplied exact runtime images. Backend and missing-image errors explain the next step. Public CLI/image distribution remains future work.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.

@@ -8,6 +8,8 @@ export const metadata = pageMetadata(
 );
 export default function Methodology() {
   const commands = [
+    "git clone https://github.com/siddiksawani/CompatLab.git",
+    "cd CompatLab",
     "pnpm install --frozen-lockfile",
     "pnpm build",
     "pnpm cli doctor --json",
@@ -79,13 +81,27 @@ export default function Methodology() {
       </p>
       <h2 id="local-cli">Run the local CLI</h2>
       <p>
+        The CLI is included in the source repository. It is not currently published as an npm
+        package, and downloading a report does not install a <code>compatlab</code> command. Use
+        Node.js 24.21.0 and pnpm 12.8.1 to build it, then run <code>pnpm cli</code> or the compiled
+        entry point below from the repository directory.
+      </p>
+      <p>
         Use a dedicated Linux amd64 host with the qualified Docker/runsc, mount and firewall
         prerequisites. Ordinary Docker alone does not reproduce this execution profile. The CLI
-        refuses to fall back to host execution.
+        refuses to fall back to host execution. On macOS or Windows, use a separate qualified Linux
+        machine or VM. Do not run another CLI supervisor on the active production worker.
       </p>
       <pre>
         <code>{commands}</code>
       </pre>
+      <p>
+        The example above makes a new check and builds its runtime images locally. Replaying a
+        hosted report additionally requires its exact runtime images. Those images are not yet
+        distributed for public download; an operator must export them from the originating worker
+        and load them on the replay host. Building the same recipe again can produce different image
+        IDs and is not exact replay.
+      </p>
       <p>
         Reproduction can reuse the actual retained snapshot or explicitly rebuild from downloaded
         inputs and their exact lock. Rebuilding records a new generation and may produce different

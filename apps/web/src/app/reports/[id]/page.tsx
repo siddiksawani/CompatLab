@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { report, status } = await loadReport((await params).id);
   const base = `/api/v1/reports/${report.id}`;
-  const command = `compatlab reproduce ./${report.id}-reproduction.json --rebuild --lockfile ./package-lock.json --json`;
+  const command = `sudo "$(command -v node)" apps/cli/dist/bin.js reproduce ./${report.id}-reproduction.json --rebuild --lockfile ./package-lock.json --json`;
   const runtimeLabels = new Map(
     report.matrix.images.map((image) => [
       image.profileId,
@@ -291,22 +291,35 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         {report.preparation.snapshot ? (
           <>
             <p>
-              Download both files, then run on a qualified Linux amd64/runsc host with the pinned
-              images available. Rebuilding creates a new snapshot generation.
+              Download the recorded inputs and exact dependency lock. These files do not include the
+              CLI, runtime images or installed packages.
             </p>
             <div className="actions">
               <a href={`${base}/reproduction`}>Reproduction inputs</a>
               <a href={`${base}/lock`}>Exact package lock</a>
-              <Copy value={command} label="Copy reproduction command" />
             </div>
-            <pre>
-              <code>{command}</code>
-            </pre>
+            <p>
+              <strong>Local replay requires setup.</strong> The CLI currently runs from the
+              CompatLab source repository on a qualified Linux amd64/runsc host. Hosted runtime
+              images are not yet distributed for public download; an operator must supply the exact
+              images named in this report. A fresh image build does not substitute for them.{" "}
+              <a href="/methodology#local-cli">CLI setup and replay requirements</a>
+            </p>
+            <details>
+              <summary>Command for a configured host</summary>
+              <p>
+                Run from the built CompatLab repository with both downloads in that directory and
+                the exact runtime images loaded. Rebuilding creates a new snapshot generation.
+              </p>
+              <Copy value={command} label="Copy reproduction command" />
+              <pre>
+                <code>{command}</code>
+              </pre>
+            </details>
             <p className="fine">
               {status.snapshotAvailable
                 ? "The original worker last reported its sealed snapshot as available. Verified reuse requires those actual bytes in your local state directory."
-                : "The recorded worker snapshot is unavailable. Retained identity and lock bytes do not guarantee a successful rebuild."}{" "}
-              <a href="/methodology#local-cli">Setup and replay limits</a>
+                : "The recorded worker snapshot is unavailable. Retained identity and lock bytes do not guarantee a successful rebuild."}
             </p>
           </>
         ) : (

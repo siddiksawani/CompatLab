@@ -51,22 +51,40 @@ describe("CLI", () => {
     expect(doctor).not.toHaveBeenCalled();
   });
 
-  it("fails closed before scanning when the backend is unavailable", async () => {
-    const check = vi.fn();
-    const reproduce = vi.fn();
-    const io = setup();
-    expect(
-      await runCli(
-        ["check", "@scope/package@1.0.0", "--json"],
-        io,
-        async () => ({ ...report, prerequisitesAvailable: false }),
-        { check, reproduce },
-      ),
-    ).toBe(3);
-    expect(check).not.toHaveBeenCalled();
-    expect(reproduce).not.toHaveBeenCalled();
-    expect(io.stderr.mock.calls.flat().join("")).toContain("unavailable");
-  });
+  it.each(["check", "reproduce"])(
+    "explains missing prerequisites before %s without running package code",
+    async (command) => {
+      const check = vi.fn();
+      const reproduce = vi.fn();
+      const io = setup();
+      expect(
+        await runCli(
+          [command, command === "check" ? "@scope/package@1.0.0" : "report.json", "--json"],
+          io,
+          async () => ({
+            ...report,
+            prerequisitesAvailable: false,
+            checks: [
+              ...report.checks,
+              {
+                name: "runsc",
+                available: false,
+                detail: "Docker has no registered runsc runtime.",
+              },
+            ],
+          }),
+          { check, reproduce },
+        ),
+      ).toBe(3);
+      expect(check).not.toHaveBeenCalled();
+      expect(reproduce).not.toHaveBeenCalled();
+      expect(io.stdout).not.toHaveBeenCalled();
+      const error = io.stderr.mock.calls.flat().join("");
+      expect(error).toContain("Docker has no registered runsc runtime.");
+      expect(error).toContain("https://compatlab.me/methodology#local-cli");
+      expect(error).not.toContain("Docker is reachable.");
+    },
+  );
 
   it.each([
     ["check", "package@^1.0.0"],

@@ -71,7 +71,20 @@ export async function verifyRuntimeImages(images: readonly RuntimeImage[]): Prom
       "--format",
       "{{.Os}}/{{.Architecture}}",
       image.imageId,
-    ]);
+    ]).catch((error: unknown) => {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "stderr" in error &&
+        typeof error.stderr === "string" &&
+        error.stderr.includes(`No such image: ${image.imageId}`)
+      )
+        throw new Error(
+          `Required runtime image ${image.imageId} (${image.profileId}) is missing. Load the exact image from the originating execution host before replaying; rebuilding the recipe is not exact replay. Setup: https://compatlab.me/methodology#local-cli`,
+          { cause: error },
+        );
+      throw error;
+    });
     if (platform !== "linux/amd64") throw new TypeError("Runtime images require Linux amd64.");
     const labels: Record<string, string> = JSON.parse(
       await docker(["image", "inspect", "--format", "{{json .Config.Labels}}", image.imageId]),
