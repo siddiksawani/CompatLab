@@ -27,4 +27,4 @@ export function pageMetadata(
   };
 }
 
-export const editorialPages = ["/", "/methodology", "/privacy", "/terms", "/security"];
+export const editorialPages = ["/", "/methodology", "/api", "/privacy", "/terms", "/security"];

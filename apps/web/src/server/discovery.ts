@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  discoverRecentReports,
   discoverReportPreviews,
   discoverReports,
   reportControlError,
@@ -18,11 +19,15 @@ export async function discoveryReports(prefix?: string) {
 }
 
 export async function recentReports() {
+  if (pending >= 2) return [];
+  pending++;
   try {
-    return await discoveryReports();
+    return await discoverRecentReports(webRuntime().catalog.db);
   } catch {
     reportControlError("report_read_failed");
     return [];
+  } finally {
+    pending--;
   }
 }
 

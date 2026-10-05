@@ -1,4 +1,4 @@
-import type { CompatibilityOutcome } from "@compatlab/contracts";
+import type { CompatibilityOutcome, HostedReport } from "@compatlab/contracts";
 
 export const labels: Record<CompatibilityOutcome, string> = {
   pass: "Passed",
@@ -9,6 +9,13 @@ export const labels: Record<CompatibilityOutcome, string> = {
   not_applicable: "Not applicable",
   infrastructure_error: "Service error",
 };
+export function coverageSummary(coverage: HostedReport["cells"][number]["coverage"]) {
+  const counts = [`${coverage.passed} passed`, `${coverage.failed} failed`];
+  if (coverage.interrupted) counts.push(`${coverage.interrupted} interrupted`);
+  if (coverage.untested) counts.push(`${coverage.untested} untested`);
+  if (!coverage.complete && !coverage.untested) counts.push("coverage limited");
+  return counts.join(" · ");
+}
 export function observedDate(value: string | null) {
   return value
     ? `${new Date(value).toISOString().slice(0, 16).replace("T", " ")} UTC`

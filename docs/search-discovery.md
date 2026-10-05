@@ -2,11 +2,25 @@
 
 The canonical site is `https://compatlab.me`. Public editorial pages and completed, current, policy-eligible reports have titles, descriptions, canonical URLs and social metadata. The homepage links to six recent eligible reports and up to three completed examples. Its matrix preview projects outcomes, coverage and runtime pins from stored evidence without loading entry details or package logs. The examples use the same eligibility rules as the sitemap and fall back to recent packages when no curated examples are available. These reads never request a scan. Historical report URLs continue to work even when they leave search discovery.
 
-Search/version queries, progress, comparisons, history and the deferred account page carry `noindex`. API and health responses send `X-Robots-Tag: noindex, nofollow`. Robots permits crawling so search engines can see those instructions; `robots.txt` is not an access-control mechanism. Invalid IDs use the normal 404 behavior.
+Search/version queries, progress, comparisons, history and the deferred account page carry `noindex`. JSON API and health responses send `X-Robots-Tag: noindex, nofollow`; the human-readable `/api` guide is indexable. Robots permits crawling so search engines can see those instructions; `robots.txt` is not an access-control mechanism. Invalid IDs use the normal 404 behavior.
 
 Submit `/sitemap.xml`, an index of the editorial sitemap and sixteen report partitions. Each report partition uses the first hexadecimal digit of its UUID and its existing primary-key range, without offset pagination or loading report payloads. A separate partial index supports the six recent homepage links. Reads are bounded to 50,000 URLs per partition, with at most two discovery queries in flight per web process. If a partition fills, it returns an error rather than silently dropping URLs; increase prefix depth before that threshold. A busy or unavailable database returns HTTP 503 with a retry hint. Sitemap responses are not cached, so invalidation, policy blocks and runtime quarantine take effect on the next read.
 
 Indexing is limited to completed reports. It does not depend on a passing outcome and does not imply package safety, functional correctness or publisher endorsement. Canonical report URLs identify exact observations; rescans retain separate provenance.
+
+## Agent discovery
+
+Public pages advertise the API catalog, OpenAPI specification and human guide through HTTP `Link` relations. The RFC 9727 catalog at `/.well-known/api-catalog` returns `application/linkset+json` with an actual API endpoint as its anchor, plus service description, documentation and health links. The specification covers existing anonymous reads only; it creates no new execution or authentication path.
+
+The homepage and `/reports/:id` negotiate `text/markdown` when explicitly preferred in `Accept`. Wildcards and ordinary browser requests keep HTML; React navigation and prefetch requests are excluded. `skipProxyUrlNormalize` preserves the framework's navigation headers for this decision. `/index.md` and `/reports/:id/markdown` are explicit alternatives, with canonical links to the HTML pages and `noindex` to avoid duplicate search entries. Markdown uses the same bounded public reads, discloses historical status and coverage, and links to full evidence rather than copying package stdout. Missing reports remain 404s. Other documentation pages do not yet offer Markdown.
+
+The application renders Markdown itself. Keep Caddy's `no-transform` protection on HTML; Cloudflare HTML conversion previously broke hydration. Caddy also appends `Vary: Accept` to HTML, preserving Next.js's own variant headers (Next.js replaces custom HTML `Vary` headers during rendering). Markdown sets `Vary: Accept` in its route handler. Both formats disable shared caching. No paid Cloudflare conversion feature is required. Verify both variants through the production proxy after deployment, not just the local Next.js port.
+
+Content Signals in `robots.txt` and response headers allow search and AI answers, and decline model training: `search=yes, ai-input=yes, ai-train=no`. These are published preferences, not a guarantee that crawlers comply or a substitute for authorization.
+
+Use [Is It Agent Ready](https://isitagentready.com/compatlab.me) after deployment to verify discovery, Markdown, robot rules and content signals. Its score also checks optional protocols. CompatLab does not implement OAuth, agent registration (`auth.md`), MCP, A2A, WebMCP, Agent Skills, DNS-AID or agent commerce; do not publish placeholder metadata to claim support. Add a protocol only with its real endpoint, behavior, security review and tests. A scanner score is not a security or execution qualification.
+
+References: [API catalogs, RFC 9727](https://www.rfc-editor.org/rfc/rfc9727), [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html), [Markdown negotiation](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/), [Content Signals](https://contentsignals.org/).
 
 ## Search Console after launch
 

@@ -6,6 +6,8 @@ The Maintainers page explains the planned release monitoring, comparisons and of
 
 The homepage pairs search with a matrix from a completed report. It reads up to three current examples for Preact, Express and Zod, using the same eligibility rules as search discovery. These examples cover mixed results, successful loading and incomplete coverage; they do not claim differences between runtimes that the observations did not show. Example links open completed reports without scheduling work. If those packages have no eligible reports, the page uses recent eligible packages; an empty catalog shows an empty state. The preview query selects only matrix, outcome and coverage fields, without entry-level evidence or logs.
 
+Subpath cells show passed and failed counts, with interrupted, untested or limited coverage disclosed separately. Recently tested cards include a readable exact version and the stored overall outcome. Their query projects only these fields for six eligible reports; sitemap queries still avoid loading report payloads.
+
 The version picker is a native select menu containing up to 200 recent versions plus the selected version. A separate, labeled form accepts another exact version, including older versions outside that menu. Both forms work without JavaScript. Header navigation links to search, methodology and GitHub. Documentation uses a reading column and a desktop section list; reports retain the wider matrix and a section bar. Section navigation returns to normal document flow on smaller screens. The footer includes the loading limitation and a direct removal-policy link.
 
 ## Running the application
@@ -31,6 +33,8 @@ The web service owns a bounded PostgreSQL pool. It has no package execution path
 | `GET /api/v1/packages?name=…&version=…` | Exact artifact metadata, version suggestions and current scan/report |
 | `POST /api/v1/scans` | Explicit `{ "name": "package", "version": "1.0.0" }` admission |
 | `/api/v1/scans/:id`, `/api/v1/reports/:id/…` | [Progress, evidence and downloads](reports.md#reads-and-downloads) |
+
+The public `/api` guide and `/openapi.json` describe anonymous GET operations for search, package metadata, reports and existing scan progress. Response schemas come from the canonical contracts. `/.well-known/api-catalog` advertises this API as an RFC 9727 linkset. Scan admission and deferred account actions are deliberately outside this read-only description. See [agent discovery](search-discovery.md#agent-discovery) for negotiated Markdown and content preferences.
 
 Admission requires JSON, same-origin headers and a body of at most 2 KiB. Public callers cannot choose commands, runtime images, policies or custom code. Eight API requests may be in flight per application handler, with a separate four-read report limit; saturation returns a bounded retry interval. Database admission atomically deduplicates work and applies requester, package and global queue limits across replicas.
 
@@ -58,6 +62,6 @@ The suite starts the production standalone server against a uniquely named datab
 
 Chromium, Firefox, WebKit and mobile Chromium cover scoped/unscoped discovery, version selection, admission, refresh recovery, cached views without new work, inert malicious logs, expiry, invalidation and missing artifacts. Keyboard navigation, automated WCAG checks, mobile overflow checks and screenshots supplement manual review. On macOS, WebKit uses Option–Tab for link navigation. The required `Browser qualification` CI job runs all four projects on Linux and retains its screenshots/report for seven days.
 
-Layout checks cover 320, 390, 768, 1024, 1440, 1920 and 2560 pixel viewports, including long package names and URLs, expanded evidence, clipboard fallback, history/comparison forms, policy pages and unavailable states. They check page gutters and centering, horizontal overflow, overlapping controls and footer placement. Tablet reports use two columns of runtime cards; narrow screens use one.
+Layout checks cover 320, 375, 390, 768, 1024, 1440, 1920 and 2560 pixel viewports, including long package names and URLs, expanded evidence, clipboard fallback, history/comparison forms, policy pages and unavailable states. They check page gutters and centering, horizontal overflow, overlapping controls and footer placement. Tablet reports use two columns of runtime cards; narrow screens use one. Mixed-result fixtures verify count labels and recent-report badges, including a stacked hero at 375 pixels.
 
 References: [Next.js self-hosting](https://nextjs.org/docs/app/guides/self-hosting), [nonce CSP](https://nextjs.org/docs/app/guides/content-security-policy), [Playwright accessibility testing](https://playwright.dev/docs/accessibility-testing), [Safari keyboard shortcuts](https://help.apple.com/safari/mac/8.0/en.lproj/cpsh003.html).

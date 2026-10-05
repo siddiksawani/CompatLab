@@ -1,4 +1,8 @@
-import { hostedReportSchema, reportCellSchema } from "@compatlab/contracts";
+import {
+  compatibilityOutcomeSchema,
+  hostedReportSchema,
+  reportCellSchema,
+} from "@compatlab/contracts";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { assertionSelectionAllowed } from "../assertions/policy.js";
@@ -64,6 +68,20 @@ export async function reportIsDiscoverable(db: CatalogReader, id: string) {
   z.uuid().parse(id);
   const result = await db.execute(sql`SELECT r.id ${source} WHERE r.id=${id} AND ${eligible}`);
   return result.rows.length === 1;
+}
+
+export async function discoverRecentReports(db: CatalogReader) {
+  const result = await db.execute<{
+    id: string;
+    name: string;
+    version: string;
+    outcome: unknown;
+  }>(sql`SELECT r.id,p.name,v.version,r.payload->>'outcome' AS outcome ${source}
+    WHERE ${eligible} ORDER BY r.created_at DESC,r.id LIMIT 6`);
+  return result.rows.map((row) => ({
+    ...row,
+    outcome: compatibilityOutcomeSchema.parse(row.outcome),
+  }));
 }
 
 export async function discoverReports(db: CatalogReader, prefix?: string) {

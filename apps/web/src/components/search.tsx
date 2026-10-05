@@ -65,7 +65,7 @@ export function Search({
           name="q"
           type="search"
           maxLength={200}
-          placeholder="Search npm packages, including @scope/name"
+          placeholder="e.g. zod or @scope/name"
           autoComplete="off"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

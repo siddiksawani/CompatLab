@@ -1,5 +1,5 @@
 import type { ReportPreview } from "@compatlab/catalog/web";
-import { labels } from "./labels";
+import { coverageSummary, labels } from "./labels";
 
 function Result({
   cell,
@@ -14,11 +14,7 @@ function Result({
       href={`${reportId ? `/reports/${reportId}` : ""}#${cell.profileId}-${cell.group}-${cell.mode}`}
     >
       {labels[cell.outcome]}
-      {cell.group === "subpaths" && (
-        <small>
-          {cell.coverage.observed}/{cell.coverage.planned ?? "?"} observed
-        </small>
-      )}
+      {cell.group === "subpaths" && <small>{coverageSummary(cell.coverage)}</small>}
     </a>
   ) : (
     <span>Unavailable</span>

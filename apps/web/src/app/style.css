@@ -440,6 +440,16 @@ nav a {
   overflow-wrap: anywhere;
   background: white;
 }
+.recent-report-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
 .site-footer {
   width: min(1200px, 100%);
   margin: 36px auto 0;

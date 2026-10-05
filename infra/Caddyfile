@@ -33,6 +33,7 @@
   header Strict-Transport-Security "max-age=31536000"
   header {
     +Cache-Control no-transform
+    +Vary Accept
     match header Content-Type text/html*
   }
   reverse_proxy web:3000 {
