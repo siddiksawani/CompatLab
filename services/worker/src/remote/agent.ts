@@ -47,11 +47,21 @@ export async function runWorker(options: {
             continue;
           }
           const started = performance.now();
+          // Keep completions that occur while the claim request is in flight.
+          const running = [...active];
           const raw = await client.post("/v1/jobs/claim", { sessionId }, signal);
           const response = claimResponseSchema.parse(raw);
           supervisor.replaceSnapshotPins(response.snapshotIds, reservation);
           if (response.job === null) {
-            await sleep(2000, undefined, { signal });
+            const idle = new AbortController();
+            try {
+              await Promise.race([
+                ...running,
+                sleep(2000, undefined, { signal: AbortSignal.any([signal, idle.signal]) }),
+              ]);
+            } finally {
+              idle.abort();
+            }
             continue;
           }
           const job = response.job;
