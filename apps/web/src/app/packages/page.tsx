@@ -1,6 +1,7 @@
 import { packageResponseSchema } from "@compatlab/contracts";
 import { readError } from "../../components/labels";
 import { RequestScan } from "../../components/request-scan";
+import { VersionPicker } from "../../components/version-picker";
 import { publicRead } from "../../server/runtime";
 
 export const metadata = {
@@ -54,40 +55,7 @@ export default async function PackagePage({
         </aside>
       )}
       <div className="package-actions">
-        <div>
-          <h2>Select a published version</h2>
-          <form action="/packages" className="version-form">
-            <input type="hidden" name="name" value={pkg.name} />
-            <label htmlFor="version">Exact version</label>
-            <input
-              id="version"
-              name="version"
-              list="published-versions"
-              defaultValue={pkg.version}
-              maxLength={256}
-              required
-            />
-            <datalist id="published-versions">
-              {pkg.versions.map((value) => (
-                <option key={value} value={value} />
-              ))}
-            </datalist>
-            <button type="submit" className="secondary">
-              Select version
-            </button>
-          </form>
-          <p className="fine">
-            {pkg.versionsTruncated
-              ? "Suggestions show 200 recent versions. Enter any exact published version."
-              : "Select an exact version to keep the evidence reproducible."}
-          </p>
-          <p className="fine">
-            Observed tags:{" "}
-            {Object.entries(pkg.tags)
-              .map(([tag, value]) => `${tag} → ${value}`)
-              .join(" · ") || "None supplied"}
-          </p>
-        </div>
+        <VersionPicker pkg={pkg} />
         <div className="scan-action">
           <p className="eyebrow">
             {pkg.reportId

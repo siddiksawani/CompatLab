@@ -1,3 +1,4 @@
+import { DocumentLayout } from "../../components/section-navigation";
 import { pageMetadata } from "../../server/metadata";
 
 export const metadata = pageMetadata(
@@ -7,8 +8,12 @@ export const metadata = pageMetadata(
 );
 export default function Security() {
   return (
-    <article className="page prose">
-      <p className="eyebrow">Operating policy</p>
+    <DocumentLayout
+      sections={[
+        { id: "disclosure", label: "Report a vulnerability" },
+        { id: "incidents", label: "Service incidents" },
+      ]}
+    >
       <h1>Security and disclosure</h1>
       <p>
         Package archives, dependencies and output are treated as untrusted. Preparation and
@@ -21,7 +26,7 @@ export default function Security() {
         that packages are safe or that in-process observations cannot be forged. Read the{" "}
         <a href="/methodology">methodology</a> before interpreting a result.
       </p>
-      <h2>Report a vulnerability</h2>
+      <h2 id="disclosure">Report a vulnerability</h2>
       <p>
         Use the repository’s{" "}
         <a href="https://github.com/siddiksawani/CompatLab/security/advisories/new">
@@ -32,7 +37,7 @@ export default function Security() {
         unavailable, contact <a href="https://github.com/siddiksawani">siddiksawani</a> through the
         contact channel on that profile to arrange a private report.
       </p>
-      <h2>Service incidents</h2>
+      <h2 id="incidents">Service incidents</h2>
       <p>
         The repository maintainer owns incident response. Public operational updates and resolved
         incident summaries are published through{" "}
@@ -41,6 +46,6 @@ export default function Security() {
         affected by a faulty runtime or policy are marked as historical evidence while the operator
         investigates.
       </p>
-    </article>
+    </DocumentLayout>
   );
 }

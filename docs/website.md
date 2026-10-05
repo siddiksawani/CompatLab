@@ -4,6 +4,10 @@ The Next.js application in `apps/web` provides public package search, exact-vers
 
 The Maintainers page explains the planned release monitoring, comparisons and offline behavioral checks and marks them **Coming soon**. It does not load account APIs or expose sign-in, repository linking, monitoring or assertion controls. Report links point to this explanation instead of offering unavailable rescans. Existing public history, comparisons and historical assertion evidence remain readable.
 
+The homepage pairs search with a matrix from a completed report. It reads up to three current examples for Preact, Express and Zod, using the same eligibility rules as search discovery. These examples cover mixed results, successful loading and incomplete coverage; they do not claim differences between runtimes that the observations did not show. Example links open completed reports without scheduling work. If those packages have no eligible reports, the page uses recent eligible packages; an empty catalog shows an empty state. The preview query selects only matrix, outcome and coverage fields, without entry-level evidence or logs.
+
+The version picker is a native select menu containing up to 200 recent versions plus the selected version. A separate, labeled form accepts another exact version, including older versions outside that menu. Both forms work without JavaScript. Header navigation links to search, methodology and GitHub. Documentation uses a reading column and a desktop section list; reports retain the wider matrix and a section bar. Section navigation returns to normal document flow on smaller screens. The footer includes the loading limitation and a direct removal-policy link.
+
 ## Running the application
 
 Use the pinned Node/pnpm toolchain, install the workspace and apply the [catalog migrations](catalog.md#migrations-and-qualification). Copy `apps/web/.env.example` to `apps/web/.env.local`. Set `DATABASE_URL`, the exact `PUBLIC_ORIGIN`, an approved `PUBLIC_MATRIX_ID`, and a random 32-byte hex `REQUESTER_SECRET`. Generate secrets with `openssl rand -hex 32`. Keep public admission disabled until the operational release gates pass.
@@ -19,7 +23,7 @@ The development server listens on `127.0.0.1:3000`. Search uses public npm metad
 
 ## Public boundaries
 
-The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request; search resolves all returned package/version pairs in one query. Search returns at most ten packages; the version picker suggests at most 200 versions and accepts another exact published version explicitly.
+The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request; search resolves all returned package/version pairs in one query. Search returns at most ten packages; the version picker lists recent published versions and accepts another exact published version through its separate form.
 
 | Route | Purpose |
 |---|---|

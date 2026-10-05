@@ -1,5 +1,9 @@
 import "server-only";
-import { discoverReports, reportControlError } from "@compatlab/catalog/web";
+import {
+  discoverReportPreviews,
+  discoverReports,
+  reportControlError,
+} from "@compatlab/catalog/web";
 import { webRuntime } from "./runtime";
 
 let pending = 0;
@@ -19,6 +23,25 @@ export async function recentReports() {
   } catch {
     reportControlError("report_read_failed");
     return [];
+  }
+}
+
+export async function exampleReports(recent: Awaited<ReturnType<typeof recentReports>>) {
+  if (pending >= 2) return [];
+  pending++;
+  try {
+    const db = webRuntime().catalog.db;
+    const examples = await discoverReportPreviews(db, ["preact", "express", "zod"]);
+    if (examples.length || !recent.length) return examples;
+    return await discoverReportPreviews(
+      db,
+      [...new Set(recent.map((report) => report.name))].slice(0, 3),
+    );
+  } catch {
+    reportControlError("report_read_failed");
+    return [];
+  } finally {
+    pending--;
   }
 }
 

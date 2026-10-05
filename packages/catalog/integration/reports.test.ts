@@ -13,6 +13,7 @@ import {
   aggregatePendingReports,
   claimJob,
   createReportApi,
+  discoverReportPreviews,
   invalidateReport,
   migrateCatalog,
   quarantineRuntime,
@@ -129,6 +130,47 @@ async function aggregate(scanId: string) {
   return envelope;
 }
 describe("immutable report classification", () => {
+  it("serves bounded previews from current evidence and withdraws invalidated or quarantined results", async () => {
+    const first = await execution({ name: "preview-fixture" });
+    const { report } = await aggregate(first.scan.scanId);
+    const counts = (await catalog.pool.query("SELECT count(*) FROM jobs")).rows;
+    const [preview] = await discoverReportPreviews(catalog.db, [
+      "missing-fixture",
+      first.source.name,
+    ]);
+    expect(preview).toMatchObject({
+      id: report.id,
+      artifact: { name: first.source.name, version: first.source.version },
+      matrix: report.matrix,
+      outcome: report.outcome,
+      coverageComplete: report.coverageComplete,
+    });
+    expect(preview?.cells).toEqual(
+      report.cells.map(({ profileId, group, mode, outcome, coverage }) => ({
+        profileId,
+        group,
+        mode,
+        outcome,
+        coverage,
+      })),
+    );
+    expect(JSON.stringify(preview)).not.toContain('"entries"');
+    expect(JSON.stringify(preview)).not.toContain('"staticObservations"');
+    expect((await catalog.pool.query("SELECT count(*) FROM jobs")).rows).toEqual(counts);
+    const replacement = await reclassifyScan(catalog.db, first.scan.scanId, actor);
+    expect(
+      (await discoverReportPreviews(catalog.db, [first.source.name])).map((item) => item.id),
+    ).toEqual([replacement]);
+    await invalidateReport(catalog.db, replacement, actor);
+    expect(await discoverReportPreviews(catalog.db, [first.source.name])).toEqual([]);
+    const second = await execution({ name: "quarantined-preview-fixture" });
+    await aggregate(second.scan.scanId);
+    await quarantineRuntime(catalog.db, selection.imageIds[0] ?? "", actor);
+    expect(await discoverReportPreviews(catalog.db, [second.source.name])).toEqual([]);
+    await expect(
+      discoverReportPreviews(catalog.db, Array(4).fill(first.source.name)),
+    ).rejects.toThrow();
+  });
   it("backs off a failed aggregation under concurrency while completing other scans", async () => {
     const broken = await execution({ name: "broken-report-fixture" });
     const healthy = await execution({ name: "healthy-report-fixture" });

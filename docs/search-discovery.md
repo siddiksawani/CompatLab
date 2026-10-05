@@ -1,6 +1,6 @@
 # Search discovery
 
-The canonical site is `https://compatlab.me`. Public editorial pages and completed, current, policy-eligible reports have titles, descriptions, canonical URLs and social metadata. The homepage links to six recent eligible reports. These reads never request a scan. Historical report URLs continue to work even when they leave search discovery.
+The canonical site is `https://compatlab.me`. Public editorial pages and completed, current, policy-eligible reports have titles, descriptions, canonical URLs and social metadata. The homepage links to six recent eligible reports and up to three completed examples. Its matrix preview projects outcomes, coverage and runtime pins from stored evidence without loading entry details or package logs. The examples use the same eligibility rules as the sitemap and fall back to recent packages when no curated examples are available. These reads never request a scan. Historical report URLs continue to work even when they leave search discovery.
 
 Search/version queries, progress, comparisons, history and the deferred account page carry `noindex`. API and health responses send `X-Robots-Tag: noindex, nofollow`. Robots permits crawling so search engines can see those instructions; `robots.txt` is not an access-control mechanism. Invalid IDs use the normal 404 behavior.
 

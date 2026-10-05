@@ -41,9 +41,13 @@ globalThis.fetch = async (input, init) => {
     return Response.json({
       name,
       "dist-tags": { latest: "1.0.0" },
-      versions: { "1.0.0": {}, "2.0.0": {} },
+      versions: {
+        ...Object.fromEntries(Array.from({ length: 205 }, (_, index) => [`0.0.${index}`, {}])),
+        "1.0.0": {},
+        "2.0.0": {},
+      },
     });
-  return ["1.0.0", "2.0.0"].includes(version)
+  return ["1.0.0", "2.0.0", "0.0.0"].includes(version)
     ? Response.json(manifest(name, version))
     : new Response("Missing fixture", { status: 404 });
 };

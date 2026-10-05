@@ -19,13 +19,15 @@ export default function Image() {
     >
       <div style={{ display: "flex", fontSize: 34, fontWeight: 700 }}>CompatLab</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ display: "flex", fontSize: 72, fontWeight: 700 }}>Know what loads.</div>
+        <div style={{ display: "flex", fontSize: 72, fontWeight: 700 }}>
+          Check your npm package.
+        </div>
         <div style={{ display: "flex", fontSize: 34 }}>
-          npm evidence across Node.js, Bun and Deno.
+          Loading results across Node.js, Bun and Deno.
         </div>
       </div>
       <div style={{ display: "flex", fontSize: 26 }}>
-        Exact packages. Pinned runtimes. Inspectable results.
+        Compare import and require checks for exact versions.
       </div>
     </div>,
     size,
