@@ -182,7 +182,9 @@ try {
     images.COMPATLAB_PROXY_IMAGE,
   );
   const origin = `http://127.0.0.1:${await port(`${prefix}-proxy`, "8080/tcp")}`;
-  await ready(`${origin}/healthz`);
+  const health = await ready(`${origin}/healthz`);
+  assert.doesNotMatch(health.headers.get("cache-control") ?? "", /no-transform/);
+  let assetPath;
   for (const path of ["/", "/methodology", "/privacy", "/terms", "/security"]) {
     const response = await fetch(`${origin}${path}`);
     assert.equal(response.status, 200);
@@ -190,8 +192,22 @@ try {
       response.headers.get("content-security-policy") ?? "",
       /script-src 'self' 'nonce-/,
     );
-    assert.ok((await response.text()).length > 200);
+    const cacheControl = response.headers.get("cache-control") ?? "";
+    assert.match(cacheControl, /\bno-transform\b/);
+    assert.match(cacheControl, /\bno-store\b/);
+    const html = await response.text();
+    assert.ok(html.length > 200);
+    if (path === "/") assetPath = html.match(/src="(\/_next\/static\/[^"]+\.js)"/)?.[1];
   }
+  assert.ok(assetPath, "The homepage must reference a built JavaScript asset.");
+  const [asset, directAsset] = await Promise.all([
+    fetch(`${origin}${assetPath}`),
+    fetch(`http://127.0.0.1:${webPort}${assetPath}`),
+  ]);
+  assert.equal(asset.status, 200);
+  assert.equal(directAsset.status, 200);
+  assert.match(asset.headers.get("cache-control") ?? "", /\bimmutable\b/);
+  assert.equal(asset.headers.get("cache-control"), directAsset.headers.get("cache-control"));
   const oversized = await fetch(`${origin}/api/v1/scans`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://qualification.invalid" },
