@@ -45,6 +45,8 @@ PR 26 corrects local replay setup: report commands invoke the built source CLI, 
 
 PR 27 removes avoidable idle polling delays between worker jobs. Job completion wakes the next claim without increasing concurrency or weakening snapshot checks. Tests cover completion during claims, idle backoff, shutdown and the local capacity bound.
 
+PR 28 publishes an evidence-led article about npm loading across Node.js, Bun and Deno. It adds an article index, canonical and article metadata, structured data, sitemap entries and links from the homepage. Published examples identify exact reports and distinguish loading, missing prerequisites and omitted coverage. It changes no execution behavior.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.

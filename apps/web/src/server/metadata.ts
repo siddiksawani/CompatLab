@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { articles } from "../content/articles";
 
 export function publicOrigin() {
   return new URL(process.env.PUBLIC_ORIGIN ?? "https://compatlab.me").origin;
@@ -27,4 +28,13 @@ export function pageMetadata(
   };
 }
 
-export const editorialPages = ["/", "/methodology", "/api", "/privacy", "/terms", "/security"];
+export const editorialPages = [
+  "/",
+  "/methodology",
+  "/api",
+  "/articles",
+  ...articles.map((article) => article.path),
+  "/privacy",
+  "/terms",
+  "/security",
+];

@@ -1,6 +1,7 @@
 import type { ReportPreview } from "@compatlab/catalog/web";
 import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
 import { coverageSummary, labels } from "../components/labels";
+import { compatibilityArticle } from "../content/articles";
 
 function text(value: string) {
   return value.replace(/[\r\n]+/g, " ").replace(/[\\`*_[\]{}()<>#+.!|~-]/g, "\\$&");
@@ -46,6 +47,7 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
     ...(reports[0]
       ? ["## Example runtime results", matrix(reports[0])]
       : ["No completed reports are currently available."]),
+    `## From the lab\n\n[${compatibilityArticle.title}](${origin}${compatibilityArticle.path})\n\n${compatibilityArticle.description}`,
     `[Methodology](${origin}/methodology) · [Privacy and removal](${origin}/privacy) · [Source](https://github.com/siddiksawani/CompatLab)`,
     "",
   ].join("\n\n");

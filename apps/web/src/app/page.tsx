@@ -2,6 +2,7 @@ import { searchResponseSchema } from "@compatlab/contracts";
 import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
+import { compatibilityArticle } from "../content/articles";
 import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata } from "../server/metadata";
 import { publicRead } from "../server/runtime";
@@ -91,6 +92,15 @@ export default async function Home({
           </ul>
         </section>
       )}
+      <section className="page article-callout" aria-labelledby="article-title">
+        <h2 id="article-title">
+          <a href={compatibilityArticle.path}>{compatibilityArticle.title}</a>
+        </h2>
+        <p>
+          Express loads, Preact needs a peer for two subpaths, and Zod’s wildcard exports leave a
+          coverage gap. Read the results and what they mean for your application.
+        </p>
+      </section>
       <section className="cli-callout">
         <div>
           <h2>Run the same checks on your own Linux host</h2>

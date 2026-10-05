@@ -531,6 +531,27 @@ nav a {
 .prose h2 {
   margin-top: 42px;
 }
+.article-header h1 {
+  font-size: clamp(2rem, 3.8vw, 3.25rem);
+}
+.article-list-item,
+.article-callout {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.article-callout p {
+  max-width: 68ch;
+}
+.article-table {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+}
+.article-table caption {
+  text-align: left;
+  color: var(--muted);
+  padding: 0 0 12px;
+}
 .back {
   display: inline-block;
   margin-bottom: 30px;
@@ -709,6 +730,13 @@ td {
 }
 thead {
   background: #edf1ed;
+}
+.article-table table {
+  min-width: 540px;
+}
+.article-table th,
+.article-table td {
+  padding: 12px;
 }
 .runtime-version {
   display: block;
