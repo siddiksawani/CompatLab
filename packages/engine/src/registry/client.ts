@@ -133,6 +133,8 @@ export class RegistryClient {
       {
         maxBytes: 2 * 1024 * 1024,
         accept: "application/json",
+        // npm sometimes labels selected-version JSON as plain text.
+        allowPlainTextJson: true,
         notFound: "package_version_not_found",
         ...(signal ? { signal } : {}),
       },

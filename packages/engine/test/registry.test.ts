@@ -225,6 +225,93 @@ const request = (http: RegistryHttp, maxBytes = 1024, signal?: AbortSignal) =>
   });
 
 describe("bounded HTTP over a real mock registry", () => {
+  it.each(["lab", "@scope/lab"])(
+    "resolves %s when npm labels selected-version JSON as plain text",
+    async (name) => {
+      serve = (req, res) => {
+        expect(req.url).toBe(`/${encodeURIComponent(name)}/1.0.0`);
+        expect(req.headers.accept).toBe("application/json");
+        res
+          .writeHead(200, { "Content-Type": "text/plain; charset=utf-8" })
+          .end(JSON.stringify(manifest(name, "1.0.0")));
+      };
+      const client = new RegistryClient({ fetch: fixtureFetch });
+      expect(await client.resolve(name, "1.0.0")).toMatchObject({
+        name,
+        version: "1.0.0",
+        integrity,
+      });
+    },
+  );
+
+  it("still requires JSON media types for search and version lists", async () => {
+    serve = (req, res) => {
+      const result = req.url?.startsWith("/-/v1/search")
+        ? { objects: [] }
+        : { name: "lab", versions: { "1.0.0": {} } };
+      res.writeHead(200, { "Content-Type": "text/plain" }).end(JSON.stringify(result));
+    };
+    const client = new RegistryClient({ fetch: fixtureFetch });
+    await expect(client.search("lab")).rejects.toMatchObject({
+      classification: "package_manifest_invalid",
+    });
+    await expect(client.versions("lab")).rejects.toMatchObject({
+      classification: "package_manifest_invalid",
+    });
+  });
+
+  it.each(["text/html", "application/octet-stream", undefined])(
+    "rejects selected manifests with media type %s",
+    async (contentType) => {
+      serve = (_req, res) => {
+        if (contentType) res.setHeader("Content-Type", contentType);
+        res.end(JSON.stringify(manifest("lab", "1.0.0")));
+      };
+      await expect(
+        new RegistryClient({ fetch: fixtureFetch }).resolve("lab", "1.0.0"),
+      ).rejects.toMatchObject({ classification: "package_manifest_invalid" });
+    },
+  );
+
+  it.each([
+    ["non-JSON text", "temporarily unavailable", "package_manifest_invalid"],
+    ["invalid UTF-8", Buffer.from([0xff, 0xfe]), "package_manifest_invalid"],
+    ["wrong name", JSON.stringify(manifest("other", "1.0.0")), "package_manifest_invalid"],
+    ["wrong version", JSON.stringify(manifest("lab", "2.0.0")), "package_manifest_invalid"],
+    [
+      "external artifact",
+      JSON.stringify({
+        ...manifest("lab", "1.0.0"),
+        dist: { tarball: "https://example.com/lab.tgz", integrity },
+      }),
+      "dependency_source_unsupported",
+    ],
+    [
+      "missing integrity",
+      JSON.stringify({
+        ...manifest("lab", "1.0.0"),
+        dist: { tarball: "https://registry.npmjs.org/lab/-/lab-1.0.0.tgz" },
+      }),
+      "artifact_integrity_unavailable",
+    ],
+    ["oversized body", Buffer.alloc(2 * 1024 * 1024 + 1, 32), "preparation_limit_exceeded"],
+    [
+      "oversized string",
+      JSON.stringify({ ...manifest("lab", "1.0.0"), extra: "a".repeat(MAX_JSON_STRING_BYTES + 1) }),
+      "preparation_limit_exceeded",
+    ],
+    [
+      "excessive nesting",
+      `${"[".repeat(MAX_JSON_DEPTH + 1)}0${"]".repeat(MAX_JSON_DEPTH + 1)}`,
+      "preparation_limit_exceeded",
+    ],
+  ])("rejects plain-text selected manifests with %s", async (_label, body, classification) => {
+    serve = (_req, res) => res.writeHead(200, { "Content-Type": "text/plain" }).end(body);
+    await expect(
+      new RegistryClient({ fetch: fixtureFetch }).resolve("lab", "1.0.0"),
+    ).rejects.toMatchObject({ classification });
+  });
+
   it("does not follow redirects or retry missing packages", async () => {
     for (const status of [302, 404]) {
       let count = 0;

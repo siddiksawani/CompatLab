@@ -12,7 +12,9 @@ Artifact URLs must use registry HTTPS without credentials, query parameters, or 
 | Abbreviated metadata | 32 MiB |
 | Selected manifest | 2 MiB |
 
-Limits apply while streaming, including decompressed responses. JSON is limited to 32 nested containers and 64 KiB of UTF-8 source bytes per string, including escapes, before constructing objects. The string limit applies to keys and values and is deliberately conservative for escaped text. Invalid UTF-8, invalid JSON, and unexpected content types fail explicitly. The default overall request deadline is ten seconds across at most three attempts. Only transport failures, HTTP 429, and server errors are retried. Retry delays are bounded and respect caller cancellation. Resolution may involve two separately bounded requests.
+Limits apply while streaming, including decompressed responses. JSON is limited to 32 nested containers and 64 KiB of UTF-8 source bytes per string, including escapes, before constructing objects. The string limit applies to keys and values and is deliberately conservative for escaped text. Invalid UTF-8, invalid JSON, and unexpected content types fail explicitly. Selected-version responses also accept `text/plain` because npm can return valid manifest JSON with that media type. This exception still requires JSON parsing, all response limits, exact name/version, registry-only artifact URLs and strong integrity. Search and abbreviated metadata require a JSON media type; HTML and missing media types remain rejected.
+
+The default overall request deadline is ten seconds across at most three attempts. Only transport failures, HTTP 429, and server errors are retried. Retry delays are bounded and respect caller cancellation. Resolution may involve two separately bounded requests.
 
 The injected fetch option is for trusted transport adapters and tests; it is not an end-user registry setting. Tests use a local HTTP registry to exercise actual streaming, gzip decoding, cancellation, redirect behavior, and retry bounds without relying on live registry availability.
 
