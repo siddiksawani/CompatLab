@@ -61,6 +61,8 @@ test("homepage previews link to stored evidence without creating scan work", asy
     await expect(page.locator(".report-preview")).toContainText("Linux amd64 / glibc");
     await expect(page.locator(".report-preview")).toContainText("Planned checks completed");
     await expectResponsiveLayout(page);
+    const searchBounds = await page.getByRole("searchbox").boundingBox();
+    expect(searchBounds?.height).toBeLessThanOrEqual(60);
     if (width === 1280) {
       const bounds = await page.locator(".report-preview").boundingBox();
       expect(bounds && bounds.y + bounds.height).toBeLessThan(900);

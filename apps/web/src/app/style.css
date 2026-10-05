@@ -1027,6 +1027,9 @@ summary {
   .search-form {
     flex-direction: column;
   }
+  .hero .search-form input {
+    flex-basis: auto;
+  }
   .search-form button {
     width: 100%;
   }
