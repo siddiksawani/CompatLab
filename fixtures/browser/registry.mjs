@@ -48,6 +48,8 @@ globalThis.fetch = async (input, init) => {
       },
     });
   return ["1.0.0", "2.0.0", "0.0.0"].includes(version)
-    ? Response.json(manifest(name, version))
+    ? Response.json(manifest(name, version), {
+        headers: { "content-type": version === "2.0.0" ? "text/plain" : "application/json" },
+      })
     : new Response("Missing fixture", { status: 404 });
 };

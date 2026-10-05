@@ -40,6 +40,7 @@ export class RegistryHttp {
     options: {
       maxBytes: number;
       accept: string;
+      allowPlainTextJson?: boolean;
       notFound: "package_not_found" | "package_version_not_found";
       signal?: AbortSignal;
     },
@@ -81,7 +82,7 @@ export class RegistryHttp {
             response.status === 429 || response.status >= 500,
           );
         }
-        return await readJson(response, options.maxBytes);
+        return await readJson(response, options.maxBytes, options.allowPlainTextJson);
       } catch (error) {
         if (options.signal?.aborted)
           throw new DOMException("Registry request cancelled.", "AbortError");
@@ -120,9 +121,17 @@ export class RegistryHttp {
   }
 }
 
-async function readJson(response: Response, maxBytes: number): Promise<unknown> {
+async function readJson(
+  response: Response,
+  maxBytes: number,
+  allowPlainTextJson = false,
+): Promise<unknown> {
   const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-  if (!contentType || !/^application\/(?:json|[a-z0-9.-]+\+json)$/.test(contentType)) {
+  if (
+    !contentType ||
+    (!/^application\/(?:json|[a-z0-9.-]+\+json)$/.test(contentType) &&
+      !(allowPlainTextJson && contentType === "text/plain"))
+  ) {
     throw new RegistryError("package_manifest_invalid", "The registry response is not JSON.");
   }
   const encoding = response.headers.get("content-encoding")?.trim().toLowerCase();
