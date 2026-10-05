@@ -31,6 +31,10 @@
     max_size 1MB
   }
   header Strict-Transport-Security "max-age=31536000"
+  header {
+    +Cache-Control no-transform
+    match header Content-Type text/html*
+  }
   reverse_proxy web:3000 {
     header_up X-CompatLab-Proxy-Token {$PROXY_SECRET}
     header_up X-CompatLab-Client-IP {client_ip}
