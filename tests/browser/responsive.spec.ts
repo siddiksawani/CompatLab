@@ -117,9 +117,13 @@ test("changed comparison inputs and clipboard fallback stay readable on narrow s
   await requestScan(page, longPackageName);
   await finish(page, request);
   const before = new URL(page.url()).pathname.split("/").at(-1);
+  await expect(page.locator("#reproduction")).toContainText(
+    "Hosted runtime images are not yet distributed for public download",
+  );
+  await page.getByText("Command for a configured host", { exact: true }).click();
   await page.getByRole("button", { name: "Copy reproduction command", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Copy reproduction command" })).toHaveValue(
-    /compatlab reproduce/,
+    /sudo "\$\(command -v node\)" apps\/cli\/dist\/bin\.js reproduce/,
   );
   await expectResponsiveLayout(page);
   await requestScan(page, longPackageName, "2.0.0");

@@ -1,10 +1,27 @@
 # Local probe execution
 
-The local engine loads public npm artifacts inside pinned runsc containers. It records raw loading evidence, static manifest observations, exact images, snapshot identity and coverage. The catalog adds versioned [classification and public report reads](reports.md). The worker runs with the [qualified lifecycle profile](worker-lifecycle.md); public execution remains disabled until the launch gates pass.
+The local engine loads public npm artifacts inside pinned runsc containers. It records raw loading evidence, static manifest observations, exact images, snapshot identity and coverage. The catalog adds versioned [classification and public report reads](reports.md). The worker runs with the [qualified lifecycle profile](worker-lifecycle.md).
+
+## Build the CLI
+
+The CLI is a private workspace package in this repository, not a published npm package. A report download does not install a global `compatlab` executable. Do not use `npx compatlab` or install an unrelated package to resolve `command not found`.
+
+Use Node.js 24.21.0 and pnpm 12.8.1, as pinned in `.node-version` and `package.json`. From a qualified Linux amd64 execution host:
+
+```sh
+git clone https://github.com/siddiksawani/CompatLab.git
+cd CompatLab
+pnpm install --frozen-lockfile
+pnpm build
+pnpm cli --help
+sudo "$(command -v node)" apps/cli/dist/bin.js doctor --json
+```
+
+`pnpm cli` invokes `apps/cli/dist/bin.js` from the repository root. Execution needs root, so the examples below invoke that compiled file with the selected Node binary through `sudo`. On macOS or Windows, use SSH to a qualified Linux machine or a dedicated VM; Docker Desktop is not this execution environment.
 
 ## Commands
 
-Use a dedicated Linux amd64 host with local Docker/runsc, root mount/firewall privileges, bridge netfilter, and the preparation prerequisites. `doctor` detects prerequisites without qualifying the host. There is no host-execution fallback, remote Docker endpoint, arbitrary image, or custom command option.
+Use a dedicated Linux amd64 host with local Docker/runsc, root mount/firewall privileges, bridge netfilter, and the [preparation prerequisites](preparation.md). `doctor` detects prerequisites without qualifying the host. There is no host-execution fallback, remote Docker endpoint, arbitrary image, or custom command option. Never start a separate CLI supervisor on an active hosted worker: execution ownership and recovery are host-wide, even with a different `--state-dir`.
 
 ```sh
 pnpm build
@@ -17,7 +34,24 @@ Names must include an exact version; scoped packages use `@scope/name@version`. 
 
 Each successful command saves a bounded JSON report, the exact lock bytes, and the sealed snapshot. Exit 0 means all applicable planned loading observations completed successfully; 1 means a loading failure or incomplete coverage; 2 means invalid arguments; 3 means the operation could not run. Text output shows compact coverage; JSON includes bounded evidence. Loading success does not exercise arbitrary exported functions or prove general compatibility.
 
-Reproduction defaults to verified reuse of the actual retained snapshot. Missing, changed or unmounted snapshots fail visibly. `--rebuild` installs from the retained validated lock with scripts disabled and records a new generation. It never silently calls a rebuild a reuse. Runtime image IDs must still be available and approved. This release accepts local report files or downloaded reproduction descriptors. Use `--rebuild --lockfile ./package-lock.json` with the exact downloaded lock to rebuild a hosted report. Retained state must accompany a copied report for verified reuse. Workspace eviction and startup recovery follow the worker lifecycle policy; report/log retention operations arrive with the control plane.
+Reproduction defaults to verified reuse of the actual retained snapshot. Missing, changed or unmounted snapshots fail visibly. `--rebuild` installs from the retained validated lock with scripts disabled and records a new generation. It never silently calls a rebuild a reuse. Runtime image IDs must still be available and approved. Retained state must accompany a copied report for verified reuse. Workspace eviction and startup recovery follow the worker lifecycle policy.
+
+## Replay a hosted report
+
+Hosted replay currently requires operator assistance. The reproduction JSON and lock download do not contain the CLI, runtime images or sealed workspace. Production runtime images are not yet published for public pulling. Their `sha256:...` IDs are local Docker image identities, not registry download addresses. A new `check` builds local images and creates new evidence; it does not make those images identical to a hosted report's images.
+
+1. Build the CLI on a separate qualified replay host as above. Use a source revision supporting the report's preparation, harness, policy and runtime profiles. Unavailable historical profiles fail closed.
+2. Download **Reproduction inputs** and **Exact package lock** from the report. Place both in the repository root, keeping the report-specific JSON filename and naming the lock `package-lock.json`.
+3. Have the originating worker's operator export the exact image IDs listed in the descriptor with `docker image save --output runtime-images.tar <image IDs>`. Load that operator-supplied archive on the replay host with `docker image load --input runtime-images.tar`. Do not rebuild or edit the descriptor to bypass missing images. The CLI verifies image identity, platform and provenance before replay.
+4. From the repository root, run the report's command, for example:
+
+```sh
+sudo "$(command -v node)" apps/cli/dist/bin.js reproduce ./REPORT_ID-reproduction.json --rebuild --lockfile ./package-lock.json --json
+```
+
+This rebuilds from the exact retained lock with scripts disabled, while keeping the recorded runtime images. It creates a new snapshot generation; compare the tree digests before claiming identical installed bytes. Unavailable registry artifacts can still prevent rebuilding. The command returns exit 1 when it ran but found loading failures or incomplete coverage, and exit 3 when execution could not run. A loading failure in a replay is evidence, not necessarily a broken CLI.
+
+If `compatlab` is not found, use the source invocation above. If `apps/cli/dist/bin.js` is missing, check the current directory and run `pnpm build`. If backend detection fails, address the listed Linux/runsc prerequisites. If an exact runtime image is missing, obtain it from the operator; the CLI will not silently substitute another image.
 
 ## Execution method
 

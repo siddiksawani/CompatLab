@@ -19,7 +19,10 @@ const usage = `Usage: compatlab doctor [--json]
        compatlab --help
 
 Execution requires a local Linux amd64/runsc host with root privileges.
+From a built source checkout, use pnpm cli <command> or sudo "$(command -v node)" apps/cli/dist/bin.js <command>.
+Setup: https://compatlab.me/methodology#local-cli
 Reproduction verifies the retained snapshot; --rebuild creates a new generation from the retained lock.
+Replay also requires the exact runtime images recorded in the input file.
 `;
 type CliIO = { stdout: (text: string) => void; stderr: (text: string) => void };
 type Operations = {
@@ -72,8 +75,11 @@ export async function runCli(
     return 2;
   }
   try {
-    if (!(await doctor()).prerequisitesAvailable) {
+    const environment = await doctor();
+    if (!environment.prerequisitesAvailable) {
       io.stderr("The required Linux amd64/runsc backend is unavailable.\n");
+      for (const check of environment.checks) if (!check.available) io.stderr(`${check.detail}\n`);
+      io.stderr("Setup: https://compatlab.me/methodology#local-cli\n");
       return 3;
     }
     const input = args[1];
