@@ -18,8 +18,8 @@ export async function requestScan(page: Page, name: string, version = "1.0.0") {
   await expect(page.getByRole("heading", { name: "requested", exact: true })).toBeVisible();
 }
 
-export async function finish(page: Page, request: APIRequestContext) {
-  await fixture(request, "execute");
+export async function finish(page: Page, request: APIRequestContext, operation = "execute") {
+  await fixture(request, operation);
   await expect(page).toHaveURL(/\/reports\/[a-f0-9-]+$/);
   await expect(page.getByRole("heading", { name: "Runtime matrix", exact: true })).toBeVisible();
 }

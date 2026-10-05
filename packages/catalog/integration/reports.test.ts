@@ -13,6 +13,7 @@ import {
   aggregatePendingReports,
   claimJob,
   createReportApi,
+  discoverRecentReports,
   discoverReportPreviews,
   invalidateReport,
   migrateCatalog,
@@ -156,6 +157,14 @@ describe("immutable report classification", () => {
     );
     expect(JSON.stringify(preview)).not.toContain('"entries"');
     expect(JSON.stringify(preview)).not.toContain('"staticObservations"');
+    expect(await discoverRecentReports(catalog.db)).toEqual([
+      {
+        id: report.id,
+        name: first.source.name,
+        version: first.source.version,
+        outcome: report.outcome,
+      },
+    ]);
     expect((await catalog.pool.query("SELECT count(*) FROM jobs")).rows).toEqual(counts);
     const replacement = await reclassifyScan(catalog.db, first.scan.scanId, actor);
     expect(
@@ -163,10 +172,12 @@ describe("immutable report classification", () => {
     ).toEqual([replacement]);
     await invalidateReport(catalog.db, replacement, actor);
     expect(await discoverReportPreviews(catalog.db, [first.source.name])).toEqual([]);
+    expect(await discoverRecentReports(catalog.db)).toEqual([]);
     const second = await execution({ name: "quarantined-preview-fixture" });
     await aggregate(second.scan.scanId);
     await quarantineRuntime(catalog.db, selection.imageIds[0] ?? "", actor);
     expect(await discoverReportPreviews(catalog.db, [second.source.name])).toEqual([]);
+    expect(await discoverRecentReports(catalog.db)).toEqual([]);
     await expect(
       discoverReportPreviews(catalog.db, Array(4).fill(first.source.name)),
     ).rejects.toThrow();

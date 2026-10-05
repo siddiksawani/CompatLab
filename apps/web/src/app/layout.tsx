@@ -45,6 +45,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               GitHub
             </a>
             <a href="/methodology">Methodology &amp; CLI</a>
+            <a href="/api">Public API</a>
             <a href="/privacy">Privacy &amp; retention</a>
             <a href="/terms">Terms</a>
             <a href="/security">Security</a>

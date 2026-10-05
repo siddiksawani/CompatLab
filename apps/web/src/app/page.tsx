@@ -80,8 +80,11 @@ export default async function Home({
             {recent.map((report) => (
               <li key={report.id}>
                 <a href={`/reports/${report.id}`}>
-                  {report.name}
-                  <span className="version">{report.version}</span>
+                  <strong>{report.name}</strong>
+                  <span className="recent-report-meta">
+                    <span className="mono">{report.version}</span>
+                    <span className={`result ${report.outcome}`}>{labels[report.outcome]}</span>
+                  </span>
                 </a>
               </li>
             ))}

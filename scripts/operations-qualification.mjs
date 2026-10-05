@@ -185,7 +185,7 @@ try {
   const health = await ready(`${origin}/healthz`);
   assert.doesNotMatch(health.headers.get("cache-control") ?? "", /no-transform/);
   let assetPath;
-  for (const path of ["/", "/methodology", "/privacy", "/terms", "/security"]) {
+  for (const path of ["/", "/methodology", "/api", "/privacy", "/terms", "/security"]) {
     const response = await fetch(`${origin}${path}`);
     assert.equal(response.status, 200);
     assert.match(
@@ -195,10 +195,19 @@ try {
     const cacheControl = response.headers.get("cache-control") ?? "";
     assert.match(cacheControl, /\bno-transform\b/);
     assert.match(cacheControl, /\bno-store\b/);
+    const vary = (response.headers.get("vary") ?? "").toLowerCase().split(/,\s*/);
+    assert.ok(vary.includes("accept"));
+    assert.ok(vary.includes("rsc"));
     const html = await response.text();
     assert.ok(html.length > 200);
     if (path === "/") assetPath = html.match(/src="(\/_next\/static\/[^"]+\.js)"/)?.[1];
   }
+  const markdown = await fetch(`${origin}/`, { headers: { accept: "text/markdown" } });
+  assert.equal(markdown.status, 200);
+  assert.match(markdown.headers.get("content-type") ?? "", /^text\/markdown/);
+  assert.ok((markdown.headers.get("vary") ?? "").toLowerCase().split(/,\s*/).includes("accept"));
+  assert.match(markdown.headers.get("cache-control") ?? "", /no-store/);
+  assert.match(await markdown.text(), /# CompatLab/);
   assert.ok(assetPath, "The homepage must reference a built JavaScript asset.");
   const [asset, directAsset] = await Promise.all([
     fetch(`${origin}${assetPath}`),
@@ -297,6 +306,7 @@ try {
     checks: [
       "readiness",
       "security headers",
+      "HTML and Markdown variants through Caddy",
       "policy pages",
       "16 KiB ingress bound",
       "worker authentication",

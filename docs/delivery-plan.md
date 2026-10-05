@@ -37,6 +37,8 @@ On October 4, 2026, the maintainer deferred the public maintainer workflow. The 
 
 Production follow-ups use separate PRs for worker-outage admission/service hardening, production infrastructure/automatic deployment, and search discoverability. The user authorized deployment on October 4, 2026 using the [VPS and isolated home-worker design](deployment.md). Existing workloads on both machines must remain unaffected.
 
+PR 24 follows the homepage feedback with explicit outcome counts, recent-report badges and 375-pixel layout qualification. Its public-discovery slice adds an API guide/catalog, contract-derived OpenAPI, Markdown summaries and content usage preferences. It does not add execution privileges, agent authentication or new sandbox behavior.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.
