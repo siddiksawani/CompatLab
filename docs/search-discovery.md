@@ -8,6 +8,12 @@ Submit `/sitemap.xml`, an index of the editorial sitemap and sixteen report part
 
 Indexing is limited to completed reports. It does not depend on a passing outcome and does not imply package safety, functional correctness or publisher endorsement. Canonical report URLs identify exact observations; rescans retain separate provenance.
 
+## Articles
+
+`/articles` lists server-rendered editorial pages. The first article, `/articles/npm-package-compatibility-node-bun-deno`, links four observed reports and records the package/runtime versions and review date. Article metadata supplies a canonical URL, publication date, author, social preview and nonce-bearing `TechArticle` structured data. The editorial sitemap, homepage and footer link to the article or index; the homepage Markdown also links it. Articles do not depend on live registry or scan requests.
+
+Editorial tables summarize fixed historical observations, not automatically refreshed compatibility claims. Check source report invalidation and evidence before publishing or revising an article. A report link can outlive its cached snapshot and raw logs; removal or invalidation may require an editorial correction. Cross-posts must point their canonical URL at the original article. Maintainer accounts and public badges remain deferred.
+
 ## Agent discovery
 
 Public pages advertise the API catalog, OpenAPI specification and human guide through HTTP `Link` relations. The RFC 9727 catalog at `/.well-known/api-catalog` returns `application/linkset+json` with an actual API endpoint as its anchor, plus service description, documentation and health links. The specification covers existing anonymous reads only; it creates no new execution or authentication path.
