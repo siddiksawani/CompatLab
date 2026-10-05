@@ -12,7 +12,7 @@ export default function Methodology() {
     "cd CompatLab",
     "pnpm install --frozen-lockfile",
     "pnpm build",
-    "pnpm cli doctor --json",
+    'sudo "$(command -v node)" apps/cli/dist/bin.js doctor --json',
     'sudo "$(command -v node)" apps/cli/dist/bin.js check is-number@7.0.0 --json',
   ].join("\n");
   return (

@@ -14,7 +14,7 @@ cd CompatLab
 pnpm install --frozen-lockfile
 pnpm build
 pnpm cli --help
-pnpm cli doctor --json
+sudo "$(command -v node)" apps/cli/dist/bin.js doctor --json
 ```
 
 `pnpm cli` invokes `apps/cli/dist/bin.js` from the repository root. Execution needs root, so the examples below invoke that compiled file with the selected Node binary through `sudo`. On macOS or Windows, use SSH to a qualified Linux machine or a dedicated VM; Docker Desktop is not this execution environment.
