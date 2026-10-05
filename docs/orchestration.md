@@ -27,6 +27,8 @@ Tokens are checked before bodies are buffered. Requests are limited to 32 MiB, r
 
 Eligible work must match the worker capabilities and current policy. Runtime jobs stay on the sealed snapshot's owner. Dispatch first favors scans with fewer active jobs, then earlier requests. A claim starts the scan's fifteen-minute deadline if it has not started; renewals and retries never extend it.
 
+An idle worker polls every two seconds. If a claim returns no work while local jobs are active, the agent retries as soon as one finishes, including completion during the claim request. A completed job therefore does not impose an extra polling interval on the next job. Local concurrency remains capped at three; the catalog also enforces each worker's registered capacity.
+
 Each attempt receives a random token and a 30-second lease. The agent renews every ten seconds, measures elapsed time with a monotonic clock, subtracts request latency and a three-second cancellation margin, and aborts immediately on renewal failure. A failed or stalled control connection cannot renew authority indefinitely. Local cleanup must finish before an abandonment acknowledgement releases the database reservation.
 
 Expired attempts remain reserved. Reconciliation marks their worker as requiring recovery; it does not assume a disconnected process has died. A new supervisor session may reclaim work only after startup cleanup. A live session cannot be superseded, and an expired session cannot resume under its old identifier. Revoked and quarantined workers cannot claim or submit new evidence. Idle workers are drained after thirty seconds without contact.

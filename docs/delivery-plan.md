@@ -43,6 +43,8 @@ PR 25 fixes package selection when npm serves a selected-version manifest as `te
 
 PR 26 corrects local replay setup: report commands invoke the built source CLI, prerequisites precede copying, and hosted replay explicitly requires operator-supplied exact runtime images. Backend and missing-image errors explain the next step. Public CLI/image distribution remains future work.
 
+PR 27 removes avoidable idle polling delays between worker jobs. Job completion wakes the next claim without increasing concurrency or weakening snapshot checks. Tests cover completion during claims, idle backoff, shutdown and the local capacity bound.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.
