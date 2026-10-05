@@ -32,7 +32,7 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     await page.getByRole("searchbox", { name: "Search npm packages" }).fill(name);
     await page.locator(".search-results li > a:first-child").filter({ hasText: name }).click();
     await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-    await page.getByLabel("Exact version").fill("2.0.0");
+    await page.getByLabel("Exact version", { exact: true }).selectOption("2.0.0");
     await page.getByRole("button", { name: "Select version", exact: true }).click();
     await expect(page.getByText("Deprecated by the publisher", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Request a scan", exact: true }).click();

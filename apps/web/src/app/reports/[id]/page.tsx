@@ -1,5 +1,5 @@
 import { reportIsDiscoverable } from "@compatlab/catalog/web";
-import { type HostedReport, type ReportCell, reportEnvelopeSchema } from "@compatlab/contracts";
+import { reportEnvelopeSchema } from "@compatlab/contracts";
 import { displayIdentifier } from "@compatlab/engine";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -7,6 +7,8 @@ import { cache } from "react";
 import { Copy } from "../../../components/copy";
 import { Evidence } from "../../../components/evidence";
 import { labels, observedDate, packageUrl } from "../../../components/labels";
+import { RuntimeMatrix } from "../../../components/runtime-matrix";
+import { SectionNavigation } from "../../../components/section-navigation";
 import { pageMetadata } from "../../../server/metadata";
 import { publicRead, webRuntime } from "../../../server/runtime";
 
@@ -23,95 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     `${labels[report.outcome]} loading observations across ${report.matrix.images.length} pinned runtimes. ${report.coverageComplete ? "Planned coverage complete." : "Coverage has limits."} Loading success does not prove functional correctness.`,
     `/reports/${report.id}`,
     status.current && (await reportIsDiscoverable(webRuntime().catalog.db, report.id)),
-  );
-}
-function Result({ cell }: { cell: ReportCell | undefined }) {
-  return cell ? (
-    <a className={`result ${cell.outcome}`} href={`#${cell.profileId}-${cell.group}-${cell.mode}`}>
-      {labels[cell.outcome]}
-      {cell.group === "subpaths" && (
-        <small>
-          {cell.coverage.observed}/{cell.coverage.planned ?? "?"} observed
-        </small>
-      )}
-    </a>
-  ) : (
-    <span>Unavailable</span>
-  );
-}
-const groups = [
-  ["root", "esm"],
-  ["root", "commonjs"],
-  ["subpaths", "esm"],
-  ["subpaths", "commonjs"],
-] as const;
-const columnNames = ["Root import", "Root require", "Subpath imports", "Subpath requires"];
-function Matrix({ report }: { report: HostedReport }) {
-  return (
-    <>
-      <div className="desktop-matrix">
-        <table>
-          <caption className="sr-only">Loading outcomes by runtime and consumer mode</caption>
-          <thead>
-            <tr>
-              <th scope="col">Runtime</th>
-              {columnNames.map((label) => (
-                <th scope="col" key={label}>
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {report.matrix.images.map((image) => (
-              <tr key={image.profileId}>
-                <th scope="row">
-                  <strong>
-                    {image.kind === "node" ? "Node.js" : image.kind === "bun" ? "Bun" : "Deno"}
-                  </strong>
-                  <span className="runtime-version mono">{image.version}</span>
-                </th>
-                {groups.map(([group, mode]) => (
-                  <td key={`${group}-${mode}`}>
-                    <Result
-                      cell={report.cells.find(
-                        (cell) =>
-                          cell.profileId === image.profileId &&
-                          cell.group === group &&
-                          cell.mode === mode,
-                      )}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mobile-matrix">
-        {report.matrix.images.map((image) => (
-          <article key={image.profileId}>
-            <h3>
-              {image.kind === "node" ? "Node.js" : image.kind === "bun" ? "Bun" : "Deno"}{" "}
-              <span className="runtime-version mono">{image.version}</span>
-            </h3>
-            {groups.map(([group, mode], index) => (
-              <div className="row" key={`${group}-${mode}`}>
-                <span>{columnNames[index]}</span>
-                <Result
-                  cell={report.cells.find(
-                    (cell) =>
-                      cell.profileId === image.profileId &&
-                      cell.group === group &&
-                      cell.mode === mode,
-                  )}
-                />
-              </div>
-            ))}
-          </article>
-        ))}
-      </div>
-    </>
   );
 }
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -206,20 +119,29 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           This is loading evidence. It does not establish functional correctness or package safety.
         </p>
       </div>
-      <section className="report-section">
+      <SectionNavigation
+        sections={[
+          { id: "runtime-matrix", label: "Runtime matrix" },
+          { id: "preparation", label: "Preparation" },
+          { id: "evidence", label: "Evidence" },
+          { id: "reproduction", label: "Reproduce" },
+          { id: "limitations", label: "Limits" },
+        ]}
+      />
+      <section className="report-section" id="runtime-matrix">
         <div className="section-heading">
           <h2>Runtime matrix</h2>
           <span className="fine">
             {report.matrix.images.length} pinned runtimes · {report.matrix.revision}
           </span>
         </div>
-        <Matrix report={report} />
+        <RuntimeMatrix report={report} />
         <p className="fine">
           Import uses ESM; require uses CommonJS. Root modes use fresh sandboxes. Subpath batches
           share module caches and globals. Select a result to inspect its evidence.
         </p>
       </section>
-      <section className="report-section">
+      <section className="report-section" id="preparation">
         <h2>Shared preparation</h2>
         <div className="preparation-summary">
           <span className={`result ${report.preparation.outcome}`}>
@@ -257,7 +179,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           )}
         </details>
       </section>
-      <section className="report-section">
+      <section className="report-section" id="evidence">
         <h2>Coverage and evidence</h2>
         {report.cells.map((cell) => (
           <details
@@ -431,7 +353,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           ))}
         </details>
       </section>
-      <section className="report-section limitations">
+      <section className="report-section limitations" id="limitations">
         <h2>Evidence limitations</h2>
         <ul>
           {report.limitations.map((limitation) => (

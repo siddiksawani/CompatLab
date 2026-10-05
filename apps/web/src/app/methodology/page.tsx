@@ -1,3 +1,4 @@
+import { DocumentLayout } from "../../components/section-navigation";
 import { pageMetadata } from "../../server/metadata";
 
 export const metadata = pageMetadata(
@@ -13,28 +14,38 @@ export default function Methodology() {
     'sudo "$(command -v node)" apps/cli/dist/bin.js check is-number@7.0.0 --json',
   ].join("\n");
   return (
-    <article className="page prose">
-      <p className="eyebrow">How to read the evidence</p>
+    <DocumentLayout
+      sections={[
+        { id: "preparation", label: "Preparation" },
+        { id: "loading", label: "Loading checks" },
+        { id: "outcomes", label: "Outcomes" },
+        { id: "limits", label: "Limits" },
+        { id: "local-cli", label: "Local CLI" },
+        { id: "retention", label: "Retention" },
+        { id: "maintainers", label: "Maintainer tools" },
+        { id: "assertions", label: "Assertions and CI" },
+      ]}
+    >
       <h1>Methodology</h1>
       <p className="lede">
         CompatLab observes exact published packages in a controlled consumer workspace. Each report
         names its inputs, coverage and limits.
       </p>
-      <h2>One artifact, one shared snapshot</h2>
+      <h2 id="preparation">One artifact, one shared snapshot</h2>
       <p>
         The service resolves an exact npm version, verifies supplied integrity, and uses a pinned
         npm installer with lifecycle scripts disabled. Every runtime in a comparison reads the same
         sealed dependency snapshot. Preparation and package code execute on a dedicated Linux amd64
         host behind gVisor, outside the web and database services.
       </p>
-      <h2>Independent roots, ordered subpaths</h2>
+      <h2 id="loading">Independent roots, ordered subpaths</h2>
       <p>
         ESM import and CommonJS require each start in a fresh sandbox. Explicit executable subpaths
         are observed in ordered batches; those entries share a module cache and globals. Root
         success does not imply complete subpath coverage. Wildcard patterns, assets, work limits and
         interruptions stay visible.
       </p>
-      <h2>Reading outcomes</h2>
+      <h2 id="outcomes">Reading outcomes</h2>
       <dl className="definitions">
         <dt>Passed</dt>
         <dd>Every applicable planned observation in this group succeeded.</dd>
@@ -59,7 +70,7 @@ export default function Methodology() {
           failure.
         </dd>
       </dl>
-      <h2>What success does not establish</h2>
+      <h2 id="limits">What success does not establish</h2>
       <p>
         Loading does not exercise arbitrary functions, test an application, or establish safety.
         Package-visible harness observations can be tampered with by malicious code in the same
@@ -87,19 +98,19 @@ export default function Methodology() {
       >
         Read the complete execution setup and limits →
       </a>
-      <h2>Public evidence and retention</h2>
+      <h2 id="retention">Public evidence and retention</h2>
       <p>
         Reports, locks and provenance are public and retained as history. Raw package logs expire
         after 30 days. Sealed worker snapshots have a bounded cache and can become unavailable
         before report metadata expires. Quarantine and invalidation appear on historical reports.
       </p>
-      <h2>Maintainer tools: coming soon</h2>
+      <h2 id="maintainers">Maintainer tools: coming soon</h2>
       <p>
         We’re planning tools for package authors to monitor releases and add focused, offline
         behavioral checks. Maintainer accounts and assertion registration are not available through
         the website yet. <a href="/account">See what’s planned for maintainers.</a>
       </p>
-      <h2>Historical assertions and local CI archives</h2>
+      <h2 id="assertions">Historical assertions and local CI archives</h2>
       <p>
         Existing reports can include a named assertion with its own outcome and immutable source.
         Successful loading never becomes behavioral verification. Reproduction inputs include the
@@ -112,6 +123,6 @@ export default function Methodology() {
           Manifest format, examples and CI setup
         </a>
       </p>
-    </article>
+    </DocumentLayout>
   );
 }

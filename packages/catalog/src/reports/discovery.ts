@@ -1,3 +1,4 @@
+import { hostedReportSchema, reportCellSchema } from "@compatlab/contracts";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { assertionSelectionAllowed } from "../assertions/policy.js";
@@ -11,6 +12,53 @@ const source = sql`FROM reports r JOIN scans s ON s.id=r.scan_id
   JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id`;
 const eligible = sql`s.state='completed' AND r.invalidated_at IS NULL AND r.replaced_by IS NULL
   AND ${selectionAllowed} AND ${assertionSelectionAllowed}`;
+
+const previewSchema = hostedReportSchema
+  .pick({ id: true, observedAt: true, matrix: true, outcome: true, coverageComplete: true })
+  .extend({
+    artifact: hostedReportSchema.shape.artifact.pick({ name: true, version: true }),
+    preparation: hostedReportSchema.shape.preparation.pick({ outcome: true }),
+    cells: z
+      .array(
+        reportCellSchema.pick({
+          profileId: true,
+          group: true,
+          mode: true,
+          outcome: true,
+          coverage: true,
+        }),
+      )
+      .min(4)
+      .max(64),
+  });
+export type ReportPreview = z.infer<typeof previewSchema>;
+
+export async function discoverReportPreviews(db: CatalogReader, packageNames: string[]) {
+  const names = z.array(z.string().min(1).max(214)).min(1).max(3).parse(packageNames);
+  const wanted = sql.join(
+    names.map((name, position) => sql`(${name}::text,${position}::int)`),
+    sql`, `,
+  );
+  const result = await db.execute<{ preview: unknown }>(sql`
+    SELECT jsonb_build_object(
+      'id', chosen.id, 'artifact', jsonb_build_object('name', wanted.name, 'version', chosen.version),
+      'observedAt', payload->'observedAt', 'matrix', payload->'matrix',
+      'outcome', payload->'outcome', 'coverageComplete', payload->'coverageComplete',
+      'preparation', jsonb_build_object('outcome', payload->'preparation'->'outcome'),
+      'cells', (SELECT jsonb_agg(jsonb_build_object(
+        'profileId', cell->'profileId', 'group', cell->'group', 'mode', cell->'mode',
+        'outcome', cell->'outcome', 'coverage', cell->'coverage') ORDER BY position)
+        FROM jsonb_array_elements(payload->'cells') WITH ORDINALITY AS entries(cell, position))
+    ) AS preview
+    FROM (VALUES ${wanted}) AS wanted(name, position)
+    CROSS JOIN LATERAL (
+      SELECT r.id, r.payload, v.version ${source}
+      WHERE p.name=wanted.name AND ${eligible}
+      ORDER BY r.created_at DESC,r.id LIMIT 1
+    ) chosen
+    ORDER BY wanted.position`);
+  return result.rows.map((row) => previewSchema.parse(row.preview));
+}
 
 export async function reportIsDiscoverable(db: CatalogReader, id: string) {
   z.uuid().parse(id);

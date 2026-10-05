@@ -1,7 +1,8 @@
 import { searchResponseSchema } from "@compatlab/contracts";
-import { packageUrl, readError } from "../components/labels";
+import { labels, readError } from "../components/labels";
+import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
-import { recentReports } from "../server/discovery";
+import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata } from "../server/metadata";
 import { publicRead } from "../server/runtime";
 
@@ -12,8 +13,8 @@ export async function generateMetadata({
 }) {
   const query = await searchParams;
   return pageMetadata(
-    "npm loading evidence for Node.js, Bun and Deno",
-    "Check how exact public npm packages install and load across pinned JavaScript runtimes. Explore free reports with evidence, coverage and reproducible inputs.",
+    "Check npm packages across Node.js, Bun and Deno",
+    "See whether an npm package imports and requires in Node.js, Bun and Deno. Compare real loading results, check coverage and inspect exact tested versions.",
     "/",
     Object.keys(query).length === 0,
   );
@@ -28,6 +29,7 @@ export default async function Home({
   let packages: ReturnType<typeof searchResponseSchema.parse>["packages"] = [];
   let error = "";
   const recent = await recentReports();
+  const examples = await exampleReports(recent);
   if (query) {
     const response = await publicRead(`/api/v1/search?${new URLSearchParams({ q: query })}`);
     if (response.ok) packages = searchResponseSchema.parse(await response.json()).packages;
@@ -36,56 +38,44 @@ export default async function Home({
   return (
     <>
       <section className="hero">
-        <p className="eyebrow">The public runtime lab</p>
-        <h1>
-          Know what loads.
-          <br />
-          <span>See the evidence.</span>
-        </h1>
-        <p className="lede">
-          Test an exact npm package across Node.js, Bun and Deno. Inspect loading results, coverage
-          and the environment behind every observation.
-        </p>
-        <Search initialQuery={query} initialPackages={packages} initialError={error} />
-        <div className="examples">
-          <span>Try a package</span>
-          {["is-number", "@nodelib/fs.stat", "kleur"].map((name) => (
-            <a key={name} href={packageUrl(name)}>
-              {name}
-            </a>
-          ))}
+        <div className="hero-search">
+          <h1>Check your package in Node.js, Bun and Deno.</h1>
+          <p className="lede">
+            See whether it loads with import and require. Pick a version, compare the results and
+            open the details when a check fails.
+          </p>
+          <Search initialQuery={query} initialPackages={packages} initialError={error} />
+          {examples.length > 0 && (
+            <section className="examples" aria-label="Example reports">
+              <span>Open a completed report</span>
+              {examples.map((report) => (
+                <a key={report.id} href={`/reports/${report.id}`}>
+                  <span>{report.artifact.name}</span>
+                  <small>{labels[report.outcome]}</small>
+                </a>
+              ))}
+            </section>
+          )}
+          <p className="hero-method">
+            We test published npm packages on Linux with exact runtime versions. Install scripts
+            stay disabled. <a href="/methodology">Read how the checks work.</a>
+          </p>
         </div>
-      </section>
-      <section className="principles" aria-label="How CompatLab works">
-        <article>
-          <span className="step">01 / Published artifact</span>
-          <h2>Start with exact inputs</h2>
-          <p>
-            A published version, verified integrity and one sealed dependency snapshot shared across
-            the runtime matrix.
-          </p>
-        </article>
-        <article>
-          <span className="step">02 / Isolated execution</span>
-          <h2>Observe each runtime</h2>
-          <p>
-            Independent import and require checks, then bounded subpath batches. Scripts stay
-            disabled and execution stays offline.
-          </p>
-        </article>
-        <article>
-          <span className="step">03 / Inspectable results</span>
-          <h2>Understand the limits</h2>
-          <p>
-            Inspect failures, incomplete coverage and pinned environments. Loading success does not
-            prove functional correctness.
-          </p>
-        </article>
+        {examples[0] ? (
+          <ReportPreviewCard report={examples[0]} />
+        ) : (
+          <aside className="preview-empty">
+            <h2>No completed reports yet</h2>
+            <p>
+              Search for a package and request a scan. Its report will show the loading results for
+              each runtime.
+            </p>
+          </aside>
+        )}
       </section>
       {recent.length > 0 && (
         <section className="page recent-reports" aria-labelledby="recent-reports-title">
-          <h2 id="recent-reports-title">Recently tested packages</h2>
-          <p>Open the stored loading observations and inspect their coverage.</p>
+          <h2 id="recent-reports-title">Recently tested</h2>
           <ul className="recent-report-list">
             {recent.map((report) => (
               <li key={report.id}>
@@ -100,15 +90,17 @@ export default async function Home({
       )}
       <section className="cli-callout">
         <div>
-          <p className="eyebrow">Open source by design</p>
-          <h2>Bring the lab to your own execution host.</h2>
-          <p>The same engine powers local checks and hosted evidence.</p>
+          <h2>Run the same checks on your own Linux host</h2>
+          <p>
+            The engine and CLI are open source. Each report includes the inputs and runtime versions
+            you need to reproduce it.
+          </p>
           <a className="text-link" href="/methodology#local-cli">
-            Read the CLI setup guide →
+            CLI setup and requirements →
           </a>
         </div>
         <pre>
-          <code>compatlab check is-number@7.0.0 --json</code>
+          <code>compatlab check express@5.2.1 --json</code>
         </pre>
       </section>
     </>
