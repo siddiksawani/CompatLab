@@ -1,3 +1,4 @@
+import { mcpArticle } from "../../content/articles";
 import { contentSignal, discoveryLinks } from "../../server/content-discovery";
 import { publicOrigin } from "../../server/metadata";
 
@@ -19,6 +20,7 @@ export function GET() {
       `- [Observed runtime loading failures](${origin}/npm/compatibility/failures): Recorded package failures with Node.js, Bun and Deno filters, excluding missing optional peers and service errors alone. These observations do not establish a runtime bug or failure in every environment.`,
       `- [Search and recent evidence](${origin}/index.md): Markdown entry point with existing report links.`,
       `- [API and MCP guide](${origin}/api): Exact-version lookup, status semantics, connection URL and limits.`,
+      `- [MCP setup and agent usage guide](${origin}${mcpArticle.path}): Claude Code, Cursor and Codex setup, tool calls, real package examples and citation instructions.`,
       `- [OpenAPI](${origin}/openapi.json): Anonymous read API contracts.`,
       `- [Sitemap](${origin}/sitemap.xml): Eligible package pages and report observations.`,
       "## Optional",

@@ -1,4 +1,5 @@
 import { DocumentLayout } from "../../components/section-navigation";
+import { mcpArticle } from "../../content/articles";
 import { pageMetadata } from "../../server/metadata";
 
 export const metadata = pageMetadata(
@@ -104,6 +105,11 @@ export default function ApiGuide() {
         Markdown is currently available for the homepage and report pages.
       </p>
       <h2 id="mcp">Connect an MCP client</h2>
+      <p>
+        New to this connection? Follow the{" "}
+        <a href={mcpArticle.path}>MCP setup and AI agent usage guide</a> for Claude Code, Cursor and
+        Codex, with real package examples and reusable prompts.
+      </p>
       <p>
         Add <code>https://compatlab.me/mcp</code> as a remote MCP server using Streamable HTTP. No
         account, API key or local package installation is required. The endpoint supports the

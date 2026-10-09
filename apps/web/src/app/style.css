@@ -738,6 +738,9 @@ thead {
 .article-table td {
   padding: 12px;
 }
+.article-table th[scope="row"] {
+  white-space: nowrap;
+}
 .runtime-version {
   display: block;
   font-size: 0.78rem;

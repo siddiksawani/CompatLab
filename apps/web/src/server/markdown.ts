@@ -1,7 +1,7 @@
 import type { ReportPreview } from "@compatlab/catalog/web";
 import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
 import { coverageSummary, labels } from "../components/labels";
-import { compatibilityArticle } from "../content/articles";
+import { articles } from "../content/articles";
 import { compatibilityScope, runtimeAnswers } from "./compatibility-copy";
 
 function text(value: string) {
@@ -54,7 +54,10 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
     ...(reports[0]
       ? ["## Example runtime results", matrix(reports[0])]
       : ["No completed reports are currently available."]),
-    `## From the lab\n\n[${compatibilityArticle.title}](${origin}${compatibilityArticle.path})\n\n${compatibilityArticle.description}`,
+    "## From the lab",
+    ...articles.map(
+      (article) => `[${article.title}](${origin}${article.path})\n\n${article.description}`,
+    ),
     `[Methodology](${origin}/methodology) · [Privacy and removal](${origin}/privacy) · [Source](https://github.com/siddiksawani/CompatLab)`,
     "",
   ].join("\n\n");

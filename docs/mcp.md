@@ -1,5 +1,7 @@
 # Read-only MCP
 
+For client setup, reusable prompts and worked package examples, read the public [MCP and AI agent usage guide](https://compatlab.me/articles/mcp-npm-compatibility-ai-agents). This document covers the protocol contract and operations.
+
 Connect a remote MCP client to `https://compatlab.me/mcp` using **Streamable HTTP**. No account, API key or local executable is needed. The endpoint supports protocol 2026-07-28 and stateless 2025 clients through the pinned official TypeScript SDK. Use the client's remote-server configuration; clients that only launch local stdio servers need native HTTP support before connecting directly.
 
 | Tool | Arguments | Result |
