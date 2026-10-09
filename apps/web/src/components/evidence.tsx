@@ -2,6 +2,7 @@
 import { type ReportCell, reportCellSchema } from "@compatlab/contracts";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { FailureDetails } from "./failure-details";
 import { labels } from "./labels";
 
 const logSchema = z.object({
@@ -80,20 +81,17 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
                 <li key={entry.index}>
                   <div className="row">
                     <code className="break">{entry.displaySpecifier}</code>
-                    <span className={`result ${entry.outcome}`}>{labels[entry.outcome]}</span>
+                    <span className={`result ${entry.outcome}`}>
+                      {entry.failure?.optionalPeer
+                        ? "Requires optional peer"
+                        : labels[entry.outcome]}
+                    </span>
                   </div>
                   <p className="fine">
                     {entry.durationMs === null ? "Duration unavailable" : `${entry.durationMs} ms`}
                     {entry.resolvedTo && ` · Resolved to ${entry.resolvedTo}`}
                   </p>
-                  {entry.failure && (
-                    <p className="failure-text">
-                      <code>{entry.failure.classification}</code> ·{" "}
-                      {entry.failure.phase.replaceAll("_", " ")}
-                      <br />
-                      {entry.failure.message}
-                    </p>
-                  )}
+                  {entry.failure && <FailureDetails failure={entry.failure} />}
                 </li>
               ))}
             </ol>

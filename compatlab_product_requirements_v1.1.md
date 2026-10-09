@@ -379,7 +379,7 @@ Each classification defines phase, origin, retryability, safe summary, and evide
 | Family | Initial classifications |
 |---|---|
 | Acquisition/preparation | `package_not_found`, `package_version_not_found`, `registry_unavailable`, `artifact_download_failed`, `artifact_integrity_mismatch`, `artifact_integrity_unavailable`, `archive_rejected`, `package_manifest_invalid`, `declared_platform_unsupported`, `dependency_source_unsupported`, `dependency_install_failed`, `install_script_required`, `native_compilation_required`, `preparation_limit_exceeded` |
-| Loading | `package_resolution_failed`, `esm_import_failed`, `commonjs_require_failed`, `export_path_failed`, `unsupported_builtin`, `unsupported_runtime_api`, `native_addon_load_failed`, `unexpected_process_exit`, `unclassified_runtime_failure` |
+| Loading | `package_resolution_failed`, `optional_peer_missing`, `esm_import_failed`, `commonjs_require_failed`, `export_path_failed`, `unsupported_builtin`, `unsupported_runtime_api`, `native_addon_load_failed`, `unexpected_process_exit`, `unclassified_runtime_failure` |
 | Policy/resources | `sandbox_policy_limited`, `process_timeout`, `process_out_of_memory`, `process_limit_exceeded`, `output_limit_exceeded`, `temporary_disk_limit_exceeded`, `coverage_limit_exceeded` |
 | Infrastructure | `sandbox_start_failed`, `runner_unavailable`, `runtime_image_unavailable`, `harness_protocol_error`, `result_submission_failed`, `control_plane_error`, `job_cancelled`, `service_policy_rejected` |
 | P1 assertions | `probe_assertion_failed` |

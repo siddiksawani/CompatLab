@@ -72,6 +72,14 @@ export default function Methodology() {
           failure.
         </dd>
       </dl>
+      <p>
+        A declared optional peer can still be required by a particular entry point. When retained
+        error details identify that peer and the installed snapshot confirms its absence, the
+        affected compatibility result is inconclusive and names the missing dependency. The original
+        failed loading observation is retained. Optional peers are not installed automatically;
+        adding one changes the test inputs and does not guarantee success. Empty or unrelated errors
+        remain unexplained failures.
+      </p>
       <h2 id="limits">What success does not establish</h2>
       <p>
         Loading does not exercise arbitrary functions, test an application, or establish safety.

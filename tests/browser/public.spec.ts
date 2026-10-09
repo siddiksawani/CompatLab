@@ -1,10 +1,52 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { reportEnvelopeSchema } from "../../packages/contracts/dist/index.js";
-import { finish, fixture, requestScan } from "./helpers.js";
+import { expectResponsiveLayout, finish, fixture, requestScan } from "./helpers.js";
 
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
+});
+test("optional peers explain inconclusive results while retaining failed loading evidence", async ({
+  page,
+  request,
+}, info) => {
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request, "execute-optional-peers");
+  const reportUrl = new URL(page.url()).pathname;
+  const before = await (await fixture(request, "counts")).json();
+  await expect(
+    page.getByRole("complementary", { name: "Optional peer requirements" }),
+  ).toContainText("inconclusive");
+  await expect(page.locator(".report-summary .result")).toHaveText("Inconclusive");
+  const cell = page.locator("#node_24_21_0-subpaths-esm");
+  await cell.locator("summary").click();
+  await expect(cell).toContainText("1 passed · 1 needs an optional peer");
+  await expect(cell).toContainText("Requires optional peer: @fixture/renderer");
+  await expect(cell).toContainText("Declared range: ^2.0.0");
+  await cell.getByRole("button", { name: "Load entry details", exact: true }).click();
+  await expect(cell.locator(".entry-list li").last()).toContainText("Requires optional peer");
+  const raw = await request.get(`${reportUrl.replace("/reports/", "/api/v1/reports/")}/json`);
+  const { report } = reportEnvelopeSchema.parse(await raw.json());
+  const subpaths = report.cells.find((entry) => entry.group === "subpaths");
+  expect(subpaths?.coverage).toMatchObject({
+    observed: 2,
+    passed: 1,
+    failed: 1,
+    prerequisiteLimited: 1,
+  });
+  const evidenceUrl = await cell.getByRole("link", { name: "Evidence JSON" }).getAttribute("href");
+  const evidence = await request.get(evidenceUrl ?? "");
+  expect((await evidence.json()).evidence.observations[1].outcome).toBe("fail");
+  const markdown = await request.get(reportUrl, { headers: { accept: "text/markdown" } });
+  expect(await markdown.text()).toContain("1 needs an optional peer");
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectResponsiveLayout(page);
+    await page.screenshot({ path: info.outputPath(`optional-peers-${width}.png`), fullPage: true });
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.reload();
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
 });
 test("explains temporary scan pauses without navigating away", async ({ page }) => {
   await page.route("**/api/v1/scans", (route) =>

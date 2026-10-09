@@ -16,6 +16,7 @@ import {
   classifyDiagnostic,
   combineOutcomes,
   failureOutcome,
+  optionalPeerContext,
   sanitizeJson,
 } from "@compatlab/engine";
 import { eq } from "drizzle-orm";
@@ -85,6 +86,11 @@ export async function buildReport(
           ? classifyDiagnostic(row.prep.diagnostics)
           : (terminalFailure ?? classifyDiagnostic(null));
   const metadata = record(row.prep.metadata);
+  const optionalPeers = optionalPeerContext(
+    row.name,
+    row.prep.installedManifest,
+    metadata.installed,
+  );
   const cells: HostedReport["cells"] = [];
   for (const image of images)
     for (const group of ["root", "subpaths"] as const)
@@ -119,6 +125,7 @@ export async function buildReport(
             entries,
             evidence: raw,
             failure,
+            optionalPeers,
           }),
         );
       }

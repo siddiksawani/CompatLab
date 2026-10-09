@@ -71,6 +71,11 @@ export function reportMarkdown(origin: string, { report, status }: ReportEnvelop
         ]
       : []),
     `## Runtime matrix\n\n${matrix(report)}`,
+    ...(report.cells.some((cell) => (cell.coverage.prerequisiteLimited ?? 0) > 0)
+      ? [
+          "Some checks require optional peers absent from the tested snapshot. Their runtime compatibility is inconclusive. Failed loading observations are retained; adding a peer requires a separate test and does not imply success.",
+        ]
+      : []),
     "Root modes use fresh sandboxes. Subpath batches share module caches and globals. Passed and failed counts are separate from planned coverage.",
     "## Failures",
     ...report.cells
