@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.siddiksawani/compatlab",
+  "title": "CompatLab",
+  "description": "Read recorded npm loading evidence across pinned Node.js, Bun and Deno runtimes.",
+  "repository": {
+    "url": "https://github.com/siddiksawani/CompatLab",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [{ "type": "streamable-http", "url": "https://compatlab.me/mcp" }]
+}

@@ -14,6 +14,7 @@ export default function ApiGuide() {
         { id: "read", label: "Read reports" },
         { id: "status", label: "Interpret results" },
         { id: "markdown", label: "Markdown" },
+        { id: "mcp", label: "MCP tools" },
         { id: "access", label: "Access and limits" },
       ]}
     >
@@ -102,10 +103,41 @@ export default function ApiGuide() {
         JSON or full report for individual entries, named assertions, logs and reproduction inputs.
         Markdown is currently available for the homepage and report pages.
       </p>
+      <h2 id="mcp">Connect an MCP client</h2>
+      <p>
+        Add <code>https://compatlab.me/mcp</code> as a remote MCP server using Streamable HTTP. No
+        account, API key or local package installation is required. The endpoint supports the
+        2026-07-28 protocol and stateless 2025 clients.
+      </p>
+      <ul>
+        <li>
+          <code>check_package</code> accepts an exact npm <code>name</code> and optional exact
+          <code> version</code>. Omitting the version resolves the current npm latest tag. It
+          returns existing evidence, including an eligible earlier environment when available.
+        </li>
+        <li>
+          <code>get_report</code> accepts a report UUID as <code>id</code> and returns its compact
+          evidence and current eligibility.
+        </li>
+      </ul>
+      <p>
+        Both tools return <code>reportUrl</code>, <code>matchesCurrentMatrix</code> and the same
+        compact report contract described above. Missing evidence has <code>kind: missing</code>; it
+        is not a failed compatibility test. Tools cannot submit scans, install packages or access
+        maintainer accounts. Selected-package lookups contribute to the disclosed aggregate counts
+        in our <a href="/privacy">privacy policy</a>.
+      </p>
+      <p>
+        Calls have bounded concurrency and a 12-second read deadline. Retry temporary tool errors
+        with backoff. Use native remote-server support in your client; cross-origin browser calls
+        and persistent subscription streams are not enabled. Client setup and validation commands
+        are in the{" "}
+        <a href="https://github.com/siddiksawani/CompatLab/blob/main/docs/mcp.md">MCP guide</a>.
+      </p>
       <h2 id="access">Access and limits</h2>
       <p>
-        The public read API is anonymous. CompatLab does not provide agent registration, OAuth, MCP,
-        A2A or payment endpoints. Maintainer tools are coming later.
+        The public read API and MCP tools are anonymous. CompatLab does not provide agent
+        registration, OAuth, A2A or payment endpoints. Maintainer tools are coming later.
       </p>
       <p>
         Respect <code>Retry-After</code> when supplied and use bounded retries with backoff for HTTP

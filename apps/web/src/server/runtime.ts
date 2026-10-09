@@ -6,7 +6,9 @@ import {
   maintainerConfig,
   openCatalog,
   publicConfigSchema,
+  reportControlError,
 } from "@compatlab/catalog/web";
+import { createEvidenceMcp } from "./mcp";
 
 function initialize() {
   initializeTelemetry();
@@ -23,11 +25,18 @@ function initialize() {
   const maintainer = accountConfig
     ? createMaintainerService(catalog.db, config, accountConfig)
     : undefined;
+  const api = createPublicApi(catalog.db, config, undefined, maintainer?.quotaKey);
   return {
     catalog,
     config,
     maintainer,
-    api: createPublicApi(catalog.db, config, undefined, maintainer?.quotaKey),
+    api,
+    mcp: createEvidenceMcp({
+      origin: config.origin,
+      matrixId: config.matrixId,
+      read: (path) => api(new Request(`${config.origin}${path}`)),
+      onError: () => reportControlError("mcp_read_failed"),
+    }),
   };
 }
 const state = globalThis as typeof globalThis & { compatlabWeb?: ReturnType<typeof initialize> };
