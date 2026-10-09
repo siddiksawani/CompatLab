@@ -1233,6 +1233,12 @@ summary {
   list-style: none;
   padding: 0;
 }
+.runtime-filters a[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
 @media (max-width: 720px) {
   .compatibility-list {
     grid-template-columns: minmax(0, 1fr);

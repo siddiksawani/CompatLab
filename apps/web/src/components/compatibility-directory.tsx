@@ -57,7 +57,7 @@ export function CompatibilityDirectory({
         <a href="/api">API and MCP access</a>
       </div>
       {failures && (
-        <nav className="actions" aria-label="Filter failures by runtime">
+        <nav className="actions runtime-filters" aria-label="Filter failures by runtime">
           <a href={path} aria-current={!page.runtime ? "page" : undefined}>
             All runtimes
           </a>
