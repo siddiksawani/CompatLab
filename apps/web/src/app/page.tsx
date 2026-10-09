@@ -77,6 +77,9 @@ export default async function Home({
       {recent.length > 0 && (
         <section className="page recent-reports" aria-labelledby="recent-reports-title">
           <h2 id="recent-reports-title">Recently tested</h2>
+          <p>
+            <a href="/npm/compatibility">Browse all tested npm package versions</a>
+          </p>
           <ul className="recent-report-list">
             {recent.map((report) => (
               <li key={report.id}>

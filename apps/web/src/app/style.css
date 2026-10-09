@@ -1186,3 +1186,61 @@ summary {
   overflow-wrap: anywhere;
   margin-left: 0;
 }
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 0;
+  margin: 0 0 24px;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.breadcrumbs li + li::before {
+  content: "/";
+  margin-right: 12px;
+  color: var(--muted);
+}
+.breadcrumbs a,
+.compatibility-answers h2,
+.compatibility-answers h3,
+.compatibility-list h3 {
+  overflow-wrap: anywhere;
+}
+.compatibility-answers > p,
+.compatibility-answers > section {
+  max-width: 72ch;
+}
+.compatibility-answers > section {
+  margin: 24px 0;
+}
+.compatibility-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  list-style: none;
+  padding: 0;
+}
+.compatibility-list > li {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.compatibility-list h3 {
+  margin-top: 0;
+}
+.runtime-outcomes {
+  list-style: none;
+  padding: 0;
+}
+.runtime-filters a[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+@media (max-width: 720px) {
+  .compatibility-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

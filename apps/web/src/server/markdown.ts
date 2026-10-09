@@ -2,6 +2,7 @@ import type { ReportPreview } from "@compatlab/catalog/web";
 import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
 import { coverageSummary, labels } from "../components/labels";
 import { compatibilityArticle } from "../content/articles";
+import { compatibilityScope, runtimeAnswers } from "./compatibility-copy";
 
 function text(value: string) {
   return value.replace(/[\r\n]+/g, " ").replace(/[\\`*_[\]{}()<>#+.!|~-]/g, "\\$&");
@@ -30,6 +31,7 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
     "Check whether an npm package loads with import and require in Node.js, Bun and Deno.",
     "Published npm packages are tested on Linux amd64 / glibc with pinned runtime images. Install scripts stay disabled. Loading success does not establish functional correctness or package safety.",
     `Search by name at ${origin}/ or read the [public API guide](${origin}/api). Reads never start scans.`,
+    `[Browse npm compatibility results](${origin}/npm/compatibility) · [Observed runtime loading failures](${origin}/npm/compatibility/failures)`,
     ...(search
       ? [
           "## Search results",
@@ -69,6 +71,16 @@ export function reportMarkdown(origin: string, { report, status }: ReportEnvelop
     `Outcome: ${labels[report.outcome]}. ${report.coverageComplete ? "Planned coverage complete." : "Coverage is limited."}`,
     `Observed: ${report.observedAt ?? "not retained"}. Platform: Linux amd64 / glibc. Evidence: ${report.evidenceLevel}.`,
     "Loading success does not establish functional correctness or package safety. These are observations of specific inputs, not a general compatibility guarantee.",
+    "## Compatibility questions",
+    text(compatibilityScope(report)),
+    ...runtimeAnswers(report).flatMap(({ question, results }) => [
+      `### ${text(question)}`,
+      ...results.flatMap((result) => [
+        `${text(result.answer)} ${text(result.counts)}.`,
+        ...result.failures.map((failure) => `- [${text(failure.label)}](${origin}${failure.path})`),
+      ]),
+    ]),
+    `[Compare npm package compatibility across Node.js, Bun and Deno](${origin}/npm/compatibility) · [Observed runtime loading failures](${origin}/npm/compatibility/failures)`,
     `## Preparation\n\n${labels[report.preparation.outcome]}. Lifecycle scripts disabled. ${report.preparation.installedCount} installed packages; ${report.preparation.omittedOptionalCount} optional dependencies omitted.`,
     ...(report.preparation.failure
       ? [

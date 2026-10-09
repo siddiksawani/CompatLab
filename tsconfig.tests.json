@@ -11,5 +11,5 @@
     "tests/**/*.ts",
     "vitest.config.ts"
   ],
-  "exclude": ["tests/browser"]
+  "exclude": ["tests/browser", "apps/web/test"]
 }

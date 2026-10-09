@@ -32,6 +32,8 @@ export const editorialPages = [
   "/",
   "/methodology",
   "/api",
+  "/npm/compatibility",
+  "/npm/compatibility/failures",
   "/articles",
   ...articles.map((article) => article.path),
   "/privacy",

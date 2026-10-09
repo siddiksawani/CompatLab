@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
+import { Breadcrumbs } from "../../../components/breadcrumbs";
+import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { FailureDetails } from "../../../components/failure-details";
 import { labels, observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
+import { compatibilityDescription } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
@@ -28,8 +31,8 @@ function runtimeSummary(summary: Awaited<ReturnType<typeof load>>["summary"]) {
 export async function generateMetadata(props: Props) {
   const { summary } = await load(props);
   return pageMetadata(
-    `${summary.artifact.name}@${summary.artifact.version} — Node.js, Bun and Deno loading results`,
-    `${runtimeSummary(summary)}. ${summary.coverageComplete ? "Planned checks completed." : "Coverage is limited."} Loading does not prove functional correctness.`,
+    `${summary.artifact.name}@${summary.artifact.version}: Node.js, Bun & Deno compatibility`,
+    compatibilityDescription(summary),
     packageEvidencePath(summary.artifact.name, summary.artifact.version),
   );
 }
@@ -40,6 +43,13 @@ export default async function PackageEvidencePage(props: Props) {
   const reportPath = `/reports/${summary.id}`;
   return (
     <section className="page report">
+      <Breadcrumbs
+        items={[
+          { name: "Home", path: "/" },
+          { name: "npm compatibility", path: "/npm/compatibility" },
+          { name: `${name}@${version}`, path: packageEvidencePath(name, version) },
+        ]}
+      />
       <a className="back" href={packageUrl(name, version)}>
         Choose a version or request a scan
       </a>
@@ -47,6 +57,7 @@ export default async function PackageEvidencePage(props: Props) {
         {name}
         <span className="version">{version}</span>
       </h1>
+      <h2>Node.js, Bun and Deno compatibility results</h2>
       <p className="lede">
         Does {name} {version} load in Node.js, Bun and Deno? In the recorded environment, the
         results were {runtimeSummary(summary)}.{" "}
@@ -73,6 +84,7 @@ export default async function PackageEvidencePage(props: Props) {
           explicit subpaths. Select a result to inspect its evidence.
         </p>
       </section>
+      <CompatibilityAnswers report={summary} />
       {summary.preparation.failure && (
         <section className="report-section">
           <h2>Preparation did not complete</h2>

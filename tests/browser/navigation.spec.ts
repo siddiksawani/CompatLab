@@ -105,7 +105,11 @@ test("navigation highlights the current page and section links target real conte
 }) => {
   await page.goto("/");
   const mainNav = page.getByRole("navigation", { name: "Main navigation", exact: true });
-  await expect(mainNav.getByRole("link")).toHaveCount(3);
+  await expect(mainNav.getByRole("link")).toHaveCount(4);
+  await expect(mainNav.getByRole("link", { name: "Reports", exact: true })).toHaveAttribute(
+    "href",
+    "/npm/compatibility",
+  );
   await expect(mainNav.getByRole("link", { name: "Search", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
@@ -132,6 +136,10 @@ test("navigation highlights the current page and section links target real conte
   await expect(page.getByRole("heading", { name: "Corrections and removal" })).toBeInViewport();
   await requestScan(page, "compatlab-browser-fixture");
   await finish(page, request);
+  await expect(mainNav.getByRole("link", { name: "Reports", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await page
     .getByRole("navigation", { name: "On this page" })
     .getByRole("link", { name: "Limits", exact: true })

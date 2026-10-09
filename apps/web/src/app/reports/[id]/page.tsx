@@ -4,6 +4,8 @@ import { displayIdentifier } from "@compatlab/engine";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { Breadcrumbs } from "../../../components/breadcrumbs";
+import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { Copy } from "../../../components/copy";
 import { Evidence } from "../../../components/evidence";
 import { FailureDetails } from "../../../components/failure-details";
@@ -16,6 +18,7 @@ import {
 } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { SectionNavigation } from "../../../components/section-navigation";
+import { compatibilityDescription } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { publicRead, webRuntime } from "../../../server/runtime";
 
@@ -28,8 +31,8 @@ const loadReport = cache(async (id: string) => {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { report, status } = await loadReport((await params).id);
   return pageMetadata(
-    `${report.artifact.name}@${report.artifact.version} runtime evidence`,
-    `${labels[report.outcome]} loading observations across ${report.matrix.images.length} pinned runtimes. ${report.coverageComplete ? "Planned coverage complete." : "Coverage has limits."} Loading success does not prove functional correctness.`,
+    `${report.artifact.name}@${report.artifact.version}: Node.js, Bun & Deno test report`,
+    `${status.current ? "" : "Historical report. "}${compatibilityDescription(report)}`,
     `/reports/${report.id}`,
     status.current && (await reportIsDiscoverable(webRuntime().catalog.db, report.id)),
   );
@@ -47,6 +50,17 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const staticJson = JSON.stringify(report.preparation.staticObservations, null, 2);
   return (
     <section className="page report">
+      <Breadcrumbs
+        items={[
+          { name: "Home", path: "/" },
+          { name: "npm compatibility", path: "/npm/compatibility" },
+          {
+            name: `${report.artifact.name}@${report.artifact.version}`,
+            path: packageEvidencePath(report.artifact.name, report.artifact.version),
+          },
+          { name: "Test report", path: `/reports/${report.id}` },
+        ]}
+      />
       <a className="back" href={packageUrl(report.artifact.name, report.artifact.version)}>
         ← Package details
       </a>
@@ -147,6 +161,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
       <SectionNavigation
         sections={[
           { id: "runtime-matrix", label: "Runtime matrix" },
+          { id: "compatibility", label: "Compatibility answers" },
           { id: "preparation", label: "Preparation" },
           { id: "evidence", label: "Evidence" },
           { id: "reproduction", label: "Reproduce" },
@@ -166,6 +181,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           share module caches and globals. Select a result to inspect its evidence.
         </p>
       </section>
+      <CompatibilityAnswers report={report} />
       <section className="report-section" id="preparation">
         <h2>Shared preparation</h2>
         <div className="preparation-summary">
