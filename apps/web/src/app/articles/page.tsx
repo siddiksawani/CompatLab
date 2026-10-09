@@ -1,4 +1,4 @@
-import { articles } from "../../content/articles";
+import { articleDate, articles } from "../../content/articles";
 import { pageMetadata } from "../../server/metadata";
 
 export const metadata = pageMetadata(
@@ -11,11 +11,12 @@ export default function Articles() {
   return (
     <div className="page narrow">
       <h1>Articles</h1>
-      <p className="lede">What we learn from testing published npm packages.</p>
+      <p className="lede">Package results and guides for developers and AI agents.</p>
       {articles.map((article) => (
         <article className="article-list-item" key={article.path}>
           <p className="muted">
-            <time dateTime={article.publishedAt}>October 5, 2026</time> · {article.author}
+            <time dateTime={article.publishedAt}>{articleDate(article.publishedAt)}</time> ·{" "}
+            {article.author}
           </p>
           <h2>
             <a href={article.path}>{article.title}</a>

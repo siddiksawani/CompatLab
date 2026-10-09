@@ -2,7 +2,7 @@ import { searchResponseSchema } from "@compatlab/contracts";
 import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
-import { compatibilityArticle } from "../content/articles";
+import { compatibilityArticle, mcpArticle } from "../content/articles";
 import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata } from "../server/metadata";
 import { publicRead } from "../server/runtime";
@@ -103,6 +103,12 @@ export default async function Home({
           Express loads, Preact needs a peer for two subpaths, and Zod’s wildcard exports leave a
           coverage gap. Read the results and what they mean for your application.
         </p>
+      </section>
+      <section className="page article-callout" aria-labelledby="mcp-article-title">
+        <h2 id="mcp-article-title">
+          <a href={mcpArticle.path}>{mcpArticle.title}</a>
+        </h2>
+        <p>{mcpArticle.description}</p>
       </section>
       <section className="cli-callout">
         <div>
