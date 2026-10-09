@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { hostedReportSchema } from "./report.js";
-import { scanStateSchema } from "./vocabulary.js";
+import { hostedReportSchema, normalizedFailureSchema, reportCellSchema } from "./report.js";
+import { compatibilityOutcomeSchema, scanStateSchema } from "./vocabulary.js";
 
 export const availableReportSchema = hostedReportSchema
   .pick({
@@ -81,6 +81,46 @@ export const reportEnvelopeSchema = z.object({
   report: hostedReportSchema,
 });
 export type ReportEnvelope = z.infer<typeof reportEnvelopeSchema>;
+export const reportSummarySchema = hostedReportSchema
+  .pick({
+    id: true,
+    scanId: true,
+    artifact: true,
+    observedAt: true,
+    classifiedAt: true,
+    classifierRevision: true,
+    matrix: true,
+    outcome: true,
+    evidenceLevel: true,
+    coverageComplete: true,
+    limitations: true,
+  })
+  .extend({
+    preparation: hostedReportSchema.shape.preparation.omit({ staticObservations: true }),
+    cells: z
+      .array(reportCellSchema.omit({ entries: true, sessions: true }))
+      .min(4)
+      .max(64),
+    runtimes: z
+      .array(
+        z.strictObject({
+          profileId: z.string().max(64),
+          outcome: compatibilityOutcomeSchema,
+        }),
+      )
+      .min(1)
+      .max(16),
+    missingOptionalPeers: z.array(normalizedFailureSchema.shape.optionalPeer.unwrap()).max(16),
+    missingOptionalPeersTruncated: z.boolean(),
+  });
+export const reportSummaryEnvelopeSchema = z.object({
+  schemaVersion: z.literal(1),
+  reportPath: z.string().regex(/^\/reports\/[a-f0-9-]{36}$/),
+  status: reportEnvelopeSchema.shape.status,
+  summary: reportSummarySchema,
+});
+export type ReportSummaryEnvelope = z.infer<typeof reportSummaryEnvelopeSchema>;
+export type ReportSummary = z.infer<typeof reportSummarySchema>;
 export const admissionRequestSchema = z.strictObject({
   name: z.string().min(1).max(214),
   version: z.string().min(1).max(256),

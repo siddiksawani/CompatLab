@@ -29,6 +29,12 @@ export function packageUrl(name: string, version?: string) {
   const query = new URLSearchParams({ name, ...(version ? { version } : {}) });
   return `/packages?${query}`;
 }
+export function packageEvidencePath(name: string, version: string) {
+  const parts = [...name.split("/"), version].map((part) =>
+    encodeURIComponent(part).replace(/^%40/, "@"),
+  );
+  return `/npm/${parts.join("/")}`;
+}
 export const readError = (status: number) =>
   status === 404
     ? "This package or version is unavailable from the registry."

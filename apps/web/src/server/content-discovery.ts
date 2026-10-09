@@ -5,6 +5,7 @@ export function discoveryLinks(origin: string) {
     `<${origin}/.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"`,
     `<${origin}/openapi.json>; rel="service-desc"; type="application/json"`,
     `<${origin}/api>; rel="service-doc"; type="text/html"`,
+    `<${origin}/llms.txt>; rel="describedby"; type="text/markdown"`,
   ].join(", ");
 }
 

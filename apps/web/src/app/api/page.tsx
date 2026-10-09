@@ -25,6 +25,8 @@ export default function ApiGuide() {
       <p>
         <a href="/openapi.json">OpenAPI specification</a> ·{" "}
         <a href="/.well-known/api-catalog">API catalog</a>
+        {" · "}
+        <a href="/llms.txt">Agent reading guide</a>
       </p>
       <h2 id="read">Find existing evidence</h2>
       <ol>
@@ -54,6 +56,22 @@ export default function ApiGuide() {
         URL-encode query parameters for scoped names. Version lists contain at most 200 entries;{" "}
         <code>versionsTruncated</code> tells you when there are more. An exact older version can
         still be requested.
+      </p>
+      <p>
+        Exact-version evidence also has readable pages such as <code>/npm/express/5.2.1</code> and{" "}
+        <code>/npm/@scope/name/1.0.0</code>. These pages read retained catalog evidence without
+        contacting npm. They can select a different observation after a rescan; cite the linked
+        <code> /reports/&#123;id&#125;</code> URL for the result you used. No eligible report means
+        HTTP 404, not a failure verdict.
+      </p>
+      <p>
+        For compact JSON, use <code>GET /api/v1/reports/&#123;id&#125;/summary</code>. It keeps
+        status, exact artifact and runtime pins, preparation, per-runtime outcomes, per-group
+        coverage and representative failures. <code>reportPath</code> is the observation link
+        relative to this site. Optional peer requirements are deduplicated and limited to 16;{" "}
+        <code>missingOptionalPeersTruncated</code> identifies a longer list. Individual entries,
+        omitted subpaths, raw logs and named assertions remain in the full report. A group’s first
+        failure does not describe every failure in that group.
       </p>
       <h2 id="status">Keep outcome, coverage and status separate</h2>
       <p>

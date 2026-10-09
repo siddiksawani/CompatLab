@@ -1,4 +1,5 @@
 import {
+  CLASSIFIER_REVISION,
   compatibilityOutcomeSchema,
   hostedReportSchema,
   reportCellSchema,
@@ -113,4 +114,26 @@ export async function discoverReports(db: CatalogReader, prefix?: string) {
   if (result.rows.length > SITEMAP_LIMIT)
     throw new Error("Report sitemap partition is full; increase its UUID prefix depth.");
   return result.rows.map((row) => ({ ...row, updatedAt: new Date(row.updatedAt).toISOString() }));
+}
+
+export async function discoverPackageVersions(db: CatalogReader, prefix: string) {
+  const digit = z
+    .string()
+    .regex(/^[a-f0-9]$/)
+    .parse(prefix);
+  const lower = `${digit}0000000-0000-0000-0000-000000000000`;
+  const upper =
+    digit === "f"
+      ? null
+      : `${(Number.parseInt(digit, 16) + 1).toString(16)}0000000-0000-0000-0000-000000000000`;
+  const result = await db.execute<{ name: string; version: string }>(sql`
+    SELECT DISTINCT p.name,v.version ${source}
+    WHERE p.id>=${lower}::uuid ${upper ? sql`AND p.id<${upper}::uuid` : sql``}
+      AND s.state IN ('completed','inconclusive') AND s.assertion_revision_id IS NULL
+      AND r.classifier_revision=${CLASSIFIER_REVISION}
+      AND r.invalidated_at IS NULL AND r.replaced_by IS NULL AND ${selectionAllowed}
+    ORDER BY p.name,v.version LIMIT ${SITEMAP_LIMIT + 1}`);
+  if (result.rows.length > SITEMAP_LIMIT)
+    throw new Error("Package sitemap partition is full; increase its UUID prefix depth.");
+  return result.rows;
 }

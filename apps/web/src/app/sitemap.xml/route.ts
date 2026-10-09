@@ -7,6 +7,7 @@ export function GET() {
   const paths = [
     "/sitemaps/pages.xml",
     ...SITEMAP_PREFIXES.map((prefix) => `/sitemaps/${prefix}.xml`),
+    ...SITEMAP_PREFIXES.map((prefix) => `/sitemaps/npm-${prefix}.xml`),
   ];
   return xmlResponse(
     `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((path) => `<sitemap><loc>${escapeXml(publicOrigin() + path)}</loc></sitemap>`).join("")}</sitemapindex>`,

@@ -7,7 +7,13 @@ import { cache } from "react";
 import { Copy } from "../../../components/copy";
 import { Evidence } from "../../../components/evidence";
 import { FailureDetails } from "../../../components/failure-details";
-import { coverageSummary, labels, observedDate, packageUrl } from "../../../components/labels";
+import {
+  coverageSummary,
+  labels,
+  observedDate,
+  packageEvidencePath,
+  packageUrl,
+} from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { SectionNavigation } from "../../../components/section-navigation";
 import { pageMetadata } from "../../../server/metadata";
@@ -78,7 +84,10 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         </aside>
       )}
       <p className="report-links">
-        Observation {status.observationRevision ?? 0} ·{" "}
+        <a href={packageEvidencePath(report.artifact.name, report.artifact.version)}>
+          Version summary
+        </a>{" "}
+        · Observation {status.observationRevision ?? 0} ·{" "}
         <a href={`/history?${new URLSearchParams({ name: report.artifact.name })}`}>
           Report history
         </a>{" "}

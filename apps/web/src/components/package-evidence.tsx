@@ -1,5 +1,5 @@
 import type { PackageResponse } from "@compatlab/contracts";
-import { labels, observedDate } from "./labels";
+import { labels, observedDate, packageEvidencePath } from "./labels";
 import { RequestScan } from "./request-scan";
 
 export function PackageEvidence({ pkg }: { pkg: PackageResponse }) {
@@ -52,6 +52,11 @@ export function PackageEvidence({ pkg }: { pkg: PackageResponse }) {
           <a className="button secondary" href={`/scans/${pkg.scanId}`}>
             View scan progress
           </a>
+        </p>
+      )}
+      {pkg.availableReport && (
+        <p>
+          <a href={packageEvidencePath(pkg.name, pkg.version)}>Version summary</a>
         </p>
       )}
     </div>

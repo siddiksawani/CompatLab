@@ -1,7 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { coverageSummary } from "../src/components/labels.js";
+import { coverageSummary, packageEvidencePath } from "../src/components/labels.js";
 import { markdownPath, prefersMarkdown } from "../src/server/content-discovery.js";
 import { publicOpenApi } from "../src/server/openapi.js";
+import { parsePackagePath } from "../src/server/package-path.js";
+
+it("normalizes exact package paths consistently for metadata and page rendering", () => {
+  expect(packageEvidencePath("@scope/name", "1.0.0+build.1")).toBe(
+    "/npm/@scope/name/1.0.0%2Bbuild.1",
+  );
+  for (const parts of [
+    ["@scope", "name", "1.0.0+build.1"],
+    ["%40scope", "name", "1.0.0%2Bbuild.1"],
+  ])
+    expect(parsePackagePath(parts)).toEqual({ name: "@scope/name", version: "1.0.0+build.1" });
+  for (const parts of [
+    ["name", "latest"],
+    ["name", "^1"],
+    ["%40scope%2Fname", "1.0.0"],
+    ["name", "1.0.0", "extra"],
+    ["%", "1.0.0"],
+    ["name", "1.0.0%2F.."],
+    ["%2540scope", "name", "1.0.0"],
+  ])
+    expect(parsePackagePath(parts)).toBeNull();
+});
 
 describe("content negotiation", () => {
   it.each([
