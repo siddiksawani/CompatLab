@@ -1,8 +1,11 @@
 import { lstat, mkdir, open, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { PreparationError } from "@compatlab/engine";
 import { command } from "../command.js";
 import { cleanup } from "../lifecycle/cleanup.js";
+import { privateDirectory } from "../lifecycle/storage.js";
+
+const reopening = new Map<string, Promise<WorkspaceVolume>>();
 
 export class WorkspaceVolume {
   readonly path: string;
@@ -71,22 +74,63 @@ export class WorkspaceVolume {
     await command("mount", ["-o", "remount,ro,nodev,nosuid,exec", this.path]);
   }
 
-  static async reopen(directory: string): Promise<WorkspaceVolume> {
+  static reopen(directory: string): Promise<WorkspaceVolume> {
+    const path = resolve(directory);
+    let pending = reopening.get(path);
+    if (!pending) {
+      pending = WorkspaceVolume.restore(path).finally(() => reopening.delete(path));
+      reopening.set(path, pending);
+    }
+    return pending;
+  }
+
+  private static async restore(directory: string): Promise<WorkspaceVolume> {
+    await privateDirectory(directory);
     const volume = new WorkspaceVolume(directory);
-    const options = await command("findmnt", [
-      "--noheadings",
-      "--mountpoint",
-      volume.path,
-      "--output",
-      "OPTIONS",
-    ]);
-    const flags = new Set(options.split(","));
-    if (!["ro", "nodev", "nosuid"].every((flag) => flags.has(flag)) || flags.has("noexec"))
+    const backing = join(directory, "workspace.ext4");
+    const file = await lstat(backing);
+    const target = await lstat(volume.path);
+    if (
+      !file.isFile() ||
+      file.uid !== 0 ||
+      file.nlink !== 1 ||
+      (file.mode & 0o022) !== 0 ||
+      file.size < 64 * 1024 ** 2 ||
+      file.size > 2 * 1024 ** 3 ||
+      !target.isDirectory() ||
+      target.uid !== 0 ||
+      (target.mode & 0o022) !== 0
+    )
       throw new PreparationError(
         "archive_rejected",
-        "The retained workspace mount policy changed.",
+        "The retained workspace backing file or mount directory is unsafe.",
       );
-    return volume;
+    let mounted = false;
+    try {
+      let options = await mountOptions(volume.path);
+      if (options === null) {
+        await command("mount", [
+          "-t",
+          "ext4",
+          "-o",
+          "loop,ro,noload,nodev,nosuid,exec",
+          backing,
+          volume.path,
+        ]);
+        mounted = true;
+        options = await mountOptions(volume.path);
+      }
+      const flags = new Set(options?.split(","));
+      if (!["ro", "nodev", "nosuid"].every((flag) => flags.has(flag)) || flags.has("noexec"))
+        throw new PreparationError(
+          "archive_rejected",
+          "The retained workspace mount policy changed.",
+        );
+      return volume;
+    } catch (error) {
+      if (mounted) await cleanup(() => command("umount", [volume.path]).then(() => {}));
+      throw error;
+    }
   }
 
   async dispose(): Promise<void> {
@@ -111,5 +155,15 @@ export class WorkspaceVolume {
       }
       await rm(this.directory, { recursive: true, force: true });
     });
+  }
+}
+
+async function mountOptions(path: string): Promise<string | null> {
+  try {
+    return await command("findmnt", ["--noheadings", "--mountpoint", path, "--output", "OPTIONS"]);
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1)
+      return null;
+    throw error;
   }
 }

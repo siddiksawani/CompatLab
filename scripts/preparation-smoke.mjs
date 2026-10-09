@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import {
+  chmod,
   chown,
   mkdir,
   mkdtemp,
   readFile,
+  rename,
   rm,
   rmdir,
   stat,
   statfs,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { createConnection } from "node:net";
@@ -56,12 +59,31 @@ try {
   await assert.rejects(() => prepareArtifact(artifact, cancelledPath, AbortSignal.abort()));
   assert.equal(await exists(cancelledPath), false);
   live = await prepareArtifact(artifact, base);
-  const reopened = await reuseSnapshot(live.id, base, artifact);
+  const metadataPath = join(live.directory, "snapshot.json");
+  const metadataBytes = await readFile(metadataPath);
+  const backing = join(live.directory, "workspace.ext4");
+  await command("umount", [join(live.directory, "volume")]);
+  await chmod(backing, 0o666);
+  await assert.rejects(() => reuseSnapshot(live.id, base, artifact), {
+    classification: "archive_rejected",
+  });
+  await chmod(backing, 0o600);
+  await rename(backing, `${backing}.saved`);
+  await symlink(`${backing}.saved`, backing);
+  await assert.rejects(() => reuseSnapshot(live.id, base, artifact), {
+    classification: "archive_rejected",
+  });
+  await rm(backing);
+  await rename(`${backing}.saved`, backing);
+  const [reopened, concurrent] = await Promise.all([
+    reuseSnapshot(live.id, base, artifact),
+    reuseSnapshot(live.id, base, artifact),
+  ]);
   assert.equal(reopened.workspace, live.workspace);
   assert.equal(reopened.generation, live.generation);
   assert.equal(reopened.tree.digest, live.tree.digest);
-  const metadataPath = join(live.directory, "snapshot.json");
-  const metadataBytes = await readFile(metadataPath);
+  assert.equal(concurrent.tree.digest, live.tree.digest);
+  assert.deepEqual(await readFile(metadataPath), metadataBytes);
   await writeFile(metadataPath, "{truncated");
   await assert.rejects(() => reuseSnapshot(live.id, base, artifact), {
     classification: "artifact_integrity_mismatch",
@@ -89,7 +111,7 @@ try {
   });
   assert.equal(launchFailure.failure, "sandbox_start_failed");
   process.stdout.write(
-    "reuse: corrupt metadata and altered mount policies rejected; launch failures remain infrastructure errors\n",
+    "reuse: missing mounts restored read-only; unsafe backing files, corrupt metadata and altered mount policies rejected\n",
   );
   const probe =
     "const fs=require('node:fs');try{fs.writeFileSync('/workspace/node_modules/is-number/index.js','changed');process.exit(1)}catch(e){if(e.code!=='EROFS')throw e}console.log('sealed')";

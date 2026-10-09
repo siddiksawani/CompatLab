@@ -49,6 +49,8 @@ PR 28 publishes an evidence-led article about npm loading across Node.js, Bun an
 
 PR 29 distinguishes missing optional peers from runtime failures using retained manifest, installed-package and error evidence. It adds prerequisite explanations and counts to reports, previews and Markdown, preserves raw loading failures and historical report revisions, and makes absent diagnostics explicit. It changes no installation or sandbox behavior. Validation covers classification false positives, PostgreSQL aggregation/evidence preservation and browser presentation at phone and desktop widths.
 
+PR 30 fixes retained snapshot reuse after a worker VM restart. The worker restores missing read-only mounts before advertising snapshots, validates backing storage and existing mount policy, and preserves snapshot identity and contents. Linux/runsc qualification covers concurrent restoration, unsafe backing rejection, startup inventory and actual loading through every runtime after mount loss.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.

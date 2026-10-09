@@ -2,6 +2,7 @@ import { lstat, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { command, docker, removeContainer } from "../command.js";
 import { readBoundedFile } from "../preparation/files.js";
+import { WorkspaceVolume } from "../preparation/volume.js";
 import { cleanup } from "./cleanup.js";
 import { privateDirectory } from "./storage.js";
 
@@ -136,8 +137,10 @@ export async function snapshotInventory(stateDirectory: string): Promise<string[
       const metadata = JSON.parse(
         (await readBoundedFile(join(path, "snapshot.json"), 64 * 1024)).toString("utf8"),
       );
-      if (metadata.schemaVersion === 1 && metadata.id === id && metadata.sealed === true)
+      if (metadata.schemaVersion === 1 && metadata.id === id && metadata.sealed === true) {
+        await WorkspaceVolume.reopen(path);
         ids.push(id);
+      }
     } catch (error) {
       if (
         !(error instanceof SyntaxError) &&
