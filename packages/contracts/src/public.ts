@@ -2,12 +2,26 @@ import { z } from "zod";
 import { hostedReportSchema } from "./report.js";
 import { scanStateSchema } from "./vocabulary.js";
 
+export const availableReportSchema = hostedReportSchema
+  .pick({
+    id: true,
+    observedAt: true,
+    classifierRevision: true,
+    outcome: true,
+    coverageComplete: true,
+  })
+  .extend({
+    matchesCurrentMatrix: z.boolean(),
+    matrix: hostedReportSchema.shape.matrix.pick({ id: true, revision: true, platform: true }),
+  });
+
 export const packageSummarySchema = z.object({
   name: z.string().max(214),
   version: z.string().max(256),
   description: z.string().max(4096).optional(),
   repositoryUrl: z.url().max(2048).optional(),
   reportId: z.uuid().nullable(),
+  availableReport: availableReportSchema.nullable().optional(),
 });
 export const searchResponseSchema = z.object({
   schemaVersion: z.literal(1),
@@ -25,6 +39,7 @@ export const packageResponseSchema = z.object({
   versionsTruncated: z.boolean(),
   tags: z.record(z.string(), z.string()),
   reportId: z.uuid().nullable(),
+  availableReport: availableReportSchema.nullable().optional(),
   scanId: z.uuid().nullable(),
   scansEnabled: z.boolean(),
 });

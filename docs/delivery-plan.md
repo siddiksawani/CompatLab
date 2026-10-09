@@ -51,6 +51,19 @@ PR 29 distinguishes missing optional peers from runtime failures using retained 
 
 PR 30 fixes retained snapshot reuse after a worker VM restart. The worker restores missing read-only mounts before advertising snapshots, validates backing storage and existing mount policy, and preserves snapshot identity and contents. Linux/runsc qualification covers concurrent restoration, unsafe backing rejection, startup inventory and actual loading through every runtime after mount loss.
 
+### Discovery and adoption follow-ups
+
+On October 9, 2026, the maintainer approved improving programmatic access, evidence discovery, focused coverage and a read-only MCP pilot. Deliver these as separate reviewable slices. Ordinary lookups must remain read-only, historical observations must retain their identities, and public maintainer accounts remain deferred.
+
+| Slice | Deliverable | Validation |
+|---|---|---|
+| 31 | Expose eligible reports from earlier matrices without changing current-matrix reuse; retain evidence during active scans; review Cloudflare blocking of public readers | PostgreSQL selection/invalidation/integrity tests, browser search/package/Markdown flows, responsive review, independent production edge-access checks |
+| 32 | Readable package/version pages, compact evidence summaries and optional agent documentation links | Canonical/404/scoped-name tests, summary fidelity, no work on reads, browser and sitemap checks |
+| 33 | Minimal disclosed measurement of useful lookups and missing evidence; bounded curated coverage | Privacy/retention, deduplication, existing admission and worker-outage gates, foreground capacity protection; seed a small relevant corpus before expanding |
+| 34 | Read-only MCP tools over the same public evidence contracts and a developer pilot | Protocol/client integration, limits, missing/historical report semantics, exact provenance; registry publishing requires the actual tested endpoint |
+
+Slice 31 adds `availableReport` while preserving `reportId` as the current-matrix selection. The initial validation plan for the later slices does not claim those features are implemented or that the pilot has users. Dependent slices follow the repository's merge and release gates.
+
 - Repository: [siddiksawani/CompatLab](https://github.com/siddiksawani/CompatLab); maintainer: `siddiksawani`.
 - The user approved a single empty bootstrap commit because GitHub requires a base for the first PR. It contains no project files. All project changes arrive through feature-branch PRs.
 - Use descriptive numbered feature branches, such as `feat/04-probe-planning`. Commits and GitHub changes use the `siddiksawani` maintainer account.

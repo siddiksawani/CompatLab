@@ -171,8 +171,7 @@ export async function concurrent<T>(operations: Promise<T>[]): Promise<T[]> {
   });
 }
 
-export async function seedOldScan(db: CatalogDatabase, matrixId: string) {
-  const source = artifact();
+export async function seedOldScan(db: CatalogDatabase, matrixId: string, source = artifact()) {
   const pkg = (await db.insert(schema.packages).values({ name: source.name }).returning())[0];
   if (!pkg) throw new Error("Fixture package missing.");
   const version = (
