@@ -12,6 +12,7 @@ import { createReportApi } from "../reports/read.js";
 import { reportControlError } from "../telemetry.js";
 import { MetadataBusy } from "./cache.js";
 import { publicDiscovery } from "./discovery.js";
+import { lookupRecorder } from "./measurement.js";
 import {
   type PublicConfig,
   PublicRequestError,
@@ -29,6 +30,7 @@ export function createPublicApi(
   const config = publicConfigSchema.parse(rawConfig);
   const discovery = publicDiscovery(db, config.matrixId, config.scansEnabled, registry);
   const reports = createReportApi(db);
+  const recordLookup = lookupRecorder(db);
   let inFlight = 0;
   return async (request: Request): Promise<Response> => {
     const response = await handle(request);
@@ -81,14 +83,14 @@ export function createPublicApi(
       let response: Response;
       if (url.pathname === "/api/v1/search")
         response = json(await discovery.search(url.searchParams.get("q") ?? ""));
-      else if (url.pathname === "/api/v1/packages")
-        response = json(
-          await discovery.package(
-            url.searchParams.get("name") ?? "",
-            url.searchParams.get("version") ?? undefined,
-          ),
+      else if (url.pathname === "/api/v1/packages") {
+        const pkg = await discovery.package(
+          url.searchParams.get("name") ?? "",
+          url.searchParams.get("version") ?? undefined,
         );
-      else response = json({ error: "not_found" }, 404);
+        if (request.method === "GET") await recordLookup(pkg);
+        response = json(pkg);
+      } else response = json({ error: "not_found" }, 404);
       return request.method === "HEAD"
         ? new Response(null, { status: response.status, headers: response.headers })
         : response;

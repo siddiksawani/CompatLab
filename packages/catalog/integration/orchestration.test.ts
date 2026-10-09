@@ -94,6 +94,21 @@ async function finishPreparation() {
 }
 
 describe("durable worker scheduling", () => {
+  it("claims public work ahead of older curated coverage jobs", async () => {
+    const background = admitted(
+      await admitScan(catalog.db, artifact(), {
+        ...options(selection.matrixId),
+        source: "coverage",
+      }),
+    );
+    const foreground = await reserve();
+    expect((await next()).scanId).toBe(foreground.scan.scanId);
+    expect(
+      (
+        await catalog.db.select().from(schema.scans).where(eq(schema.scans.id, background.scanId))
+      )[0]?.source,
+    ).toBe("coverage");
+  });
   it("denies eviction of reserved snapshots and removes evicted snapshots from reuse", async () => {
     const fixture = await finishPreparation();
     const inventory = { sessionId: worker.sessionId, snapshotIds: [fixture.result.snapshot.id] };

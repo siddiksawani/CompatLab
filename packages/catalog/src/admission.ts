@@ -37,6 +37,7 @@ const optionsSchema = z.strictObject({
     .max(7)
     .default([]),
   classifierRevision: revisionSchema,
+  source: z.enum(["public", "coverage"]).default("public"),
   retry: adminActionSchema.extend({ scanId: uuidSchema }).optional(),
   rescan: z
     .strictObject({ previousScanId: uuidSchema, assertionRevisionId: uuidSchema.optional() })
@@ -302,6 +303,7 @@ export async function admitScanInTransaction(
       previousScanId: options.rescan?.previousScanId ?? null,
       assertionRevisionId: options.rescan?.assertionRevisionId ?? null,
       requesterKey: options.requesterKey,
+      source: options.source,
       accountKey: options.accountKey ?? null,
       requesterExpiresAt: new Date(now.getTime() + 7 * 86400_000),
       requestedAt: now,

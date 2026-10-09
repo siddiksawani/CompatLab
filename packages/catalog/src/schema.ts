@@ -101,6 +101,7 @@ export const matrixMembers = pgTable("matrix_members", {
 });
 export const scans = pgTable("scans", {
   id: identity(),
+  source: text("source").$type<"public" | "coverage">().notNull().default("public"),
   preparationId: uuid("preparation_id").notNull(),
   matrixId: uuid("matrix_id").notNull(),
   state: text("state").$type<ScanState>().notNull().default("requested"),
@@ -185,6 +186,7 @@ export const serviceControls = pgTable("service_controls", {
   admissionPaused: boolean("admission_paused").notNull().default(false),
   workerGuardEnabled: boolean("worker_guard_enabled").notNull().default(false),
   deploymentRelease: text("deployment_release"),
+  coveragePaused: boolean("coverage_paused").notNull().default(true),
 });
 
 export * from "./assertions/schema.js";

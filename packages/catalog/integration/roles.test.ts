@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { assertionDigest } from "@compatlab/engine";
+import { assertionDigest, RegistryClient } from "@compatlab/engine";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { assertionBundle } from "../../../tests/assertion-fixtures.js";
 import {
+  addCoverageTargets,
   admitScan,
+  advanceCoverage,
   applyRetention,
   openCatalog,
   reconcileCatalog,
   setAdmissionPaused,
+  setCoveragePaused,
   setWorkerGuard,
 } from "../src/index.js";
+import { lookupRecorder } from "../src/public/measurement.js";
 import { actor, artifact, database, migrateCatalog, options, seedMatrix } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
@@ -59,6 +63,39 @@ it("admits public work using the deployed web grants without operator authority"
   await expect(web.pool.query("CREATE TABLE forbidden(id int)")).rejects.toThrow(
     "permission denied",
   );
+});
+it("separates public measurement, operator curation and background execution grants", async () => {
+  await lookupRecorder(web.db)({ name: "fixture", version: "1.0.0", availableReport: null });
+  expect((await operator.pool.query("SELECT * FROM lookup_demand")).rowCount).toBe(1);
+  await expect(web.pool.query("SELECT * FROM coverage_targets")).rejects.toThrow(
+    "permission denied",
+  );
+  await expect(setCoveragePaused(web.db, false, actor)).rejects.toThrow();
+  await expect(setCoveragePaused(control.db, false, actor)).rejects.toThrow();
+  const source = artifact("coverage-grant-fixture");
+  await addCoverageTargets(
+    operator.db,
+    matrixId,
+    [{ name: source.name, version: source.version }],
+    actor,
+  );
+  await setCoveragePaused(operator.db, false, actor);
+  await catalog.pool.query("UPDATE scans SET state='cancelled'");
+  await catalog.pool.query("UPDATE jobs SET state='finished'");
+  const registry = new RegistryClient({
+    fetch: async () =>
+      Response.json({
+        ...source.manifest,
+        dist: { integrity: source.integrity, tarball: source.tarballUrl },
+      }),
+  });
+  await advanceCoverage(control.db, registry);
+  expect((await operator.pool.query("SELECT state FROM coverage_targets")).rows[0].state).toBe(
+    "submitted",
+  );
+  await catalog.pool.query("UPDATE scans SET state='cancelled'");
+  await catalog.pool.query("UPDATE jobs SET state='finished'");
+  await setCoveragePaused(operator.db, true, actor);
 });
 it("allows control maintenance and operator controls without superuser privileges", async () => {
   expect(await applyRetention(control.db, actor)).toEqual({ logs: 0, requesters: 0, audits: 0 });

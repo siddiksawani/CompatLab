@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { networkInterfaces } from "node:os";
 import { promisify } from "node:util";
 import {
+  advanceCoverage,
   aggregatePendingReports,
   applyRetention,
   initializeTelemetry,
@@ -44,12 +45,22 @@ let stopping = false;
 let timer: NodeJS.Timeout | undefined;
 let maintenance: Promise<void> = Promise.resolve();
 let lastRetention = 0;
+let coverage: Promise<void> | undefined;
+let lastCoverage = 0;
 function schedule() {
   timer = setTimeout(() => {
     maintenance = reconcileCatalog(catalog.db)
       .then(async () => {
         const result = await aggregatePendingReports(catalog.db);
         if (result.failed) reportControlError("aggregation_failed");
+        if (!coverage && Date.now() - lastCoverage > 60_000) {
+          lastCoverage = Date.now();
+          coverage = advanceCoverage(catalog.db)
+            .catch(() => reportControlError("coverage_failed"))
+            .finally(() => {
+              coverage = undefined;
+            });
+        }
         if (Date.now() - lastRetention > 60_000) {
           lastRetention = Date.now();
           await applyRetention(catalog.db, {
@@ -77,6 +88,7 @@ async function stop() {
   server.closeIdleConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await maintenance;
+  await coverage;
   await catalog.close();
 }
 process.once("SIGTERM", () => {
