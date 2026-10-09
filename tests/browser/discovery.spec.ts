@@ -111,7 +111,7 @@ test("publishes canonical pages and excludes query and operational surfaces", as
   );
   const index = await (await request.get("/sitemap.xml")).text();
   expect(index).toContain(`${origin}/sitemaps/pages.xml`);
-  expect(index.match(/<sitemap>/g)).toHaveLength(17);
+  expect(index.match(/<sitemap>/g)).toHaveLength(33);
   const pages = await (await request.get("/sitemaps/pages.xml")).text();
   expect(pages).toContain(`${origin}/methodology`);
   expect(pages).not.toContain("/account");

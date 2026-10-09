@@ -18,6 +18,7 @@ export * from "./public/api.js";
 export { type PublicConfig, publicConfigSchema } from "./public/security.js";
 export * from "./reports/aggregate.js";
 export * from "./reports/discovery.js";
+export * from "./reports/package.js";
 export * from "./reports/read.js";
 export * from "./scheduling/claims.js";
 export * from "./scheduling/reconcile.js";

@@ -1,6 +1,7 @@
 import {
   packageResponseSchema,
   reportEnvelopeSchema,
+  reportSummaryEnvelopeSchema,
   scanProgressSchema,
   searchResponseSchema,
 } from "@compatlab/contracts";
@@ -103,12 +104,23 @@ export function publicOpenApi(origin: string) {
           responses: responses("ScanProgress"),
         },
       },
+      "/api/v1/reports/{id}/summary": {
+        get: {
+          operationId: "getReportSummary",
+          summary: "Read compact loading evidence with status and exact runtime pins",
+          description:
+            "Includes per-runtime outcomes, per-group coverage and representative failures. reportPath is the immutable observation path relative to this origin. Optional peers are deduplicated and bounded to 16 requirements; truncation is explicit. Individual entries, raw logs and named assertions remain in the full report.",
+          parameters: [identifier],
+          responses: responses("ReportSummaryEnvelope"),
+        },
+      },
     },
     components: {
       schemas: {
         SearchResponse: z.toJSONSchema(searchResponseSchema),
         PackageResponse: z.toJSONSchema(packageResponseSchema),
         ReportEnvelope: z.toJSONSchema(reportEnvelopeSchema),
+        ReportSummaryEnvelope: z.toJSONSchema(reportSummaryEnvelopeSchema),
         ScanProgress: z.toJSONSchema(scanProgressSchema),
       },
     },

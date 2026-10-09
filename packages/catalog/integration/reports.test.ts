@@ -5,6 +5,7 @@ import {
   PREPARATION_PROFILE_REVISION,
   type ProbeGroupResult,
   parseReproductionInputs,
+  reportSummaryEnvelopeSchema,
 } from "@compatlab/contracts";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -468,6 +469,134 @@ describe("immutable report classification", () => {
 });
 
 describe("public report reads", () => {
+  it("projects compact evidence without losing failures, coverage, runtime pins or status", async () => {
+    const { scan } = await execution({
+      manifest: {
+        exports: { ".": "./index.js", "./util": "./util.js", "./server": "./server.js" },
+        peerDependencies: { renderer: "^2" },
+        peerDependenciesMeta: { renderer: { optional: true } },
+      },
+      mutate(job, evidence) {
+        if (job.group !== "subpaths") return;
+        evidence.observations[1] = {
+          index: 1,
+          outcome: "fail",
+          durationMs: 1,
+          resolvedTo: null,
+          error: {
+            name: "Error",
+            code: "MODULE_NOT_FOUND",
+            message: "Cannot find module 'renderer'",
+          },
+        };
+      },
+    });
+    const envelope = await aggregate(scan.scanId);
+    const { report } = envelope;
+    const jobs = await catalog.db.select().from(schema.jobs);
+    const api = createReportApi(catalog.db);
+    const url = `http://localhost/api/v1/reports/${report.id}/summary`;
+    const response = await api(new Request(url));
+    expect(response.status).toBe(200);
+    const compact = reportSummaryEnvelopeSchema.parse(await response.json());
+    expect(compact.status).toEqual(envelope.status);
+    expect(compact.reportPath).toBe(`/reports/${report.id}`);
+    expect(compact.summary).toMatchObject({
+      id: report.id,
+      artifact: report.artifact,
+      matrix: report.matrix,
+      observedAt: report.observedAt,
+      classifiedAt: report.classifiedAt,
+      classifierRevision: CLASSIFIER_REVISION,
+      outcome: "inconclusive",
+      coverageComplete: true,
+      missingOptionalPeers: [{ name: "renderer", range: "^2" }],
+      missingOptionalPeersTruncated: false,
+    });
+    expect(compact.summary.runtimes).toEqual(
+      report.matrix.images.map(({ profileId }) => ({ profileId, outcome: "inconclusive" })),
+    );
+    expect(compact.summary.cells).toEqual(
+      report.cells.map(({ entries: _entries, sessions: _sessions, ...cell }) => cell),
+    );
+    expect(JSON.stringify(compact)).not.toMatch(
+      /"(entries|sessions|staticObservations|assertions)":/,
+    );
+    expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(envelope).length);
+    const etag = response.headers.get("etag") ?? "";
+    expect((await api(new Request(url, { headers: { "if-none-match": etag } }))).status).toBe(304);
+    const head = await api(new Request(url, { method: "HEAD" }));
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    await invalidateReport(catalog.db, report.id, actor);
+    const historical = await api(new Request(url, { headers: { "if-none-match": etag } }));
+    expect(historical.status).toBe(200);
+    expect(await historical.json()).toMatchObject({
+      status: { current: false, invalidationReason: actor.reason },
+      summary: compact.summary,
+    });
+    expect((await api(new Request(url, { method: "POST" }))).status).toBe(405);
+    expect((await api(new Request("http://localhost/api/v1/reports/bad/summary"))).status).toBe(
+      400,
+    );
+    expect(
+      (await api(new Request(`http://localhost/api/v1/reports/${randomUUID()}/summary`))).status,
+    ).toBe(404);
+    expect(await catalog.db.select().from(schema.jobs)).toEqual(jobs);
+  });
+  it("keeps preparation failures distinct from runtime failures in compact evidence", async () => {
+    const { scan } = await execution({ failure: "install_script_required" });
+    const { report } = await aggregate(scan.scanId);
+    const response = await createReportApi(catalog.db)(
+      new Request(`http://localhost/api/v1/reports/${report.id}/summary`),
+    );
+    const { summary } = reportSummaryEnvelopeSchema.parse(await response.json());
+    expect(summary.preparation.failure?.classification).toBe("install_script_required");
+    expect(summary.outcome).toBe(report.outcome);
+    expect(summary.evidenceLevel).toBe("static_only");
+    expect(summary.coverageComplete).toBe(false);
+    expect(summary.missingOptionalPeers).toEqual([]);
+  });
+  it("bounds optional peer requirements and explicitly marks omitted summary details", async () => {
+    const peers = Array.from({ length: 18 }, (_, index) => `peer-${index}`);
+    const { scan } = await execution({
+      manifest: {
+        exports: {
+          ".": "./index.js",
+          ...Object.fromEntries(peers.map((peer) => [`./${peer}`, `./${peer}.js`])),
+        },
+        peerDependencies: Object.fromEntries(peers.map((peer) => [peer, "^1"])),
+        peerDependenciesMeta: Object.fromEntries(peers.map((peer) => [peer, { optional: true }])),
+      },
+      mutate(job, evidence) {
+        if (job.group !== "subpaths") return;
+        evidence.observations.forEach((entry, index) => {
+          evidence.observations[index] = {
+            index: entry.index,
+            durationMs: entry.durationMs,
+            outcome: "fail",
+            resolvedTo: null,
+            error: {
+              name: "Error",
+              code: "MODULE_NOT_FOUND",
+              message: `Cannot find module '${peers[index]}'`,
+            },
+          };
+        });
+      },
+    });
+    const { report } = await aggregate(scan.scanId);
+    const response = await createReportApi(catalog.db)(
+      new Request(`http://localhost/api/v1/reports/${report.id}/summary`),
+    );
+    const { summary } = reportSummaryEnvelopeSchema.parse(await response.json());
+    expect(summary.missingOptionalPeers).toHaveLength(16);
+    expect(summary.missingOptionalPeersTruncated).toBe(true);
+    expect(new Set(summary.missingOptionalPeers.map((peer) => peer.name)).size).toBe(16);
+    expect(
+      summary.cells.find((cell) => cell.group === "subpaths")?.coverage.prerequisiteLimited,
+    ).toBe(18);
+  });
   it("preserves exact entry identities in reports and evidence downloads", async () => {
     const { scan } = await execution({
       manifest: { exports: { ".": "./index.js", "./a\u202eb": "./a.js", "./ab": "./b.js" } },

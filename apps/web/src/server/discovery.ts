@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  discoverPackageVersions,
   discoverRecentReports,
   discoverReportPreviews,
   discoverReports,
@@ -8,6 +9,15 @@ import {
 import { webRuntime } from "./runtime";
 
 let pending = 0;
+export async function discoveryPackages(prefix: string) {
+  if (pending >= 2) throw new Error("Discovery is busy.");
+  pending++;
+  try {
+    return await discoverPackageVersions(webRuntime().catalog.db, prefix);
+  } finally {
+    pending--;
+  }
+}
 export async function discoveryReports(prefix?: string) {
   if (pending >= 2) throw new Error("Discovery is busy.");
   pending++;

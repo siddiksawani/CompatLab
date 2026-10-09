@@ -18,6 +18,7 @@ import { scanProgress } from "../scheduling/reconcile.js";
 import { preparations, reports, runs, scans } from "../schema.js";
 import { reportControlError } from "../telemetry.js";
 import { readComparison, reportBadge, reportHistory } from "./comparison.js";
+import { readReportSummary } from "./summary.js";
 
 export async function reportHeader(db: CatalogReader, reportId: string) {
   z.uuid().parse(reportId);
@@ -215,7 +216,7 @@ export function createReportApi(db: CatalogDatabase) {
       return conditional(request, etag) ?? json(result, 200, { etag });
     }
     const match =
-      /^\/api\/v1\/reports\/([^/]+)(?:\/(json|logs|evidence|reproduction|lock|cell))?$/.exec(
+      /^\/api\/v1\/reports\/([^/]+)(?:\/(json|logs|evidence|reproduction|lock|cell|summary))?$/.exec(
         url.pathname,
       );
     if (!match) return json({ error: "not_found" }, 404);
@@ -266,6 +267,14 @@ export function createReportApi(db: CatalogDatabase) {
       .digest("hex")}"`;
     const cached = conditional(request, etag);
     if (cached) return cached;
+    if (part === "summary") {
+      const summary = await readReportSummary(db, id);
+      return summary
+        ? json({ schemaVersion: 1, reportPath: `/reports/${summary.id}`, status, summary }, 200, {
+            etag,
+          })
+        : json({ error: "not_found" }, 404);
+    }
     if (part === "lock") {
       const [row] = await db
         .select({ bytes: preparations.lockBytes, digest: preparations.lockDigest })

@@ -8,9 +8,12 @@ import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import {
   ADMISSION_POLICY,
   createPublicApi,
+  discoverPackageVersions,
+  findPackageReport,
   invalidateReport,
   migrateCatalog,
   registerMatrix,
+  SITEMAP_PREFIXES,
   schema,
 } from "../src/index.js";
 import {
@@ -163,6 +166,16 @@ it("exposes older-matrix evidence without treating it as a reusable current-matr
     availableReport: pkg.availableReport,
   });
   expect(await counts()).toEqual(before);
+  expect(await findPackageReport(catalog.db, currentMatrixId, source.name, source.version)).toEqual(
+    pkg.availableReport,
+  );
+  expect(
+    (
+      await Promise.all(
+        SITEMAP_PREFIXES.map((prefix) => discoverPackageVersions(catalog.db, prefix)),
+      )
+    ).flat(),
+  ).toEqual([{ name: source.name, version: source.version }]);
   const admittedResponse = await api(
     new Request(`${origin}/api/v1/scans`, {
       method: "POST",
@@ -187,6 +200,9 @@ it("prefers the current matrix and keeps its report visible during a newer scan"
       matrix: { id: currentMatrixId },
     },
   });
+  expect(
+    await findPackageReport(catalog.db, currentMatrixId, source.name, source.version),
+  ).toMatchObject({ id: currentReportId, matchesCurrentMatrix: true });
 });
 
 it("retains older evidence while a scan in the current matrix is running", async () => {
@@ -207,6 +223,11 @@ it("does not let a completed scan with no eligible report hide existing evidence
 });
 
 it("requires the exact version and registry integrity for package evidence", async () => {
+  expect(await findPackageReport(catalog.db, currentMatrixId, source.name, "2.0.0")).toBeNull();
+  await expect(findPackageReport(catalog.db, currentMatrixId, "../bad", "1.0.0")).rejects.toThrow();
+  await expect(
+    findPackageReport(catalog.db, currentMatrixId, source.name, "latest"),
+  ).rejects.toThrow();
   expect(await lookup("2.0.0")).toMatchObject({ reportId: null, availableReport: null });
   source = { ...source, integrity: artifact("different-bytes").integrity };
   api = publicApi();
@@ -240,6 +261,16 @@ it.each([
   if (reason === "integrity_anomaly")
     await catalog.pool.query("UPDATE package_versions SET integrity_anomaly=true");
   expect(await lookup()).toMatchObject({ reportId: null, availableReport: null });
+  expect(
+    await findPackageReport(catalog.db, currentMatrixId, source.name, source.version),
+  ).toBeNull();
+  expect(
+    (
+      await Promise.all(
+        SITEMAP_PREFIXES.map((prefix) => discoverPackageVersions(catalog.db, prefix)),
+      )
+    ).flat(),
+  ).toEqual([]);
   const response = await api(new Request(`${origin}/api/v1/search?q=fixture`));
   expect(searchResponseSchema.parse(await response.json()).packages[0]).toMatchObject({
     reportId: null,
