@@ -132,7 +132,9 @@ lookup-to-scan path. The curator chooses exact versions in a small JSON array:
 [{"name":"express","version":"5.2.1"}]
 ```
 
-On the VPS, using the current matrix ID from the release manifest:
+On the VPS, confirm the approved matrix and reconciled worker capability with
+`sudo compatlab-admin status`. The release manifest records image/source identity,
+not the catalog's matrix UUID. Use the compatible matrix ID from status:
 
 ```sh
 sudo compatlab-admin coverage-add MATRIX_UUID /path/to/reviewed-targets.json --reason 'Initial curated coverage'
@@ -172,3 +174,10 @@ The initial [20-package pilot](qualification/coverage-pilot.json) pins versions
 resolved from npm on October 9, 2026. It covers HTTP servers and clients, validation,
 UI libraries, utilities, logging and native prerequisites. This is a curated
 starting set, not a download ranking or a claim that every package will pass.
+
+The [October coverage research](coverage-research-2026-10.md) selects 30 additional
+package names using upstream runtime questions, documentation and npm adoption.
+Its [exact-version import](qualification/coverage-expansion-2026-10.json) is an
+operator-reviewed expansion, not a change to admission limits or an automatic
+release monitor. Check coverage status for execution progress; inclusion in the
+file does not mean that a report has completed or Google has indexed it.
