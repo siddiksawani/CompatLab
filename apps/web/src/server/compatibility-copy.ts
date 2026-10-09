@@ -1,6 +1,6 @@
 import type { CompatibilityOutcome, ReportSummary } from "@compatlab/contracts";
 import { combineOutcomes } from "@compatlab/engine";
-import { labels } from "../components/labels.js";
+import { labels } from "../components/labels";
 
 export type CompatibilityEvidence = Pick<ReportSummary, "id" | "coverageComplete"> & {
   artifact: Pick<ReportSummary["artifact"], "name" | "version">;
