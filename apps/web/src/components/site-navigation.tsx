@@ -8,6 +8,12 @@ export function SiteNavigation() {
       <a href="/" aria-current={path === "/" ? "page" : undefined}>
         Search
       </a>
+      <a
+        href="/npm/compatibility"
+        aria-current={path.startsWith("/npm/") || path.startsWith("/reports/") ? "page" : undefined}
+      >
+        Reports
+      </a>
       <a href="/methodology" aria-current={path === "/methodology" ? "page" : undefined}>
         Methodology
       </a>

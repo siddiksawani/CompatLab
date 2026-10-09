@@ -14,6 +14,7 @@ import {
   aggregatePendingReports,
   claimJob,
   createReportApi,
+  discoverCompatibility,
   discoverRecentReports,
   discoverReportPreviews,
   invalidateReport,
@@ -183,6 +184,10 @@ describe("immutable report classification", () => {
     );
     const [preview] = await discoverReportPreviews(catalog.db, [report.artifact.name]);
     expect(
+      (await discoverCompatibility(catalog.db, selection.matrixId, { failureRuntime: "bun" }))
+        .entries,
+    ).toEqual([]);
+    expect(
       preview?.cells.find((cell) => cell.group === "subpaths")?.coverage.prerequisiteLimited,
     ).toBe(1);
   });
@@ -236,6 +241,138 @@ describe("immutable report classification", () => {
     await expect(
       discoverReportPreviews(catalog.db, Array(4).fill(first.source.name)),
     ).rejects.toThrow();
+  });
+  it("paginates eligible baseline reports without work or retained raw entries", async () => {
+    for (const name of ["@scope/directory-one", "directory-two", "directory-three"]) {
+      const { scan } = await execution({ name });
+      await aggregate(scan.scanId);
+    }
+    const counts = (await catalog.pool.query("SELECT count(*) FROM jobs")).rows;
+    const first = await discoverCompatibility(catalog.db, selection.matrixId, { limit: 2 });
+    expect(first.entries).toHaveLength(2);
+    expect(first.entries.every((entry) => entry.matchesCurrentMatrix)).toBe(true);
+    expect(JSON.stringify(first)).not.toContain('"staticObservations"');
+    expect(JSON.stringify(first.entries[0]?.report)).not.toContain('"entries"');
+    if (!first.next) throw new Error("Expected continuation");
+    const second = await discoverCompatibility(catalog.db, selection.matrixId, {
+      after: first.next,
+      limit: 2,
+    });
+    expect(second.entries).toHaveLength(1);
+    expect(second.next).toBeNull();
+    expect(
+      new Set([...first.entries, ...second.entries].map((entry) => entry.artifactId)).size,
+    ).toBe(3);
+    expect(
+      (await discoverCompatibility(catalog.db, selection.matrixId, { after: randomUUID() }))
+        .entries,
+    ).toEqual([]);
+    const firstId = first.entries[0]?.report.id;
+    if (!firstId) throw new Error("Missing report");
+    await invalidateReport(catalog.db, firstId, actor);
+    expect((await discoverCompatibility(catalog.db, selection.matrixId)).entries).toHaveLength(2);
+    await catalog.pool.query("UPDATE package_versions SET integrity_anomaly=true WHERE id=$1", [
+      second.entries[0]?.artifactId,
+    ]);
+    expect((await discoverCompatibility(catalog.db, selection.matrixId)).entries).toHaveLength(1);
+    await quarantineRuntime(catalog.db, selection.imageIds[0] ?? "", actor);
+    expect((await discoverCompatibility(catalog.db, selection.matrixId)).entries).toEqual([]);
+    expect((await catalog.pool.query("SELECT count(*) FROM jobs")).rows).toEqual(counts);
+    await expect(
+      discoverCompatibility(catalog.db, selection.matrixId, { limit: 25 }),
+    ).rejects.toThrow();
+    await expect(
+      discoverCompatibility(catalog.db, selection.matrixId, { after: "invalid" }),
+    ).rejects.toThrow();
+  });
+  it("lists actual Bun failures from the selected report, not a superseded environment", async () => {
+    const old = await execution({
+      name: "bun-failure-fixture",
+      mutate(job, evidence) {
+        if (job.image.kind !== "bun" || job.group !== "root") return;
+        evidence.observations[0] = {
+          index: 0,
+          outcome: "fail",
+          durationMs: 1,
+          resolvedTo: null,
+          error: {
+            name: "Error",
+            code: "ERR_MODULE_NOT_FOUND",
+            message: "Authored missing module",
+          },
+        };
+      },
+    });
+    const { report } = await aggregate(old.scan.scanId);
+    expect(
+      (
+        await discoverCompatibility(catalog.db, selection.matrixId, { failureRuntime: "bun" })
+      ).entries.map((entry) => entry.report.id),
+    ).toEqual([report.id]);
+    expect(
+      (
+        await discoverCompatibility(catalog.db, selection.matrixId, { failureRuntime: "any" })
+      ).entries.map((entry) => entry.report.id),
+    ).toEqual([report.id]);
+    for (const failureRuntime of ["node", "deno"] as const)
+      expect(
+        (await discoverCompatibility(catalog.db, selection.matrixId, { failureRuntime })).entries,
+      ).toEqual([]);
+    const nextMatrix = await registerMatrix(
+      catalog.db,
+      matrix(selection.imageIds, "directory_next_v1"),
+      actor,
+    );
+    expect(
+      (await discoverCompatibility(catalog.db, nextMatrix, { failureRuntime: "bun" })).entries[0]
+        ?.matchesCurrentMatrix,
+    ).toBe(false);
+    const [currentScan] = await catalog.db
+      .insert(schema.scans)
+      .values({
+        preparationId: old.scan.preparationId,
+        matrixId: nextMatrix,
+        state: "completed",
+        requesterKey: "a".repeat(64),
+        requesterExpiresAt: new Date(Date.now() + 86400_000),
+        admissionPolicy: "admission_v1",
+      })
+      .returning();
+    if (!currentScan) throw new Error("Missing fixture scan");
+    const currentReport = {
+      ...report,
+      id: randomUUID(),
+      scanId: currentScan.id,
+      matrix: { ...report.matrix, id: nextMatrix, revision: "directory_next_v1" },
+      outcome: "pass",
+      cells: report.cells.map((cell) =>
+        cell.outcome !== "fail"
+          ? cell
+          : {
+              ...cell,
+              outcome: "pass",
+              failure: null,
+              coverage: { ...cell.coverage, passed: cell.coverage.observed, failed: 0 },
+              entries: cell.entries.map((entry) => ({ ...entry, outcome: "pass", failure: null })),
+            },
+      ),
+    };
+    await catalog.db.insert(schema.reports).values({
+      id: currentReport.id,
+      scanId: currentScan.id,
+      classifierRevision: CLASSIFIER_REVISION,
+      payload: currentReport,
+    });
+    expect(
+      (await discoverCompatibility(catalog.db, nextMatrix)).entries.map((entry) => entry.report.id),
+    ).toEqual([currentReport.id]);
+    expect(
+      (await discoverCompatibility(catalog.db, nextMatrix, { failureRuntime: "bun" })).entries,
+    ).toEqual([]);
+    await invalidateReport(catalog.db, currentReport.id, actor);
+    expect(
+      (await discoverCompatibility(catalog.db, nextMatrix, { failureRuntime: "bun" })).entries[0],
+    ).toMatchObject({ matchesCurrentMatrix: false, report: { id: report.id } });
   });
   it("backs off a failed aggregation under concurrency while completing other scans", async () => {
     const broken = await execution({ name: "broken-report-fixture" });

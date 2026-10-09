@@ -137,3 +137,71 @@ export async function discoverPackageVersions(db: CatalogReader, prefix: string)
     throw new Error("Package sitemap partition is full; increase its UUID prefix depth.");
   return result.rows;
 }
+
+export async function discoverCompatibility(
+  db: CatalogReader,
+  matrixId: string,
+  options: {
+    after?: string;
+    failureRuntime?: "any" | "node" | "bun" | "deno";
+    limit?: number;
+  } = {},
+) {
+  z.uuid().parse(matrixId);
+  const { after, failureRuntime, limit } = z
+    .strictObject({
+      after: z.uuid().optional(),
+      failureRuntime: z.enum(["any", "node", "bun", "deno"]).optional(),
+      limit: z.number().int().min(1).max(24).default(24),
+    })
+    .parse(options);
+  const result = await db.execute<{
+    artifactId: string;
+    matchesCurrentMatrix: boolean;
+    preview: unknown;
+  }>(sql`
+    SELECT v.id AS "artifactId",chosen."matchesCurrentMatrix",
+      jsonb_build_object(
+        'id',chosen.id,'artifact',jsonb_build_object('name',p.name,'version',v.version),
+        'observedAt',payload->'observedAt','matrix',payload->'matrix',
+        'outcome',payload->'outcome','coverageComplete',payload->'coverageComplete',
+        'preparation',jsonb_build_object('outcome',payload->'preparation'->'outcome'),
+        'cells',(SELECT jsonb_agg(jsonb_build_object(
+          'profileId',cell->'profileId','group',cell->'group','mode',cell->'mode',
+          'outcome',cell->'outcome','coverage',cell->'coverage') ORDER BY position)
+          FROM jsonb_array_elements(payload->'cells') WITH ORDINALITY AS entries(cell,position))
+      ) AS preview
+    FROM package_versions v JOIN packages p ON p.id=v.package_id
+    CROSS JOIN LATERAL (
+      SELECT r.id,r.payload,m.id=${matrixId} AS "matchesCurrentMatrix"
+      FROM preparations prep JOIN scans s ON s.preparation_id=prep.id
+      JOIN matrices m ON m.id=s.matrix_id JOIN reports r ON r.scan_id=s.id
+      WHERE prep.artifact_id=v.id AND ${selectionAllowed}
+        AND s.state IN ('completed','inconclusive') AND s.assertion_revision_id IS NULL
+        AND r.classifier_revision=${CLASSIFIER_REVISION}
+        AND r.invalidated_at IS NULL AND r.replaced_by IS NULL
+      ORDER BY (m.id=${matrixId}) DESC,s.requested_at DESC,s.id,r.created_at DESC,r.id LIMIT 1
+    ) chosen
+    WHERE ${after ? sql`v.id>${after}::uuid AND EXISTS (SELECT 1 FROM package_versions cursor WHERE cursor.id=${after}::uuid)` : sql`true`}
+      ${
+        failureRuntime
+          ? sql`AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(payload->'matrix'->'images') image,
+          jsonb_array_elements(payload->'cells') cell,
+          jsonb_array_elements(cell->'entries') entry
+        WHERE ${failureRuntime === "any" ? sql`true` : sql`image->>'kind'=${failureRuntime}`} AND cell->>'profileId'=image->>'profileId'
+          AND entry->>'outcome'='fail' AND entry->'failure'->>'origin'='package'
+      )`
+          : sql``
+      }
+    ORDER BY v.id LIMIT ${limit + 1}`);
+  const entries = result.rows.slice(0, limit).map((row) => ({
+    artifactId: z.uuid().parse(row.artifactId),
+    matchesCurrentMatrix: z.boolean().parse(row.matchesCurrentMatrix),
+    report: previewSchema.parse(row.preview),
+  }));
+  return {
+    entries,
+    next: result.rows.length > limit ? (entries.at(-1)?.artifactId ?? null) : null,
+  };
+}

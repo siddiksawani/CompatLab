@@ -36,6 +36,15 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
       new URL(reportUrl).pathname,
     );
     await expect(page.locator(".lede")).toContainText("inconclusive");
+    await expect(page).toHaveTitle(`${name}@1.0.0: Node.js, Bun & Deno compatibility | CompatLab`);
+    await expect(
+      page.getByRole("heading", { name: `Does ${name} work with Bun?`, exact: true }),
+    ).toBeVisible();
+    const breadcrumbs = JSON.parse(
+      await page.locator('script[type="application/ld+json"]').innerText(),
+    );
+    expect(breadcrumbs["@type"]).toBe("BreadcrumbList");
+    expect(breadcrumbs.itemListElement.at(-1).item).toBe(page.url());
     await expect(page.getByRole("heading", { name: "Missing optional peers" })).toBeVisible();
     await expect(page.locator(".notice")).toContainText("@fixture/renderer");
     for (const width of [375, 1440]) {
@@ -53,6 +62,21 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     const html = await request.get(path);
     expect(html.status()).toBe(200);
     expect(await html.text()).toContain("Missing optional peers");
+    await page.goto("/npm/compatibility");
+    await expect(page.getByRole("link", { name: `${name}@1.0.0`, exact: true })).toHaveAttribute(
+      "href",
+      path,
+    );
+    await page.goto("/npm/compatibility/failures");
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
+    await expect(
+      page.getByText(
+        "No eligible reports currently contain a qualifying loading failure for this selection.",
+        {
+          exact: false,
+        },
+      ),
+    ).toBeVisible();
     const summary = await request.get(`/api/v1/reports/${reportId}/summary`);
     expect(summary.status()).toBe(200);
     expect(await summary.json()).toMatchObject({
@@ -63,11 +87,19 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
       },
     });
     const sitemaps = await packageSitemaps(request);
+    expect(await (await request.get("/sitemaps/pages.xml")).text()).not.toContain(
+      "/npm/compatibility/failures",
+    );
     expect(sitemaps.join("").split(path).length - 1).toBe(1);
     const agentGuide = await request.get("/llms.txt");
     expect(agentGuide.headers()["content-type"]).toContain("text/markdown");
     expect(agentGuide.headers()["content-signal"]).toBe("search=yes, ai-input=yes, ai-train=no");
     expect(await agentGuide.text()).toContain("status.current");
+    const reportMarkdown = await request.get(new URL(reportUrl).pathname, {
+      headers: { accept: "text/markdown" },
+    });
+    expect(reportMarkdown.headers()["content-type"]).toContain("text/markdown");
+    expect(await reportMarkdown.text()).toContain("work with Bun");
     expect(html.headers().link).toContain('rel="describedby"');
     expect((await request.post("/llms.txt")).status()).toBe(405);
     expect(
@@ -83,6 +115,12 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
     const withdrawn = await packageSitemaps(request);
     expect(withdrawn.join("")).not.toContain(path);
+    await page.goto("/npm/compatibility");
+    await expect(page.getByRole("link", { name: `${name}@1.0.0`, exact: true })).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
+    expect(await (await request.get("/sitemaps/pages.xml")).text()).not.toContain(
+      "/npm/compatibility",
+    );
     expect(await (await request.get(`/api/v1/reports/${reportId}/summary`)).json()).toMatchObject({
       status: { current: false },
     });

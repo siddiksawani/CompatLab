@@ -1,6 +1,7 @@
 import { reportControlError } from "@compatlab/catalog/web";
 import { packageEvidencePath } from "../../../components/labels";
 import {
+  compatibilityDirectory,
   discoveryPackages,
   discoveryReports,
   escapeXml,
@@ -14,9 +15,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ par
   if (part !== "pages.xml" && !/^(npm-)?[a-f0-9]\.xml$/.test(part))
     return new Response(null, { status: 404 });
   try {
+    let pages = editorialPages;
+    if (part === "pages.xml") {
+      const all = await compatibilityDirectory(undefined, undefined, 1);
+      const failures = await compatibilityDirectory(undefined, "any", 1);
+      pages = pages.filter((path) =>
+        path === "/npm/compatibility"
+          ? all.entries.length > 0
+          : path === "/npm/compatibility/failures"
+            ? failures.entries.length > 0
+            : true,
+      );
+    }
     const entries =
       part === "pages.xml"
-        ? editorialPages.map((path) => ({ url: publicOrigin() + path, updatedAt: null }))
+        ? pages.map((path) => ({ url: publicOrigin() + path, updatedAt: null }))
         : part.startsWith("npm-")
           ? (await discoveryPackages(part[4] ?? "")).map((pkg) => ({
               url: publicOrigin() + packageEvidencePath(pkg.name, pkg.version),

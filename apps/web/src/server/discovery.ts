@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  discoverCompatibility,
   discoverPackageVersions,
   discoverRecentReports,
   discoverReportPreviews,
@@ -9,6 +10,24 @@ import {
 import { webRuntime } from "./runtime";
 
 let pending = 0;
+export async function compatibilityDirectory(
+  after?: string,
+  failureRuntime?: "any" | "node" | "bun" | "deno",
+  limit = 24,
+) {
+  if (pending >= 2) throw new Error("Discovery is busy.");
+  pending++;
+  try {
+    const { catalog, config } = webRuntime();
+    return await discoverCompatibility(catalog.db, config.matrixId, {
+      ...(after ? { after } : {}),
+      ...(failureRuntime ? { failureRuntime } : {}),
+      limit,
+    });
+  } finally {
+    pending--;
+  }
+}
 export async function discoveryPackages(prefix: string) {
   if (pending >= 2) throw new Error("Discovery is busy.");
   pending++;
