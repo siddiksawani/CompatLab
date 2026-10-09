@@ -32,6 +32,7 @@ import {
 } from "../src/index.js";
 import type { LinkedAuthority } from "../src/monitoring/authority.js";
 import { monitoringMutation } from "../src/monitoring/settings.js";
+import { publicDiscovery } from "../src/public/discovery.js";
 import * as schema from "../src/schema.js";
 import { prepared, runEvidence } from "./execution-fixtures.js";
 import { actor, database, image, migrateCatalog, seedMatrix, seedOldScan } from "./fixtures.js";
@@ -284,6 +285,9 @@ it("keeps named failed assertions separate from passing automatic loads and expo
       classifierRevision: CLASSIFIER_REVISION,
     }),
   ).toBeNull();
+  expect(
+    await publicDiscovery(catalog.db, matrixId, true, registry).package(parent.source.name),
+  ).toMatchObject({ reportId: null, availableReport: null, scanId: null });
   const pass = structuredClone(report.report);
   for (const c of pass.assertions?.[0]?.cells ?? []) {
     c.outcome = "pass";

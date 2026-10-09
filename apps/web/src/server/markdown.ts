@@ -33,10 +33,15 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
     ...(search
       ? [
           "## Search results",
-          ...search.packages.map(
-            (item) =>
-              `- ${text(item.name)} ${text(item.version)}: [package](${origin}/packages?${new URLSearchParams({ name: item.name })})${item.reportId ? `; [report](${origin}/reports/${item.reportId})` : "; no current report"}.`,
-          ),
+          ...search.packages.map((item) => {
+            const query = new URLSearchParams({ name: item.name, version: item.version });
+            const evidence = item.reportId
+              ? `[report](${origin}/reports/${item.reportId})`
+              : item.availableReport
+                ? `[earlier environment report](${origin}/reports/${item.availableReport.id}); no report for the current environment`
+                : "no eligible report available";
+            return `- ${text(item.name)} ${text(item.version)}: [package](${origin}/packages?${query}); ${evidence}.`;
+          }),
         ]
       : []),
     "## Completed reports",

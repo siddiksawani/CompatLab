@@ -73,6 +73,8 @@ export function publicOpenApi(origin: string) {
         get: {
           operationId: "getPackage",
           summary: "Resolve a package version and find existing evidence",
+          description:
+            "reportId selects baseline evidence for the current matrix and classifier. availableReport also exposes eligible baseline evidence from another approved matrix, with matchesCurrentMatrix=false and the original observation time. An active scan can coexist with either result. No read starts work.",
           parameters: [
             query("name", "Exact npm package name, including its scope when present.", true, 214),
             query(

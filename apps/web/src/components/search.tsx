@@ -91,7 +91,11 @@ export function Search({
                 </div>
                 <p>{pkg.description || "No description supplied."}</p>
                 <span className="text-link">
-                  {pkg.reportId ? "Stored report available" : "Inspect version"}
+                  {pkg.reportId
+                    ? "Stored report available"
+                    : pkg.availableReport
+                      ? "Earlier environment report available"
+                      : "Inspect version"}
                   <span aria-hidden="true"> →</span>
                 </span>
               </a>

@@ -80,6 +80,26 @@ For a change, inspect the candidate against [Cloudflare's published ranges](http
 
 After Cloudflare is proxying both domain records with **Full (strict)**, write `cloudflare` to `/etc/compatlab/origin-mode`, run `sudo python3 /opt/compatlab/current/infra/origin.py apply /opt/compatlab/current/infra/cloudflare-ips.json`, and verify external HTTPS plus rejection of direct-origin connections. Caddy trusts the same versioned Cloudflare ranges. There is no public IPv6 or QUIC origin mapping. Keep those absent until separately qualified.
 
+### Public readers
+
+Cloudflare's Browser Integrity Check rejected ordinary Python API clients with error 1010 even though an identified reader could fetch the same public URL. On October 9, 2026, the operator approved and deployed **Public read access: Browser Integrity Check exception** under **compatlab.me → Security → Security rules**. The custom rule uses **Skip**, selects only **Browser Integrity Check**, and keeps matching-request logging enabled:
+
+```text
+(http.host eq "compatlab.me" and http.request.method in {"GET" "HEAD"} and (
+  http.request.uri.path in {"/" "/api" "/index.md" "/packages" "/methodology" "/articles" "/openapi.json" "/.well-known/api-catalog" "/robots.txt" "/sitemap.xml"}
+  or starts_with(http.request.uri.path, "/api/v1/")
+  or starts_with(http.request.uri.path, "/reports/")
+  or starts_with(http.request.uri.path, "/articles/")
+  or starts_with(http.request.uri.path, "/sitemaps/")
+))
+```
+
+Other skip components stay unchecked. Account/authentication/maintainer routes and every POST are outside the expression; existing WAF rules, application admission limits, origin isolation and training preferences still apply. Review new public paths explicitly instead of broadening the exception to the whole domain. This dashboard setting is separate from application releases.
+
+After changing it, compare the default `Python-urllib/3.9` user agent with an identified API reader. Check `/api/v1/packages?name=express&version=5.2.1`, `/openapi.json`, a retained report with `Accept: text/markdown`, and report HEAD requests. The October 9 check changed those public reads from 403 to 200; the same Python client's `/account` GET and an empty `/api/v1/scans` POST remained 403. Use invalid scan input for this check so verification cannot enqueue work. Also verify an HTML report retains its cache/variant headers. To roll back, disable this one custom rule; no origin or application change is needed.
+
+See Cloudflare's [Browser Integrity Check](https://developers.cloudflare.com/waf/tools/browser-integrity-check/) and [scoped skip-rule guidance](https://developers.cloudflare.com/waf/custom-rules/skip/).
+
 ## Monitoring and persistence
 
 `compatlab-health.timer` checks local website/database health, the selected matrix's worker guard, queue age, infrastructure failures, backup capture age, VPS/VM disk space, deployment failures and the Cloudflare range check. It emails on state changes and daily while a problem persists; recovery sends one email. An email accepted by Resend is not proof of inbox delivery. Confirm the launch test in the recipient inbox.

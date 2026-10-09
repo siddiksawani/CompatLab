@@ -1,8 +1,83 @@
 import { expect, test } from "@playwright/test";
-import { finish, fixture, requestScan } from "./helpers.js";
+import { expectResponsiveLayout, finish, fixture, requestScan } from "./helpers.js";
 
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
+});
+
+test("finds earlier environment reports without requesting new work", async ({
+  page,
+  request,
+}, info) => {
+  const { scanId } = await (await fixture(request, "earlier-environment")).json();
+  await page.goto(`/scans/${scanId}`);
+  await finish(page, request);
+  const reportUrl = page.url();
+  const before = await (await fixture(request, "counts")).json();
+  await page.goto("/?q=compatlab-browser-fixture");
+  await expect(
+    page.getByRole("link", {
+      name: /compatlab-browser-fixture.*Earlier environment report available/,
+    }),
+  ).toBeVisible();
+  await page.locator(".search-results li > a:first-child").click();
+  await expect(
+    page.getByRole("heading", { name: "A report exists for an earlier environment." }),
+  ).toBeVisible();
+  await expect(page.locator(".scan-action")).toContainText("Observed:");
+  await expect(
+    page.getByRole("link", { name: "View earlier report", exact: true }),
+  ).toHaveAttribute("href", new URL(reportUrl).pathname);
+  await expect(page.getByRole("button", { name: "Request a scan", exact: true })).toBeVisible();
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectResponsiveLayout(page);
+    await page.screenshot({
+      path: info.outputPath(`earlier-environment-${width}.png`),
+      fullPage: true,
+    });
+  }
+  const markdown = await request.get("/?q=compatlab-browser-fixture", {
+    headers: { accept: "text/markdown" },
+  });
+  expect(await markdown.text()).toContain(`[earlier environment report](${reportUrl})`);
+  await page.getByRole("link", { name: "View earlier report", exact: true }).click();
+  await expect(page).toHaveURL(reportUrl);
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  await fixture(request, "invalidate");
+  await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0");
+  await expect(page.getByRole("link", { name: "View earlier report", exact: true })).toHaveCount(0);
+});
+
+test("keeps earlier evidence visible while a scan uses the current environment", async ({
+  page,
+  request,
+}) => {
+  const { scanId } = await (await fixture(request, "earlier-environment")).json();
+  await page.goto(`/scans/${scanId}`);
+  await finish(page, request);
+  const previousReport = new URL(page.url()).pathname;
+  await requestScan(page, "compatlab-browser-fixture");
+  const progressUrl = page.url();
+  await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0");
+  await expect(
+    page.getByRole("link", { name: "View earlier report", exact: true }),
+  ).toHaveAttribute("href", previousReport);
+  await expect(page.getByRole("link", { name: "View scan progress", exact: true })).toHaveAttribute(
+    "href",
+    new URL(progressUrl).pathname,
+  );
+  await expect(page.getByRole("button", { name: "Request a scan", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "View scan progress", exact: true }).click();
+  await finish(page, request);
+  const currentReport = new URL(page.url()).pathname;
+  expect(currentReport).not.toBe(previousReport);
+  await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0");
+  await expect(page.getByRole("link", { name: "View report", exact: true })).toHaveAttribute(
+    "href",
+    currentReport,
+  );
+  await expect(page.getByRole("link", { name: "View earlier report", exact: true })).toHaveCount(0);
 });
 
 test("publishes canonical pages and excludes query and operational surfaces", async ({

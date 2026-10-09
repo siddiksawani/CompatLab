@@ -1,6 +1,6 @@
 import { packageResponseSchema } from "@compatlab/contracts";
 import { readError } from "../../components/labels";
-import { RequestScan } from "../../components/request-scan";
+import { PackageEvidence } from "../../components/package-evidence";
 import { VersionPicker } from "../../components/version-picker";
 import { publicRead } from "../../server/runtime";
 
@@ -56,29 +56,7 @@ export default async function PackagePage({
       )}
       <div className="package-actions">
         <VersionPicker pkg={pkg} />
-        <div className="scan-action">
-          <p className="eyebrow">
-            {pkg.reportId
-              ? "Evidence available"
-              : pkg.scanId
-                ? "Scan in progress"
-                : "Ready to inspect"}
-          </p>
-          <h2>
-            {pkg.reportId ? "Open the stored observations." : "Compare loading across runtimes."}
-          </h2>
-          {pkg.reportId ? (
-            <a className="button" href={`/reports/${pkg.reportId}`}>
-              View report
-            </a>
-          ) : pkg.scanId ? (
-            <a className="button" href={`/scans/${pkg.scanId}`}>
-              View scan progress
-            </a>
-          ) : (
-            <RequestScan name={pkg.name} version={pkg.version} enabled={pkg.scansEnabled} />
-          )}
-        </div>
+        <PackageEvidence pkg={pkg} />
       </div>
       <p>
         <a href={`/history?${new URLSearchParams({ name: pkg.name })}`}>

@@ -7,10 +7,13 @@ import { assertionResult, seedAssertion } from "../fixtures/browser/assertions.m
 import { prepared, runEvidence } from "../packages/catalog/.browser-fixtures/execution-fixtures.js";
 import {
   actor,
+  artifact,
   database,
   image,
+  matrix as matrixInput,
   migrateCatalog,
   seedMatrix,
+  seedOldScan,
 } from "../packages/catalog/.browser-fixtures/fixtures.js";
 import {
   aggregatePendingReports,
@@ -18,6 +21,7 @@ import {
   invalidateReport,
   readyWorker,
   reconcileCatalog,
+  registerMatrix,
   registerWorker,
   submitJobResult,
 } from "../packages/catalog/dist/index.js";
@@ -31,6 +35,11 @@ await cp(
 const catalog = await database();
 await migrateCatalog(catalog.pool);
 const matrix = await seedMatrix(catalog.db);
+const previousMatrixId = await registerMatrix(
+  catalog.db,
+  matrixInput(matrix.imageIds, "browser_previous_v1"),
+  actor,
+);
 const owner = await registerWorker(
   catalog.db,
   {
@@ -64,6 +73,16 @@ const fixtureServer = createServer(async (request, response) => {
       await catalog.pool.query(
         "TRUNCATE auth_users,probe_revisions,audit_events,blocks,reports,jobs,runs,scans,preparations,package_versions,packages CASCADE",
       );
+    } else if (request.url === "/earlier-environment") {
+      const { scan } = await seedOldScan(
+        catalog.db,
+        previousMatrixId,
+        artifact("compatlab-browser-fixture"),
+      );
+      await catalog.pool.query("UPDATE scans SET state='requested' WHERE id=$1", [scan.scanId]);
+      await catalog.pool.query("UPDATE jobs SET state='queued' WHERE scan_id=$1", [scan.scanId]);
+      response.end(JSON.stringify({ scanId: scan.scanId }));
+      return;
     } else if (["/execute", "/execute-mixed", "/execute-optional-peers"].includes(request.url)) {
       const mixed = request.url === "/execute-mixed";
       const optionalPeers = request.url === "/execute-optional-peers";
@@ -81,6 +100,7 @@ const fixtureServer = createServer(async (request, response) => {
         sessionId,
         snapshotIds: snapshots.map((row) => row.snapshot_id),
       });
+      await reconcileCatalog(catalog.db);
       for (let count = 0; count < 64; count++) {
         const job = await claimJob(catalog.db, owner.token, { sessionId });
         if (!job) break;

@@ -42,6 +42,13 @@ export default function ApiGuide() {
           <code>GET /api/v1/scans/&#123;id&#125;</code> for progress. A missing report is not a
           failure verdict.
         </li>
+        <li>
+          Check <code>availableReport</code> for retained evidence when <code>reportId</code> is
+          null. When <code>matchesCurrentMatrix</code> is false, that report uses another approved
+          execution environment. Cite its recorded runtime pins and observation date; it does not
+          describe the current environment. An active scan and an existing report can both be
+          present.
+        </li>
       </ol>
       <p>
         URL-encode query parameters for scoped names. Version lists contain at most 200 entries;{" "}
@@ -53,6 +60,12 @@ export default function ApiGuide() {
         Read <code>status.current</code> before citing evidence. Historical reports remain readable
         and may link to a replacement. Include the package version, observation time, runtime pins
         and report URL in your answer.
+      </p>
+      <p>
+        Here, <code>status.current</code> means the report is not invalidated, replaced or blocked
+        by service policy. It does not mean the package version is latest or the report uses the
+        current execution environment. Package lookup exposes that distinction through{" "}
+        <code>availableReport.matchesCurrentMatrix</code>.
       </p>
       <p>
         Each cell has an outcome and separate passed, failed, interrupted and untested counts.
