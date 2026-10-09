@@ -64,8 +64,9 @@ const fixtureServer = createServer(async (request, response) => {
       await catalog.pool.query(
         "TRUNCATE auth_users,probe_revisions,audit_events,blocks,reports,jobs,runs,scans,preparations,package_versions,packages CASCADE",
       );
-    } else if (request.url === "/execute" || request.url === "/execute-mixed") {
+    } else if (["/execute", "/execute-mixed", "/execute-optional-peers"].includes(request.url)) {
       const mixed = request.url === "/execute-mixed";
+      const optionalPeers = request.url === "/execute-optional-peers";
       sessionId = randomUUID();
       await catalog.pool.query(
         "UPDATE workers SET recovery_required=true,state='drained',session_id=NULL",
@@ -92,13 +93,19 @@ const fixtureServer = createServer(async (request, response) => {
             exports: {
               ".": "./index.js",
               "./util": "./util.js",
-              ...(mixed ? { "./missing": "./missing.js" } : {}),
+              ...(mixed || optionalPeers ? { "./missing": "./missing.js" } : {}),
             },
+            ...(optionalPeers
+              ? {
+                  peerDependencies: { "@fixture/renderer": "^2.0.0" },
+                  peerDependenciesMeta: { "@fixture/renderer": { optional: true } },
+                }
+              : {}),
           });
         } else if (job.kind === "assertion") result = assertionResult(job);
         else {
           const evidence = runEvidence(job);
-          if (mixed && job.group === "subpaths") {
+          if ((mixed || optionalPeers) && job.group === "subpaths") {
             evidence.observations[1] = {
               index: 1,
               outcome: "fail",
@@ -107,7 +114,9 @@ const fixtureServer = createServer(async (request, response) => {
               error: {
                 name: "Error",
                 code: "ERR_MODULE_NOT_FOUND",
-                message: "Authored missing export fixture.",
+                message: optionalPeers
+                  ? "Cannot find package '@fixture/renderer' imported from /workspace/node_modules/fixture/missing.js"
+                  : "Authored missing export fixture.",
               },
             };
           }

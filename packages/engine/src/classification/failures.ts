@@ -6,11 +6,13 @@ import {
   type ProbeMode,
   type StopReason,
 } from "@compatlab/contracts";
+import { missingOptionalPeer, type OptionalPeerContext } from "./optional-peers.js";
 import { sanitizeText } from "./text.js";
 
 export function classifyLoad(
   observation: Extract<LoadObservation, { outcome: "fail" }>,
   mode: ProbeMode,
+  optionalPeers?: OptionalPeerContext,
 ): NormalizedFailure {
   const codes: Record<string, FailureClassification> = {
     MODULE_NOT_FOUND: "package_resolution_failed",
@@ -26,19 +28,27 @@ export function classifyLoad(
     observation.error.code && Object.hasOwn(codes, observation.error.code)
       ? codes[observation.error.code]
       : undefined;
-  const classification =
-    captured || (mode === "esm" ? "esm_import_failed" : "commonjs_require_failed");
+  const optionalPeer = missingOptionalPeer(observation.error, optionalPeers);
+  const classification = optionalPeer
+    ? "optional_peer_missing"
+    : captured || (mode === "esm" ? "esm_import_failed" : "commonjs_require_failed");
   return {
     classification,
-    phase: ["package_resolution_failed", "export_path_failed", "unsupported_builtin"].includes(
-      classification,
-    )
+    phase: [
+      "package_resolution_failed",
+      "export_path_failed",
+      "unsupported_builtin",
+      "optional_peer_missing",
+    ].includes(classification)
       ? "module_resolution"
       : "module_evaluation",
-    origin: "package",
+    origin: optionalPeer ? "prerequisite" : "package",
     retryable: false,
     source: captured ? "captured_error_code" : "harness_observation",
-    message: sanitizeText(observation.error.message).slice(0, 1024),
+    message:
+      sanitizeText(observation.error.message).slice(0, 1024) ||
+      "The runtime reported a loading failure without a captured error message. Its cause is unknown.",
+    ...(optionalPeer ? { optionalPeer } : {}),
   };
 }
 
@@ -69,12 +79,13 @@ export function classifyStop(reason: StopReason): NormalizedFailure {
 
 export function classifyDiagnostic(
   value: unknown,
-  fallback: FailureClassification = "runner_unavailable",
+  fallback: Exclude<FailureClassification, "optional_peer_missing"> = "runner_unavailable",
 ): NormalizedFailure {
   const record =
     value !== null && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const parsed = failureClassificationSchema.safeParse(record.classification);
-  const classification = parsed.success ? parsed.data : fallback;
+  const classification =
+    parsed.success && parsed.data !== "optional_peer_missing" ? parsed.data : fallback;
   const prerequisite = [
     "install_script_required",
     "native_compilation_required",

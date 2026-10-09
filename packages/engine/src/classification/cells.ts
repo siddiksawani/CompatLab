@@ -6,6 +6,7 @@ import type {
   ReportCell,
 } from "@compatlab/contracts";
 import { classifyLoad, classifyStop } from "./failures.js";
+import type { OptionalPeerContext } from "./optional-peers.js";
 import { displayIdentifier, sanitizeText } from "./text.js";
 
 export function combineOutcomes(values: readonly CompatibilityOutcome[]): CompatibilityOutcome {
@@ -31,6 +32,7 @@ export function classifyCell(input: {
   entries: readonly string[] | null;
   evidence: ProbeGroupResult | null;
   failure: NormalizedFailure | null;
+  optionalPeers?: OptionalPeerContext;
 }): ReportCell {
   const { evidence } = input;
   const observations = new Map(evidence?.observations.map((entry) => [entry.index, entry]));
@@ -47,13 +49,16 @@ export function classifyCell(input: {
     const observation = observations.get(index);
     const error =
       observation?.outcome === "fail"
-        ? classifyLoad(observation, input.mode)
+        ? classifyLoad(observation, input.mode, input.optionalPeers)
         : (interruptions.get(index) ?? null);
     return {
       index,
       specifier,
       displaySpecifier: displayIdentifier(specifier),
-      outcome: observation?.outcome ?? (error ? failureOutcome(error) : ("inconclusive" as const)),
+      outcome:
+        error?.origin === "prerequisite"
+          ? ("inconclusive" as const)
+          : (observation?.outcome ?? (error ? failureOutcome(error) : ("inconclusive" as const))),
       durationMs: observation?.durationMs ?? null,
       resolvedTo: observation?.resolvedTo ? sanitizeText(observation.resolvedTo) : null,
       failure: error,
@@ -61,6 +66,9 @@ export function classifyCell(input: {
   });
   const passed = evidence?.observations.filter((entry) => entry.outcome === "pass").length ?? 0;
   const failed = evidence?.observations.filter((entry) => entry.outcome === "fail").length ?? 0;
+  const prerequisiteLimited = entries.filter(
+    (entry) => entry.failure?.classification === "optional_peer_missing",
+  ).length;
   const inapplicable = input.entries !== null && input.entries.length === 0;
   const complete = inapplicable || (!failure && !!evidence?.coverage.complete);
   const outcome = inapplicable
@@ -87,6 +95,7 @@ export function classifyCell(input: {
       observed: passed + failed,
       passed,
       failed,
+      prerequisiteLimited,
       interrupted: evidence?.coverage.interrupted ?? 0,
       untested:
         input.entries === null

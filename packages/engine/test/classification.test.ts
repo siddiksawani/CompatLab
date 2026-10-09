@@ -9,6 +9,7 @@ import {
   classifyStop,
   combineOutcomes,
   failureOutcome,
+  optionalPeerContext,
   sanitizeText,
 } from "../src/index.js";
 
@@ -70,7 +71,7 @@ function group(outcomes: readonly ("pass" | "fail")[]): ProbeGroupResult {
       : [],
   };
 }
-function cell(evidence: ProbeGroupResult) {
+function cell(evidence: ProbeGroupResult, optionalPeers?: ReadonlyMap<string, string>) {
   return classifyCell({
     runId: randomUUID(),
     profileId: evidence.profileId,
@@ -79,9 +80,38 @@ function cell(evidence: ProbeGroupResult) {
     entries: evidence.entries,
     evidence,
     failure: null,
+    ...(optionalPeers ? { optionalPeers } : {}),
   });
 }
 describe("versioned evidence classification", () => {
+  it("separates prerequisite-limited compatibility from retained loading failures", () => {
+    const evidence = group(["pass", "fail", "fail"]);
+    const context = optionalPeerContext(
+      "fixture",
+      {
+        name: "fixture",
+        peerDependencies: { renderer: "^1" },
+        peerDependenciesMeta: { renderer: { optional: true } },
+      },
+      ["node_modules/fixture"],
+    );
+    const observation = evidence.observations[1];
+    if (observation?.outcome !== "fail") throw new Error("Missing fixture failure.");
+    observation.error = {
+      name: "Error",
+      message: "Cannot find module 'renderer'",
+      code: "MODULE_NOT_FOUND",
+    };
+    const original = structuredClone(evidence);
+    const result = cell(evidence, context);
+    expect(result).toMatchObject({
+      outcome: "inconclusive",
+      evidenceLevel: "smoke_tested",
+      coverage: { passed: 1, failed: 2, prerequisiteLimited: 1, observed: 3, complete: true },
+    });
+    expect(result.entries.map((entry) => entry.outcome)).toEqual(["pass", "inconclusive", "fail"]);
+    expect(evidence).toEqual(original);
+  });
   it.each([
     ["ERR_MODULE_NOT_FOUND", "package_resolution_failed", "module_resolution"],
     ["ERR_PACKAGE_PATH_NOT_EXPORTED", "export_path_failed", "module_resolution"],

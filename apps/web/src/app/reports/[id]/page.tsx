@@ -6,7 +6,8 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Copy } from "../../../components/copy";
 import { Evidence } from "../../../components/evidence";
-import { labels, observedDate, packageUrl } from "../../../components/labels";
+import { FailureDetails } from "../../../components/failure-details";
+import { coverageSummary, labels, observedDate, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { SectionNavigation } from "../../../components/section-navigation";
 import { pageMetadata } from "../../../server/metadata";
@@ -119,6 +120,21 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           This is loading evidence. It does not establish functional correctness or package safety.
         </p>
       </div>
+      {report.cells.some((cell) => (cell.coverage.prerequisiteLimited ?? 0) > 0) && (
+        <aside className="notice warning" aria-label="Optional peer requirements">
+          <strong>Some checks need optional peer dependencies</strong>
+          <p>
+            The affected entries could not load because an optional peer was absent from this
+            snapshot. Those compatibility results are inconclusive. The failed loading observations
+            remain in the evidence; other unexplained failures remain separate.
+          </p>
+          <p>
+            Optional peers are not installed automatically. Install the declared peer when using the
+            affected feature in your application, then test that feature. This report does not
+            establish whether adding it makes the feature work.
+          </p>
+        </aside>
+      )}
       <SectionNavigation
         sections={[
           { id: "runtime-matrix", label: "Runtime matrix" },
@@ -153,14 +169,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             scripts disabled
           </p>
         </div>
-        {report.preparation.failure && (
-          <p className="failure-text">
-            <code>{report.preparation.failure.classification}</code> ·{" "}
-            {report.preparation.failure.phase.replaceAll("_", " ")}
-            <br />
-            {report.preparation.failure.message}
-          </p>
-        )}
+        {report.preparation.failure && <FailureDetails failure={report.preparation.failure} />}
+        <p className="fine">
+          The omitted count covers locked optional dependencies. Optional peers are separate and are
+          not automatically installed.
+        </p>
         <details>
           <summary>Static manifest, native and script observations</summary>
           <p className="fine">
@@ -197,18 +210,16 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             </summary>
             <div className="detail-content">
               <p>
-                {cell.coverage.passed} passed · {cell.coverage.failed} failed ·{" "}
-                {cell.coverage.interrupted} interrupted · {cell.coverage.untested ?? "unknown"}{" "}
-                untested of {cell.coverage.planned ?? "unknown"} planned
+                {coverageSummary(cell.coverage)} · {cell.coverage.observed} observed of{" "}
+                {cell.coverage.planned ?? "unknown"} planned
               </p>
-              {cell.failure && (
-                <p className="failure-text">
-                  <code>{cell.failure.classification}</code> ·{" "}
-                  {cell.failure.phase.replaceAll("_", " ")}
-                  <br />
-                  {cell.failure.message}
+              {(cell.coverage.prerequisiteLimited ?? 0) > 0 && (
+                <p className="fine">
+                  Missing optional peers explain {cell.coverage.prerequisiteLimited} of{" "}
+                  {cell.coverage.failed} recorded failed load attempts.
                 </p>
               )}
+              {cell.failure && <FailureDetails failure={cell.failure} />}
               {cell.runId ? (
                 <Evidence reportId={report.id} runId={cell.runId} />
               ) : (

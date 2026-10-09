@@ -7,7 +7,7 @@ import { stopReasonSchema } from "./probes.js";
 import { runtimeMatrixSchema } from "./runtime.js";
 import { compatibilityOutcomeSchema } from "./vocabulary.js";
 
-export const CLASSIFIER_REVISION = "classifier_v1";
+export const CLASSIFIER_REVISION = "classifier_v2";
 export const failureClassificationSchema = z.enum([
   "package_not_found",
   "package_version_not_found",
@@ -24,6 +24,7 @@ export const failureClassificationSchema = z.enum([
   "native_compilation_required",
   "preparation_limit_exceeded",
   "package_resolution_failed",
+  "optional_peer_missing",
   "esm_import_failed",
   "commonjs_require_failed",
   "export_path_failed",
@@ -61,32 +62,51 @@ export const evidencePhaseSchema = z.enum([
   "probe_assertion",
   "teardown",
 ]);
-export const normalizedFailureSchema = z.strictObject({
-  classification: failureClassificationSchema,
-  phase: evidencePhaseSchema,
-  origin: z.enum(["package", "prerequisite", "policy", "infrastructure", "assertion"]),
-  retryable: z.boolean(),
-  source: z.enum([
-    "captured_error_code",
-    "harness_observation",
-    "supervisor",
-    "preparation",
-    "control",
-  ]),
-  message: z.string().max(1024),
-});
+export const normalizedFailureSchema = z
+  .strictObject({
+    classification: failureClassificationSchema,
+    phase: evidencePhaseSchema,
+    origin: z.enum(["package", "prerequisite", "policy", "infrastructure", "assertion"]),
+    retryable: z.boolean(),
+    source: z.enum([
+      "captured_error_code",
+      "harness_observation",
+      "supervisor",
+      "preparation",
+      "control",
+    ]),
+    message: z.string().max(1024),
+    optionalPeer: z
+      .strictObject({ name: z.string().min(1).max(214), range: z.string().min(1).max(256) })
+      .optional(),
+  })
+  .refine(
+    (failure) =>
+      failure.classification === "optional_peer_missing"
+        ? failure.optionalPeer !== undefined &&
+          failure.origin === "prerequisite" &&
+          failure.phase === "module_resolution" &&
+          !failure.retryable
+        : failure.optionalPeer === undefined,
+    { message: "Optional-peer context must describe a missing prerequisite." },
+  );
 export type NormalizedFailure = z.infer<typeof normalizedFailureSchema>;
 export type FailureClassification = z.infer<typeof failureClassificationSchema>;
 const count = z.number().int().nonnegative().max(512);
-export const reportCoverageSchema = z.strictObject({
-  planned: count.nullable(),
-  observed: count,
-  passed: count,
-  failed: count,
-  interrupted: count,
-  untested: count.nullable(),
-  complete: z.boolean(),
-});
+export const reportCoverageSchema = z
+  .strictObject({
+    planned: count.nullable(),
+    observed: count,
+    passed: count,
+    failed: count,
+    prerequisiteLimited: count.optional(),
+    interrupted: count,
+    untested: count.nullable(),
+    complete: z.boolean(),
+  })
+  .refine((coverage) => (coverage.prerequisiteLimited ?? 0) <= coverage.failed, {
+    message: "Prerequisite-limited checks must be a subset of failed loading observations.",
+  });
 export const reportCellSchema = z.strictObject({
   runId: z.uuid().nullable(),
   profileId: z.string().max(64),

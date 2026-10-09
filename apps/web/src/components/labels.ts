@@ -10,7 +10,11 @@ export const labels: Record<CompatibilityOutcome, string> = {
   infrastructure_error: "Service error",
 };
 export function coverageSummary(coverage: HostedReport["cells"][number]["coverage"]) {
-  const counts = [`${coverage.passed} passed`, `${coverage.failed} failed`];
+  const limited = coverage.prerequisiteLimited ?? 0;
+  const counts = [`${coverage.passed} passed`];
+  if (!limited || coverage.failed > limited) counts.push(`${coverage.failed - limited} failed`);
+  if (limited)
+    counts.push(limited === 1 ? "1 needs an optional peer" : `${limited} need optional peers`);
   if (coverage.interrupted) counts.push(`${coverage.interrupted} interrupted`);
   if (coverage.untested) counts.push(`${coverage.untested} untested`);
   if (!coverage.complete && !coverage.untested) counts.push("coverage limited");

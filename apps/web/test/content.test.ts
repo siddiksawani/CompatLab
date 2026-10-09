@@ -40,6 +40,12 @@ it("separates mixed outcomes from incomplete coverage", () => {
     complete: true,
   };
   expect(coverageSummary(complete)).toBe("12 passed · 2 failed");
+  expect(coverageSummary({ ...complete, prerequisiteLimited: 2 })).toBe(
+    "12 passed · 2 need optional peers",
+  );
+  expect(coverageSummary({ ...complete, prerequisiteLimited: 1 })).toBe(
+    "12 passed · 1 failed · 1 needs an optional peer",
+  );
   expect(
     coverageSummary({
       ...complete,

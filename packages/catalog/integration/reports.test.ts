@@ -131,6 +131,60 @@ async function aggregate(scanId: string) {
   return envelope;
 }
 describe("immutable report classification", () => {
+  it("uses retained preparation metadata to explain optional peers without changing raw observations", async () => {
+    const { scan } = await execution({
+      manifest: {
+        exports: { ".": "./index.js", "./util": "./util.js", "./server": "./server.js" },
+        peerDependencies: { renderer: "^2" },
+        peerDependenciesMeta: { renderer: { optional: true } },
+      },
+      mutate(job, evidence) {
+        if (job.group !== "subpaths") return;
+        evidence.observations[1] = {
+          index: 1,
+          outcome: "fail",
+          durationMs: 1,
+          resolvedTo: null,
+          error: {
+            name: "Error",
+            code: "MODULE_NOT_FOUND",
+            message: "Cannot find module 'renderer'",
+          },
+        };
+      },
+    });
+    const raw = await catalog.db.select().from(schema.runs);
+    const prep = await catalog.db.select().from(schema.preparations);
+    const jobs = await catalog.db.select().from(schema.jobs);
+    const { report } = await aggregate(scan.scanId);
+    expect(report).toMatchObject({ outcome: "inconclusive", coverageComplete: true });
+    const subpaths = report.cells.filter((cell) => cell.group === "subpaths");
+    expect(subpaths).toHaveLength(8);
+    for (const cell of subpaths) {
+      expect(cell).toMatchObject({
+        outcome: "inconclusive",
+        coverage: { observed: 2, passed: 1, failed: 1, prerequisiteLimited: 1, complete: true },
+        failure: {
+          classification: "optional_peer_missing",
+          origin: "prerequisite",
+          optionalPeer: { name: "renderer", range: "^2" },
+        },
+      });
+      expect(cell.entries[1]?.outcome).toBe("inconclusive");
+    }
+    expect(
+      report.cells.filter((cell) => cell.group === "root").every((cell) => cell.outcome === "pass"),
+    ).toBe(true);
+    expect(await catalog.db.select().from(schema.runs)).toEqual(raw);
+    expect(await catalog.db.select().from(schema.preparations)).toEqual(prep);
+    expect((await catalog.db.select().from(schema.jobs)).map((job) => job.id).sort()).toEqual(
+      jobs.map((job) => job.id).sort(),
+    );
+    const [preview] = await discoverReportPreviews(catalog.db, [report.artifact.name]);
+    expect(
+      preview?.cells.find((cell) => cell.group === "subpaths")?.coverage.prerequisiteLimited,
+    ).toBe(1);
+  });
   it("serves bounded previews from current evidence and withdraws invalidated or quarantined results", async () => {
     const first = await execution({ name: "preview-fixture" });
     const { report } = await aggregate(first.scan.scanId);
@@ -394,7 +448,7 @@ describe("immutable report classification", () => {
     await catalog.db.insert(schema.reports).values({
       id: previousId,
       scanId: scan.scanId,
-      classifierRevision: "classifier_v0",
+      classifierRevision: "classifier_v1",
       payload: { historical: true },
       invalidatedAt: new Date(),
       invalidationReason: "Faulty retained evidence.",
