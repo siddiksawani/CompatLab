@@ -222,8 +222,13 @@ export function createEvidenceMcp(options: Options) {
         return httpError(405, "method_not_allowed", { allow: "GET, POST, DELETE" });
       if (requests >= 8) return httpError(503, "busy", { "retry-after": "2" });
       requests++;
+      const bodyController = new AbortController();
       try {
-        const bodySignal = AbortSignal.any([request.signal, AbortSignal.timeout(10_000)]);
+        const bodySignal = AbortSignal.any([
+          request.signal,
+          bodyController.signal,
+          AbortSignal.timeout(10_000),
+        ]);
         const bodyOptions = request.body
           ? {
               body: request.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>(), {
@@ -243,6 +248,7 @@ export function createEvidenceMcp(options: Options) {
         options.onError();
         return httpError(503, "temporarily_unavailable", { "retry-after": "5" });
       } finally {
+        bodyController.abort();
         requests--;
       }
     },

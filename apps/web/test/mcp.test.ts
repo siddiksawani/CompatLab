@@ -368,6 +368,20 @@ it("does not disguise invalid or oversized upstream data as missing evidence", a
   ).toBe(true);
 });
 
+it("cancels unread request bodies when the protocol rejects their content type", async () => {
+  const { handler, read } = setup();
+  const cancel = vi.fn();
+  const init = {
+    method: "POST",
+    headers: { "content-type": "text/plain" },
+    body: new ReadableStream<Uint8Array>({ cancel }),
+    duplex: "half" as const,
+  };
+  expect((await handler.fetch(new Request(`${origin}/mcp`, init))).status).toBe(415);
+  await vi.waitFor(() => expect(cancel).toHaveBeenCalledOnce());
+  expect(read).not.toHaveBeenCalled();
+});
+
 it("keeps registry metadata aligned with the actual anonymous remote server", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../../../server.json", import.meta.url), "utf8"),
