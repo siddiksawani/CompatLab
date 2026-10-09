@@ -1,6 +1,60 @@
 import { expect, test } from "@playwright/test";
 import { expectResponsiveLayout, finish, fixture, requestScan } from "./helpers.js";
 
+test("MCP reads the same retained evidence without creating execution work", async ({
+  page,
+  request,
+}) => {
+  const { scanId } = await (await fixture(request, "earlier-environment")).json();
+  await page.goto(`/scans/${scanId}`);
+  await finish(page, request);
+  const reportId = new URL(page.url()).pathname.split("/").at(-1);
+  const before = await (await fixture(request, "counts")).json();
+  const call = async (method: string, params: Record<string, unknown>) => {
+    const response = await request.post("/mcp", {
+      headers: {
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-11-25",
+      },
+      data: { jsonrpc: "2.0", id: 1, method, params },
+    });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toContain("no-store");
+    const body = await response.text();
+    const json = body.startsWith("event:")
+      ? body
+          .split("\n")
+          .find((line) => line.startsWith("data: "))
+          ?.slice(6)
+      : body;
+    return JSON.parse(json ?? "{}").result;
+  };
+  const initialized = await call("initialize", {
+    protocolVersion: "2025-11-25",
+    capabilities: {},
+    clientInfo: { name: "browser-qualification", version: "1.0.0" },
+  });
+  expect(initialized.serverInfo.name).toBe("compatlab");
+  const lookup = await call("tools/call", {
+    name: "check_package",
+    arguments: { name: "compatlab-browser-fixture", version: "1.0.0" },
+  });
+  expect(lookup.isError).not.toBe(true);
+  expect(lookup.structuredContent.matchesCurrentMatrix).toBe(false);
+  const direct = await call("tools/call", { name: "get_report", arguments: { id: reportId } });
+  const summary = await (await request.get(`/api/v1/reports/${reportId}/summary`)).json();
+  expect(direct.structuredContent.report).toEqual(summary);
+  expect(lookup.structuredContent.report).toEqual(summary);
+  await page.goto("/api#mcp");
+  await expect(page.getByRole("heading", { name: "Connect an MCP client" })).toBeVisible();
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  const denied = await request.post("/mcp", {
+    headers: { origin: "https://untrusted.example" },
+    data: { jsonrpc: "2.0", id: 2, method: "tools/list" },
+  });
+  expect(denied.status()).toBe(403);
+});
+
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
 });

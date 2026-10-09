@@ -42,7 +42,9 @@ The application renders Markdown itself. Keep Caddy's `no-transform` protection 
 
 Content Signals in `robots.txt` and response headers allow search and AI answers, and decline model training: `search=yes, ai-input=yes, ai-train=no`. These are published preferences, not a guarantee that crawlers comply or a substitute for authorization.
 
-Use [Is It Agent Ready](https://isitagentready.com/compatlab.me) after deployment to verify discovery, Markdown, robot rules and content signals. Its score also checks optional protocols. CompatLab does not implement OAuth, agent registration (`auth.md`), MCP, A2A, WebMCP, Agent Skills, DNS-AID or agent commerce; do not publish placeholder metadata to claim support. Add a protocol only with its real endpoint, behavior, security review and tests. A scanner score is not a security or execution qualification.
+The [read-only MCP endpoint](mcp.md) at `/mcp` exposes `check_package` and `get_report` over the same validated public evidence. The API guide and `llms.txt` give its connection URL and citation rules. It adds no scan operation, credentials or private access. The registry manifest describes the actual hosted endpoint; publication requires production client qualification.
+
+Use [Is It Agent Ready](https://isitagentready.com/compatlab.me) after deployment to verify discovery, Markdown, robot rules and content signals. Its score also checks optional protocols. CompatLab does not implement OAuth, agent registration (`auth.md`), A2A, WebMCP, Agent Skills, DNS-AID or agent commerce; do not publish placeholder metadata to claim support. Add a protocol only with its real endpoint, behavior, security review and tests. A scanner score is not a security or execution qualification.
 
 References: [API catalogs, RFC 9727](https://www.rfc-editor.org/rfc/rfc9727), [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html), [Markdown negotiation](https://developers.cloudflare.com/fundamentals/reference/markdown-for-agents/), [Content Signals](https://contentsignals.org/).
 
