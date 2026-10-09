@@ -337,9 +337,39 @@ async function qualifyReuse() {
   await mkdir(state, { mode: 0o700 });
   const artifact = await new RegistryClient().resolve("is-number", "7.0.0");
   const snapshot = await prepareArtifact(artifact, join(state, "snapshots"));
-  const reopened = await reuseSnapshot(snapshot.id, join(state, "snapshots"), artifact);
-  assert.equal(reopened.workspace, snapshot.workspace);
-  assert.equal(reopened.generation, snapshot.generation);
+  await command("umount", [join(snapshot.directory, "volume")]);
+  const restarted = await ExecutionSupervisor.open(state);
+  try {
+    assert.deepEqual(await restarted.snapshotInventory(), [snapshot.id]);
+    await restarted.withScan(async (scanId) => {
+      const reopened = await reuseSnapshot(snapshot.id, join(state, "snapshots"), artifact);
+      assert.equal(reopened.workspace, snapshot.workspace);
+      assert.equal(reopened.generation, snapshot.generation);
+      assert.equal(reopened.tree.digest, snapshot.tree.digest);
+      const backend = await restarted.backend(reopened, images, scanId);
+      for (const image of images) {
+        const result = await backend.run(
+          {
+            schemaVersion: 2,
+            probeId: randomUUID(),
+            mode: "commonjs",
+            group: "root",
+            entries: ["is-number"],
+            startIndex: 0,
+          },
+          image,
+          AbortSignal.timeout(60_000),
+        );
+        assert.equal(result.stopReason, "completed", JSON.stringify(result));
+        assert.equal(result.checkpoint.observations[0].outcome, "pass", JSON.stringify(result));
+      }
+    });
+  } finally {
+    await restarted.close();
+  }
+  process.stdout.write(
+    "Sealed snapshot mounts restored before readiness and loaded in every runtime\n",
+  );
   await collectSnapshots(state, new Set([snapshot.id]));
   assert.equal((await inspectTree(snapshot.workspace)).digest, snapshot.tree.digest);
   const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);

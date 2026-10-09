@@ -43,6 +43,8 @@ The stopped tree is inspected without following untrusted files into host paths.
 
 The volume is remounted read-only before returning a snapshot. The snapshot has a random immutable generation, the exact lock digest, installer/profile/platform identity, and a tree digest. A reuse request names a retained snapshot explicitly; it verifies the read-only mount and both digests and returns the same generation and workspace. It does not reinstall packages. An unavailable snapshot cannot silently turn into a new generation under the old identity.
 
+After a host restart, a retained backing file may exist without its loop mount. Reuse validates the backing file and mount directory, restores the volume read-only without journal replay, and checks the same digests. Concurrent reuse requests share that restoration. Unsafe files and existing mounts with changed policies fail closed; recovery never repairs them by enabling writes.
+
 Local metadata lives outside the sealed filesystem and is readable only by the supervisor. Filesystem operations and Docker arguments are internal worker interfaces; they are not public request payloads. Persistent catalog ownership and durable job authorization arrive in slices 07 and 08.
 
 Profile `npm_11_19_0_linux_amd64_v2` reserves an empty `.compatlab` directory in the consumer for the read-only harness mount. It is included in tree verification. Snapshots from the earlier layout require fresh preparation; they cannot be reused under this profile.
@@ -55,7 +57,7 @@ On a disposable Linux amd64 execution host with runsc, after `pnpm build`:
 sudo "$(command -v node)" scripts/preparation-smoke.mjs
 ```
 
-The suite pulls the pinned installer and proxy, verifies npm's version, prepares a small public artifact without loading it, reopens its actual snapshot, and attempts writes through two independent read-only mounts. Authored archives exercise root/transitive/bundled lifecycle sentinels, aliases, platform-omitted optional dependencies, traversal and symlink handling, compression-ratio rejection, expanded bytes, inode exhaustion, traffic quota exhaustion, a container OOM kill, proxy source isolation, and npm integrity rejection. Fixture tarballs are seeded into a private cache by npm inside runsc; no archive is extracted on the developer host.
+The suite pulls the pinned installer and proxy, verifies npm's version, prepares a small public artifact without loading it, restores its missing mount through concurrent reuse, and attempts writes through two independent read-only mounts. It rejects writable or symlinked backing files, corrupt metadata and changed mount policies. Authored archives exercise root/transitive/bundled lifecycle sentinels, aliases, platform-omitted optional dependencies, traversal and symlink handling, compression-ratio rejection, expanded bytes, inode exhaustion, traffic quota exhaustion, a container OOM kill, proxy source isolation, and npm integrity rejection. Fixture tarballs are seeded into a private cache by npm inside runsc; no archive is extracted on the developer host.
 
 Unit tests separately cover lock policy, safe file reads, tree inspection, stream limits, and cancellation. These tests supplement the Linux suite; they do not replace it or certify the full worker boundary.
 

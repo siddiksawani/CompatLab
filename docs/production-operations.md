@@ -88,4 +88,6 @@ Run `sudo python3 /opt/compatlab/current/infra/health.py test` for an alert test
 
 Docker restart policies, `compatlab-stack.service`, WireGuard units, VM/network autostart, the worker unit and timers restore services after restart. Test the VM and project services without rebooting the shared hosts. Shared-host reboots require an agreed maintenance window. Log rotation applies only to project containers; no global journald settings are changed.
 
+The worker restores retained snapshot mounts before reporting its ready inventory. Restart verification must include an actual scan using a retained snapshot, not only a heartbeat: its original generation and lock/tree digests must remain unchanged and runtime jobs must complete. Missing or unsafe backing files are not repaired by reinstalling under the old identity. If recovery fails, keep admission paused, inspect `journalctl -u compatlab-worker`, and preserve the affected snapshot files for diagnosis.
+
 Release directories and images are retained for diagnosis and rollback. Inspect disk usage regularly. Remove an obsolete release only after checking it is neither `current`, `previous`, nor the installed `worker-release`; remove only its known project image digests. Never run a shared-host `docker system prune`.
