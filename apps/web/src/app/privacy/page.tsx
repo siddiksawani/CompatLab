@@ -32,6 +32,16 @@ export default function Privacy() {
         filters request details from proxy errors. There is no advertising or browser analytics
         integration.
       </p>
+      <p>
+        For successful package-version lookups, we retain the public package name, exact version,
+        UTC day and whether current, earlier or no eligible evidence was available. Repeated lookups
+        of the same package, version and availability count at most once per ten-minute window
+        across all visitors. These totals include automated clients and are not visitor or
+        unique-user counts. We store no address, cookie, user agent, referrer or search text with
+        them. Collection is best effort, capped at 1,000 package/version/availability rows per day,
+        and expires after 30 UTC days. Viewing evidence never submits a scan; an operator reviews
+        missing evidence before adding packages to the separate coverage queue.
+      </p>
       <h2 id="retention">Retention</h2>
       <ul>
         <li>

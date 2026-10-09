@@ -11,6 +11,12 @@ GRANT UPDATE (observed_tags,tags_observed_at,integrity_anomaly) ON package_versi
 GRANT INSERT ON jobs,runs,reports,audit_events TO compatlab_control;
 GRANT UPDATE ON workers,preparations,scans,jobs,runs,reports TO compatlab_control;
 GRANT DELETE ON audit_events TO compatlab_control;
+GRANT SELECT,INSERT,UPDATE ON lookup_demand TO compatlab_web;
+GRANT DELETE ON lookup_demand TO compatlab_control,compatlab_operator;
+GRANT INSERT,UPDATE ON coverage_targets TO compatlab_operator;
+GRANT UPDATE ON coverage_targets TO compatlab_control;
+GRANT INSERT ON packages,package_versions,preparations,scans TO compatlab_control;
+GRANT UPDATE (observed_tags,tags_observed_at,integrity_anomaly) ON package_versions TO compatlab_control;
 GRANT SELECT ON worker_availability TO compatlab_web;
 GRANT INSERT,UPDATE ON worker_availability TO compatlab_control,compatlab_operator;
 GRANT DELETE ON worker_availability TO compatlab_operator;
@@ -73,7 +79,7 @@ REVOKE ALL ON FUNCTION public.audit_operator_mutation() FROM PUBLIC;
 DO $$
 DECLARE relation text;
 BEGIN
-  FOREACH relation IN ARRAY ARRAY['packages','package_versions','preparations','runtime_images','matrices','matrix_members','scans','jobs','workers','blocks','runs','reports','service_controls'] LOOP
+  FOREACH relation IN ARRAY ARRAY['packages','package_versions','preparations','runtime_images','matrices','matrix_members','scans','jobs','workers','blocks','runs','reports','service_controls','coverage_targets'] LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS operator_mutation_audit ON public.%I',relation);
     EXECUTE format('CREATE TRIGGER operator_mutation_audit AFTER INSERT OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.audit_operator_mutation()',relation);
   END LOOP;

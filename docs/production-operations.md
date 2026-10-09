@@ -111,3 +111,64 @@ Docker restart policies, `compatlab-stack.service`, WireGuard units, VM/network 
 The worker restores retained snapshot mounts before reporting its ready inventory. Restart verification must include an actual scan using a retained snapshot, not only a heartbeat: its original generation and lock/tree digests must remain unchanged and runtime jobs must complete. Missing or unsafe backing files are not repaired by reinstalling under the old identity. If recovery fails, keep admission paused, inspect `journalctl -u compatlab-worker`, and preserve the affected snapshot files for diagnosis.
 
 Release directories and images are retained for diagnosis and rollback. Inspect disk usage regularly. Remove an obsolete release only after checking it is neither `current`, `previous`, nor the installed `worker-release`; remove only its known project image digests. Never run a shared-host `docker system prune`.
+
+
+## Lookup demand and curated coverage
+
+`sudo compatlab-admin lookup-demand` returns the top 100 package/version/availability
+combinations over the last 30 UTC days. A lookup window is a ten-minute period in
+which the package-version API returned current, earlier or no eligible evidence.
+The same combination counts once per window across all clients and replicas.
+These are best-effort demand signals, including crawlers, operators and repeated
+visitors, not requests, people or unique users. HEAD, free-text searches, errors,
+and direct report/page views are not counted. No client identifier, user agent,
+address, cookie, referrer or search text is recorded. Daily cardinality is capped
+at 1,000 rows; maintenance removes expired daily records in bounded batches.
+
+Review missing-evidence demand before changing coverage. There is no automatic
+lookup-to-scan path. The curator chooses exact versions in a small JSON array:
+
+```json
+[{"name":"express","version":"5.2.1"}]
+```
+
+On the VPS, using the current matrix ID from the release manifest:
+
+```sh
+sudo compatlab-admin coverage-add MATRIX_UUID /path/to/reviewed-targets.json --reason 'Initial curated coverage'
+sudo compatlab-admin coverage-status
+sudo compatlab-admin coverage-resume --reason 'Run the reviewed coverage targets while idle'
+sudo compatlab-admin coverage-pause --reason 'Reserve execution for public traffic'
+sudo compatlab-admin coverage-skip TARGET_UUID --reason 'Retire a pending target after review'
+```
+
+Start with 20–50 relevant packages, not thousands. Each import accepts at most 50
+exact versions and the durable queue holds at most 200 pending/submitted targets.
+Importing the same package/version/matrix twice does not create duplicate work.
+Adding targets does not resume the queue. The control process checks it once a
+minute; database state survives restarts. Registry reads have a five-second overall
+limit, retry at most three times on transient errors, and never execute packages.
+The existing qualified worker is the only execution host.
+
+Coverage admits at most one scan while no other scan or cleanup is active. It uses
+the ordinary blocks, immutable matrix, artifact integrity, duplicate suppression,
+worker-outage, deployment, cooldown and admission quotas, including ten new scans
+per hour shared by all coverage targets. Public jobs sort ahead of coverage jobs.
+A running job is not preempted: public work can still wait for that bounded job,
+and prolonged foreground load can exhaust the coverage scan's normal deadline.
+Pausing stops new coverage admission; use the existing audited cancel command if
+a specific active scan also needs to stop. Completed includes inconclusive reports;
+inspect the report outcome and coverage before drawing conclusions. Terminal
+package failures are not automatically rescanned; infrastructure failures and
+blocked targets require operator inspection.
+
+Targets stay attached to their approved matrix. After a runtime matrix change,
+review pending targets and worker compatibility before resuming. Older reports
+remain discoverable. Do not enable maintainer accounts or their monitoring service
+for this queue. Expand the corpus only after useful demand and operational capacity
+justify it.
+
+The initial [20-package pilot](qualification/coverage-pilot.json) pins versions
+resolved from npm on October 9, 2026. It covers HTTP servers and clients, validation,
+UI libraries, utilities, logging and native prerequisites. This is a curated
+starting set, not a download ranking or a claim that every package will pass.

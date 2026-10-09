@@ -58,7 +58,7 @@ export async function claimJob(
             AND prep.snapshot_id IS NOT NULL AND ${JSON.stringify(caps.imageDigests)}::jsonb ? ri.image_digest
             AND (SELECT count(*) FROM jobs busy JOIN runs br ON br.id=busy.run_id WHERE busy.state IN ('leased','running') AND br.image_id=r.image_id) < ${SCHEDULER_POLICY.perImage})
         )
-      ORDER BY (SELECT count(*) FROM jobs busy WHERE busy.scan_id=s.id AND busy.state IN ('leased','running')), s.requested_at,j.created_at,j.id
+      ORDER BY (s.source='coverage'), (SELECT count(*) FROM jobs busy WHERE busy.scan_id=s.id AND busy.state IN ('leased','running')), s.requested_at,j.created_at,j.id
       LIMIT 1 FOR UPDATE OF j SKIP LOCKED`)
     ).rows[0];
     if (!selected) return null;

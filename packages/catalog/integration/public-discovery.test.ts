@@ -115,6 +115,42 @@ async function counts() {
   ).rows;
 }
 
+it("measures successful selected-package GETs without counting HEAD or search results", async () => {
+  await catalog.pool.query("TRUNCATE lookup_demand");
+  const path = `${origin}/api/v1/packages?${new URLSearchParams({ name: source.name, version: source.version })}`;
+  expect((await api(new Request(path, { method: "HEAD" }))).status).toBe(200);
+  await api(new Request(`${origin}/api/v1/search?q=fixture`));
+  expect((await catalog.pool.query("SELECT * FROM lookup_demand")).rowCount).toBe(0);
+  await api(
+    new Request(path, {
+      headers: { "user-agent": "private-user-agent", referer: "https://private.example/secret" },
+    }),
+  );
+  expect(
+    (
+      await catalog.pool.query(
+        "SELECT package_name,version,availability,windows FROM lookup_demand",
+      )
+    ).rows,
+  ).toEqual([
+    { package_name: source.name, version: source.version, availability: "earlier", windows: 1 },
+  ]);
+  await insertReport(await insertCurrentScan("completed"));
+  await api(new Request(path));
+  await lookup("2.0.0");
+  expect(
+    (
+      await catalog.pool.query(
+        "SELECT availability,windows FROM lookup_demand ORDER BY availability",
+      )
+    ).rows,
+  ).toEqual([
+    { availability: "current", windows: 1 },
+    { availability: "earlier", windows: 1 },
+    { availability: "missing", windows: 1 },
+  ]);
+});
+
 beforeAll(async () => {
   catalog = await database();
   await migrateCatalog(catalog.pool);

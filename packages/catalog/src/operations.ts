@@ -302,6 +302,9 @@ export async function applyRetention(db: CatalogDatabase, rawActor: AdminAction)
     await tx.execute(
       sql`DELETE FROM github_deliveries WHERE id IN (SELECT id FROM github_deliveries WHERE received_at<clock_timestamp()-interval '7 days' ORDER BY received_at LIMIT 1000)`,
     );
+    await tx.execute(sql`DELETE FROM lookup_demand WHERE (day,package_name,version,availability) IN (
+      SELECT day,package_name,version,availability FROM lookup_demand
+      WHERE day<(clock_timestamp() AT TIME ZONE 'UTC')::date-29 ORDER BY day LIMIT 1000)`);
     if (Object.values(counts).some(Boolean))
       await tx
         .insert(auditEvents)

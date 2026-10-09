@@ -3,12 +3,15 @@ import { open, statfs } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { parseArgs } from "node:util";
 import {
+  addCoverageTargets,
   applyRetention,
   approveRuntime,
   auditBackup,
   blockSubject,
   cancelScan,
+  coverageStatus,
   invalidateReport,
+  lookupDemand,
   migrateCatalog,
   openCatalog,
   operationStatus,
@@ -23,15 +26,21 @@ import {
   revokeBlock,
   schema,
   setAdmissionPaused,
+  setCoveragePaused,
   setDeploymentPause,
   setMatrixEnabled,
   setWorkerGuard,
   setWorkerState,
+  skipCoverageTarget,
   updateWorkerDefinition,
 } from "@compatlab/catalog";
 import { z } from "zod";
 
 export const adminUsage = `Usage: compatlab admin status | migrate | retention
+       compatlab admin lookup-demand | coverage-status
+       compatlab admin coverage-add MATRIX_UUID targets.json
+       compatlab admin coverage-pause | coverage-resume
+       compatlab admin coverage-skip TARGET_UUID
        compatlab admin pause | resume
        compatlab admin worker-guard-enable | worker-guard-disable
        compatlab admin deployment-begin | deployment-end COMMIT
@@ -51,6 +60,12 @@ Worker registration prints its one-time token; save the output privately.
 Cancellation during preparation cancels all scans sharing that unfinished preparation.
 `;
 const counts: Record<string, number> = {
+  "lookup-demand": 0,
+  "coverage-status": 0,
+  "coverage-add": 2,
+  "coverage-pause": 0,
+  "coverage-resume": 0,
+  "coverage-skip": 1,
   status: 0,
   migrate: 0,
   retention: 0,
@@ -109,10 +124,9 @@ export async function runAdmin(
       throw new TypeError();
     if (!Object.hasOwn(counts, command) || counts[command] !== positionals.length)
       throw new TypeError();
-    reason =
-      command === "status" || command === "host-status"
-        ? "Read-only operator inspection."
-        : z.string().trim().min(1).max(1024).parse(parsed.values.reason);
+    reason = ["status", "host-status", "lookup-demand", "coverage-status"].includes(command)
+      ? "Read-only operator inspection."
+      : z.string().trim().min(1).max(1024).parse(parsed.values.reason);
   } catch {
     io.stderr(adminUsage);
     return 2;
@@ -137,6 +151,22 @@ export async function runAdmin(
       id = positionals[0] ?? "";
     let result: unknown = { ok: true };
     switch (command) {
+      case "lookup-demand":
+        result = await lookupDemand(db);
+        break;
+      case "coverage-status":
+        result = await coverageStatus(db);
+        break;
+      case "coverage-skip":
+        await skipCoverageTarget(db, id, actor);
+        break;
+      case "coverage-add":
+        result = await addCoverageTargets(db, id, await jsonFile(positionals[1] ?? ""), actor);
+        break;
+      case "coverage-pause":
+      case "coverage-resume":
+        await setCoveragePaused(db, command === "coverage-pause", actor);
+        break;
       case "status":
         result = await operationStatus(db);
         break;
