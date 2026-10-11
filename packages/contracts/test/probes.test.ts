@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { type ProbeInput, parseProbeCheckpoint, probeInputSchema } from "../src/probes.js";
+import {
+  type ProbeInput,
+  parseProbeCheckpoint,
+  probeGroupResultSchema,
+  probeInputSchema,
+} from "../src/probes.js";
 
 const input: ProbeInput = {
   schemaVersion: 2,
@@ -69,5 +74,49 @@ describe("probe checkpoints", () => {
     expect(
       probeInputSchema.safeParse({ ...input, entries: ["@scope/fixture/subpath"] }).success,
     ).toBe(true);
+  });
+});
+describe("fresh-process confirmations", () => {
+  const session = {
+    probeId: input.probeId,
+    startIndex: 0,
+    stopReason: "completed",
+    exitCode: 0,
+    oomKilled: false,
+    durationMs: 1,
+    checkpoint: null,
+    logs: {
+      stdout: "",
+      stderr: "",
+      stdoutTruncated: false,
+      stderrTruncated: false,
+      emittedBytes: 0,
+    },
+  };
+  const result = {
+    profileId: "node_24_21_0",
+    group: "subpaths",
+    mode: "esm",
+    method: "sequential_batch_v2",
+    entries: input.entries,
+    sessions: [],
+    observations: [],
+    interruptions: [],
+    coverage: { planned: 2, observed: 0, interrupted: 0, untested: 2, complete: false },
+  };
+  const confirmation = { method: "fresh_entry_v2", index: 1, session };
+  it("keeps historical results readable and labels confirmations separately", () => {
+    expect(probeGroupResultSchema.parse(result).confirmations).toBeUndefined();
+    expect(
+      probeGroupResultSchema.parse({ ...result, confirmations: [confirmation] }).confirmations,
+    ).toHaveLength(1);
+  });
+  it.each([
+    { confirmations: Array(5).fill(confirmation) },
+    { confirmations: [{ ...confirmation, method: "sequential_batch_v2" }] },
+    { confirmations: [{ ...confirmation, index: 512 }] },
+    { confirmations: [{ ...confirmation, attempt: 2 }] },
+  ])("rejects unbounded or relabeled confirmation evidence %#", (change) => {
+    expect(probeGroupResultSchema.safeParse({ ...result, ...change }).success).toBe(false);
   });
 });

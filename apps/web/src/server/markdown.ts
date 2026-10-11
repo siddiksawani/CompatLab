@@ -1,6 +1,6 @@
 import type { ReportPreview } from "@compatlab/catalog/web";
 import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
-import { coverageSummary, labels } from "../components/labels";
+import { coverageSummary, isolationLimited, labels } from "../components/labels";
 import { articles } from "../content/articles";
 import { compatibilityScope, runtimeAnswers } from "./compatibility-copy";
 
@@ -94,6 +94,11 @@ export function reportMarkdown(origin: string, { report, status }: ReportEnvelop
     ...(report.cells.some((cell) => (cell.coverage.prerequisiteLimited ?? 0) > 0)
       ? [
           "Some checks require optional peers absent from the tested snapshot. Their runtime compatibility is inconclusive. Failed loading observations are retained; adding a peer requires a separate test and does not imply success.",
+        ]
+      : []),
+    ...(report.cells.some(isolationLimited)
+      ? [
+          "Some subpath failures followed an earlier failed load in the same batch process. Up to four such entries per batch are loaded again in fresh sandboxes; the fresh result decides the entry, and entries without one are inconclusive. Batch observations are retained; their cause is not established.",
         ]
       : []),
     "Root modes use fresh sandboxes. Subpath batches share module caches and globals. Passed and failed counts are separate from planned coverage.",

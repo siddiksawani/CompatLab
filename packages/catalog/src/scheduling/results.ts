@@ -7,12 +7,18 @@ import {
   jobEvidenceBudget,
   PREPARATION_INSTALLER_IMAGE,
   type ProbeGroupResult,
+  type ProbeSession,
   parseBoundedJson,
   parseProbeCheckpoint,
   preparationClassificationSchema,
   submissionSchema,
 } from "@compatlab/contracts";
-import { parseInstalledManifest, validateLock, verifyAssertionEvidence } from "@compatlab/engine";
+import {
+  confirmationCandidates,
+  parseInstalledManifest,
+  validateLock,
+  verifyAssertionEvidence,
+} from "@compatlab/engine";
 import { eq, sql } from "drizzle-orm";
 import { allowedAssertion } from "../assertions/policy.js";
 import { probeRevisions } from "../assertions/schema.js";
@@ -213,7 +219,14 @@ async function acceptRun(
   );
   parseBoundedJson(bytes, budget.maxEvidenceBytes);
   verifyEvidence(evidence);
-  const logs = evidence.sessions.map((session) => ({ probeId: session.probeId, ...session.logs }));
+  const logs = [
+    ...evidence.sessions.map((session) => ({ probeId: session.probeId, ...session.logs })),
+    ...(evidence.confirmations ?? []).map(({ index, session }) => ({
+      probeId: session.probeId,
+      confirmedIndex: index,
+      ...session.logs,
+    })),
+  ];
   if (
     logs.reduce(
       (sum, log) => sum + Buffer.byteLength(log.stdout) + Buffer.byteLength(log.stderr),
@@ -221,12 +234,21 @@ async function acceptRun(
     ) > budget.maxLogBytes
   )
     throw new SchedulingError("invalid_result", "Run logs exceed their scan budget.");
+  const withoutLogs = (session: ProbeSession) => ({
+    ...session,
+    logs: { ...session.logs, stdout: "", stderr: "" },
+  });
   const rawEvidence = {
     ...evidence,
-    sessions: evidence.sessions.map((session) => ({
-      ...session,
-      logs: { ...session.logs, stdout: "", stderr: "" },
-    })),
+    sessions: evidence.sessions.map(withoutLogs),
+    ...(evidence.confirmations
+      ? {
+          confirmations: evidence.confirmations.map((confirmation) => ({
+            ...confirmation,
+            session: withoutLogs(confirmation.session),
+          })),
+        }
+      : {}),
   };
   await tx
     .update(runs)
@@ -305,6 +327,42 @@ export function verifyEvidence(evidence: ProbeGroupResult): void {
     !isDeepStrictEqual(coverage, evidence.coverage)
   )
     throw new SchedulingError("invalid_result", "Evidence summary differs from its checkpoints.");
+  verifyConfirmations(evidence);
+}
+function verifyConfirmations(evidence: ProbeGroupResult): void {
+  if (!evidence.confirmations) return;
+  if (evidence.group !== "subpaths")
+    throw new SchedulingError("invalid_result", "Root probes are not confirmed separately.");
+  const candidates = [...confirmationCandidates(evidence).keys()];
+  const probeIds = new Set(evidence.sessions.map((session) => session.probeId));
+  for (const [position, { index, session }] of evidence.confirmations.entries()) {
+    const specifier = evidence.entries[index];
+    if (
+      index !== candidates[position] ||
+      !specifier ||
+      session.startIndex !== 0 ||
+      probeIds.has(session.probeId)
+    )
+      throw new SchedulingError("invalid_result", "Confirmation targets an invalid entry.");
+    probeIds.add(session.probeId);
+    if (session.checkpoint)
+      parseProbeCheckpoint(Buffer.from(JSON.stringify(session.checkpoint)), {
+        schemaVersion: 2,
+        probeId: session.probeId,
+        group: evidence.group,
+        mode: evidence.mode,
+        entries: [specifier],
+        startIndex: 0,
+      });
+    if (
+      session.stopReason === "completed" &&
+      (session.exitCode !== 0 || session.oomKilled || !session.checkpoint?.completed)
+    )
+      throw new SchedulingError(
+        "invalid_result",
+        "Completion lacks a valid successful process outcome.",
+      );
+  }
 }
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);

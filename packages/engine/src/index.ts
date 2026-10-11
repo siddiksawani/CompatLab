@@ -4,6 +4,7 @@ export * from "./classification/failures.js";
 export * from "./classification/optional-peers.js";
 export * from "./classification/text.js";
 export * from "./comparison.js";
+export * from "./execution/confirmation.js";
 export * from "./execution/run.js";
 export * from "./execution/summary.js";
 export * from "./planning/observations.js";

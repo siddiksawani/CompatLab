@@ -1,6 +1,6 @@
 import type { CompatibilityOutcome, ReportSummary } from "@compatlab/contracts";
 import { combineOutcomes } from "@compatlab/engine";
-import { labels } from "../components/labels";
+import { isolationCounts, labels } from "../components/labels";
 
 export type CompatibilityEvidence = Pick<ReportSummary, "id" | "coverageComplete"> & {
   artifact: Pick<ReportSummary["artifact"], "name" | "version">;
@@ -28,13 +28,25 @@ const observations: Record<CompatibilityOutcome, string> = {
 export function loadingCounts(cells: Pick<ReportSummary["cells"][number], "coverage">[]) {
   const passed = cells.reduce((sum, cell) => sum + cell.coverage.passed, 0);
   const peers = cells.reduce((sum, cell) => sum + (cell.coverage.prerequisiteLimited ?? 0), 0);
-  const failed = cells.reduce((sum, cell) => sum + cell.coverage.failed, 0) - peers;
+  const isolation = {
+    isolationPassed: cells.reduce((sum, cell) => sum + (cell.coverage.isolationPassed ?? 0), 0),
+    isolationUnconfirmed: cells.reduce(
+      (sum, cell) => sum + (cell.coverage.isolationUnconfirmed ?? 0),
+      0,
+    ),
+  };
+  const failed =
+    cells.reduce((sum, cell) => sum + cell.coverage.failed, 0) -
+    peers -
+    isolation.isolationPassed -
+    isolation.isolationUnconfirmed;
   const interrupted = cells.reduce((sum, cell) => sum + cell.coverage.interrupted, 0);
   const untested = cells.reduce((sum, cell) => sum + (cell.coverage.untested ?? 0), 0);
   return [
     `${passed} passed`,
     `${failed} failed`,
     ...(peers ? [peers === 1 ? "1 needs an optional peer" : `${peers} need optional peers`] : []),
+    ...isolationCounts(isolation),
     ...(interrupted ? [`${interrupted} interrupted`] : []),
     ...(untested ? [`${untested} untested`] : []),
   ].join(" · ");

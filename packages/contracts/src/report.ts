@@ -7,7 +7,7 @@ import { stopReasonSchema } from "./probes.js";
 import { runtimeMatrixSchema } from "./runtime.js";
 import { compatibilityOutcomeSchema } from "./vocabulary.js";
 
-export const CLASSIFIER_REVISION = "classifier_v2";
+export const CLASSIFIER_REVISION = "classifier_v3";
 export const failureClassificationSchema = z.enum([
   "package_not_found",
   "package_version_not_found",
@@ -100,13 +100,20 @@ export const reportCoverageSchema = z
     passed: count,
     failed: count,
     prerequisiteLimited: count.optional(),
+    isolationPassed: count.optional(),
+    isolationUnconfirmed: count.optional(),
     interrupted: count,
     untested: count.nullable(),
     complete: z.boolean(),
   })
-  .refine((coverage) => (coverage.prerequisiteLimited ?? 0) <= coverage.failed, {
-    message: "Prerequisite-limited checks must be a subset of failed loading observations.",
-  });
+  .refine(
+    (coverage) =>
+      (coverage.prerequisiteLimited ?? 0) +
+        (coverage.isolationPassed ?? 0) +
+        (coverage.isolationUnconfirmed ?? 0) <=
+      coverage.failed,
+    { message: "Explained checks must be a subset of failed loading observations." },
+  );
 export const reportCellSchema = z.strictObject({
   runId: z.uuid().nullable(),
   profileId: z.string().max(64),
@@ -128,9 +135,28 @@ export const reportCellSchema = z.strictObject({
         durationMs: z.number().nonnegative().nullable(),
         resolvedTo: z.string().max(4096).nullable(),
         failure: normalizedFailureSchema.nullable(),
+        isolation: z
+          .strictObject({
+            priorFailureIndex: count,
+            batchFailure: normalizedFailureSchema,
+            confirmation: z
+              .strictObject({
+                method: z.literal("fresh_entry_v2"),
+                probeId: z.uuid(),
+                stopReason: stopReasonSchema,
+                durationMs: z.number().nonnegative(),
+              })
+              .nullable(),
+          })
+          .optional(),
       }),
     )
-    .max(512),
+    .max(512)
+    .refine(
+      (entries) =>
+        entries.every(({ index, isolation }) => !isolation || isolation.priorFailureIndex < index),
+      { message: "An isolation record must follow an earlier failed entry." },
+    ),
   sessions: z
     .array(
       z.strictObject({

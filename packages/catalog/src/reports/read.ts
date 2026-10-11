@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   assertionEvidenceSchema,
   hostedReportSchema,
+  MAX_CONFIRMATIONS,
   probeGroupResultSchema,
   probeSessionSchema,
   reproductionInputsSchema,
@@ -67,7 +68,15 @@ export async function readReport(db: CatalogReader, reportId: string) {
 }
 
 const storedLogsSchema = z.object({
-  sessions: z.array(z.object({ probeId: z.uuid(), ...probeSessionSchema.shape.logs.shape })).max(4),
+  sessions: z
+    .array(
+      z.object({
+        probeId: z.uuid(),
+        confirmedIndex: z.number().int().min(0).max(511).optional(),
+        ...probeSessionSchema.shape.logs.shape,
+      }),
+    )
+    .max(4 + MAX_CONFIRMATIONS),
 });
 export async function readReportLogs(db: CatalogDatabase, reportId: string, runId: string) {
   z.uuid().parse(reportId);

@@ -303,7 +303,7 @@ async function scanSnapshot(
       report.groups.reduce(
         (sum, g) =>
           sum +
-          g.sessions.reduce(
+          [...g.sessions, ...(g.confirmations ?? []).map((c) => c.session)].reduce(
             (n, s) => n + Buffer.byteLength(s.logs.stdout) + Buffer.byteLength(s.logs.stderr),
             0,
           ),

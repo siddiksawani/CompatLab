@@ -12,6 +12,7 @@ export const PROBE_LIMITS = {
   scanMs: 900_000,
   restarts: 3,
 } as const;
+export const MAX_CONFIRMATIONS = 4;
 export const probeGroupSchema = z.enum(["root", "subpaths"]);
 const specifierSchema = z
   .string()
@@ -105,6 +106,11 @@ export const probeSessionSchema = z.strictObject({
     emittedBytes: z.number().int().nonnegative(),
   }),
 });
+export const probeConfirmationSchema = z.strictObject({
+  method: z.literal("fresh_entry_v2"),
+  index: z.number().int().min(0).max(511),
+  session: probeSessionSchema,
+});
 export const probeGroupResultSchema = z.strictObject({
   profileId: z.string().max(64),
   group: probeGroupSchema,
@@ -112,6 +118,7 @@ export const probeGroupResultSchema = z.strictObject({
   method: z.enum(["fresh_root_v2", "sequential_batch_v2"]),
   entries: z.array(specifierSchema).max(512),
   sessions: z.array(probeSessionSchema).max(4),
+  confirmations: z.array(probeConfirmationSchema).max(MAX_CONFIRMATIONS).optional(),
   observations: z.array(loadObservationSchema).max(512),
   interruptions: z
     .array(
@@ -130,6 +137,7 @@ export const probeGroupResultSchema = z.strictObject({
   }),
 });
 export type ProbeSession = z.infer<typeof probeSessionSchema>;
+export type ProbeConfirmation = z.infer<typeof probeConfirmationSchema>;
 export type ProbeGroupResult = z.infer<typeof probeGroupResultSchema>;
 
 export function parseProbeCheckpoint(bytes: Uint8Array, input: ProbeInput): ProbeCheckpoint {

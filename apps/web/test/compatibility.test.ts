@@ -92,6 +92,30 @@ describe("evidence-based compatibility answers", () => {
     expect(compatibilityDescription(report)).toContain("not a full compatibility verdict");
   });
 
+  it("separates batch failures after an earlier failure from attributed failures", () => {
+    const report = evidence();
+    for (const cell of report.cells.slice(0, 2)) {
+      cell.group = "subpaths";
+      cell.outcome = "inconclusive";
+      cell.coverage = {
+        planned: 3,
+        observed: 3,
+        passed: 0,
+        failed: 3,
+        prerequisiteLimited: 1,
+        isolationPassed: 1,
+        isolationUnconfirmed: cell.profileId === "node-one" ? 1 : 0,
+        interrupted: 0,
+        untested: 0,
+        complete: true,
+      };
+    }
+    expect(runtimeAnswers(report)[0]?.results.map((result) => result.counts)).toEqual([
+      "0 passed · 0 failed · 1 needs an optional peer · 1 failed only in the shared batch · 1 batch failure unconfirmed",
+      "0 passed · 1 failed · 1 needs an optional peer · 1 failed only in the shared batch",
+    ]);
+  });
+
   it("does not turn missing cells or preparation errors into runtime incompatibility", () => {
     const report = evidence();
     report.cells = [];

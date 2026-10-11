@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import {
+  MAX_CONFIRMATIONS,
   MAX_REPORT_BYTES,
   MAX_SCAN_LOG_BYTES,
   PROBE_LIMITS,
+  type ProbeConfirmation,
   type ProbeGroupResult,
   type ProbeInput,
   type ProbePlan,
@@ -11,6 +13,7 @@ import {
   probeSessionSchema,
   type RuntimeImage,
 } from "@compatlab/contracts";
+import { confirmationCandidates } from "./confirmation.js";
 
 export type SandboxBackend = {
   run(input: ProbeInput, image: RuntimeImage, signal: AbortSignal): Promise<ProbeSession>;
@@ -42,6 +45,57 @@ export async function executePlan(
       );
   };
   let remainingLogs = MAX_SCAN_LOG_BYTES;
+  const runSession = async (input: ProbeInput, image: RuntimeImage) => {
+    const session = probeSessionSchema.parse(await backend.run(input, image, signal));
+    if (session.probeId !== input.probeId || session.startIndex !== input.startIndex)
+      throw new TypeError("The sandbox returned a result for a different probe.");
+    if (session.checkpoint)
+      parseProbeCheckpoint(Buffer.from(JSON.stringify(session.checkpoint)), input);
+    if (
+      session.stopReason === "completed" &&
+      (session.exitCode !== 0 || session.oomKilled || !session.checkpoint?.completed)
+    )
+      throw new TypeError("The sandbox reported completion without valid evidence.");
+    for (const stream of ["stdout", "stderr"] as const) {
+      const bytes = Buffer.from(session.logs[stream]);
+      if (bytes.length > remainingLogs) session.logs[`${stream}Truncated`] = true;
+      session.logs[stream] = new TextDecoder().decode(bytes.subarray(0, remainingLogs), {
+        stream: true,
+      });
+      remainingLogs -= Math.min(bytes.length, remainingLogs);
+    }
+    return session;
+  };
+  const confirm = async (result: ProbeGroupResult, image: RuntimeImage) => {
+    const confirmations: ProbeConfirmation[] = [];
+    result.confirmations = confirmations;
+    const candidates = [...confirmationCandidates(result).keys()];
+    for (const index of candidates.slice(0, MAX_CONFIRMATIONS)) {
+      const specifier = result.entries[index];
+      if (!specifier || signal.aborted) break;
+      const input: ProbeInput = {
+        schemaVersion: 2,
+        probeId: randomUUID(),
+        group: result.group,
+        mode: result.mode,
+        entries: [specifier],
+        startIndex: 0,
+      };
+      const logs = remainingLogs;
+      confirmations.push({
+        method: "fresh_entry_v2",
+        index,
+        session: await runSession(input, image),
+      });
+      // A dropped confirmation leaves its entry unconfirmed; the batch evidence remains reportable.
+      if (Buffer.byteLength(JSON.stringify(results)) > maxResultBytes) {
+        confirmations.pop();
+        remainingLogs = logs;
+        break;
+      }
+    }
+    if (!confirmations.length) delete result.confirmations;
+  };
   for (const [runtimeIndex, runtime] of plan.runtimes.entries()) {
     const image = images[runtimeIndex];
     if (!image) throw new TypeError("Missing runtime image.");
@@ -83,24 +137,7 @@ export async function executePlan(
             entries,
             startIndex,
           };
-          const session = probeSessionSchema.parse(await backend.run(input, image, signal));
-          if (session.probeId !== input.probeId || session.startIndex !== input.startIndex)
-            throw new TypeError("The sandbox returned a result for a different probe.");
-          if (session.checkpoint)
-            parseProbeCheckpoint(Buffer.from(JSON.stringify(session.checkpoint)), input);
-          if (
-            session.stopReason === "completed" &&
-            (session.exitCode !== 0 || session.oomKilled || !session.checkpoint?.completed)
-          )
-            throw new TypeError("The sandbox reported completion without valid evidence.");
-          for (const stream of ["stdout", "stderr"] as const) {
-            const bytes = Buffer.from(session.logs[stream]);
-            if (bytes.length > remainingLogs) session.logs[`${stream}Truncated`] = true;
-            session.logs[stream] = new TextDecoder().decode(bytes.subarray(0, remainingLogs), {
-              stream: true,
-            });
-            remainingLogs -= Math.min(bytes.length, remainingLogs);
-          }
+          const session = await runSession(input, image);
           result.sessions.push(session);
           if (session.checkpoint) result.observations.push(...session.checkpoint.observations);
           assertBudget();
@@ -134,6 +171,7 @@ export async function executePlan(
           result.interruptions.length === 0 &&
           (entries.length === 0 || result.sessions.at(-1)?.stopReason === "completed");
         assertBudget();
+        if (group === "subpaths") await confirm(result, image);
       }
   }
   return results;

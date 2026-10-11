@@ -1,5 +1,5 @@
 import type { ProbeInput, ProbeSession, RuntimeImage } from "@compatlab/contracts";
-import { expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   executePlan,
   planProbes,
@@ -182,4 +182,145 @@ it("limits total retained logs across variable runtime matrices", async () => {
       ),
   ).toBe(4 * 1024 ** 2);
   expect(result.at(-3)?.sessions[0]?.logs.stdoutTruncated).toBe(true);
+});
+
+const missingPeer = {
+  name: "Error",
+  message: "Cannot find package 'vitest' imported from /workspace/node_modules/fixture/test.js",
+  code: "ERR_MODULE_NOT_FOUND",
+};
+const raceCondition = {
+  name: "Error",
+  message: "Cannot require() ES Module fixture/db.js in a cycle.",
+  code: "ERR_REQUIRE_ESM_RACE_CONDITION",
+};
+const helperFirst = plan({
+  "./test": "./test.js",
+  "./db/adapter": "./adapter.js",
+  "./db/migration": "./migration.js",
+  ...Object.fromEntries(Array.from({ length: 6 }, (_, i) => [`./extra/${i}`, `./${i}.js`])),
+});
+// The helper misses its optional peer; later loads fail only in a process that saw a failure.
+function sharedProcess(stillFailing: readonly string[] = [], fresh?: typeof session) {
+  return vi.fn(async (input: ProbeInput): Promise<ProbeSession> => {
+    if (fresh && input.group === "subpaths" && input.entries.length === 1) return fresh(input);
+    const value = session(input);
+    let failed = false;
+    if (value.checkpoint)
+      value.checkpoint.observations = value.checkpoint.observations.map((observation) => {
+        const specifier = input.entries[observation.index] ?? "";
+        const error = specifier.endsWith("/test")
+          ? missingPeer
+          : failed || stillFailing.includes(specifier)
+            ? raceCondition
+            : null;
+        if (!error) return observation;
+        failed = true;
+        return {
+          index: observation.index,
+          outcome: "fail",
+          resolvedTo: null,
+          durationMs: 1,
+          error,
+        };
+      });
+    return value;
+  });
+}
+const confirmationInputs = (run: ReturnType<typeof sharedProcess>) =>
+  run.mock.calls.map(([input]) => input).filter((input) => input.entries.length === 1);
+
+describe("fresh-process confirmation after an earlier failed batch load", () => {
+  it("confirms later failures in fresh sessions without changing batch evidence", async () => {
+    const run = sharedProcess();
+    const result = await executePlan(
+      plan({ "./test": "./test.js", "./db/adapter": "./a.js", "./db/migration": "./m.js" }),
+      [image],
+      { run },
+      new AbortController().signal,
+    );
+    for (const group of [result[2], result[3]]) {
+      expect(group?.method).toBe("sequential_batch_v2");
+      expect(group?.observations.map((value) => value.outcome)).toEqual(["fail", "fail", "fail"]);
+      expect(group?.coverage).toMatchObject({ observed: 3, complete: true });
+      expect(group?.sessions).toHaveLength(1);
+      expect(
+        group?.confirmations?.map(({ method, index, session }) => [
+          method,
+          index,
+          session.stopReason,
+          session.checkpoint?.observations[0]?.outcome,
+        ]),
+      ).toEqual([
+        ["fresh_entry_v2", 1, "completed", "pass"],
+        ["fresh_entry_v2", 2, "completed", "pass"],
+      ]);
+    }
+    expect(result[0]?.confirmations).toBeUndefined();
+    expect(confirmationInputs(run).map((input) => [input.entries, input.startIndex])).toEqual([
+      [["fixture/db/adapter"], 0],
+      [["fixture/db/migration"], 0],
+      [["fixture/db/adapter"], 0],
+      [["fixture/db/migration"], 0],
+    ]);
+    expect(new Set(run.mock.calls.map(([input]) => input.probeId)).size).toBe(6);
+  });
+
+  it("records a fresh failure and confirms at most four entries per group", async () => {
+    const run = sharedProcess(["fixture/db/migration"]);
+    const result = await executePlan(helperFirst, [image], { run }, new AbortController().signal);
+    for (const group of [result[2], result[3]]) {
+      expect(group?.observations.filter((value) => value.outcome === "fail")).toHaveLength(9);
+      expect(group?.confirmations?.map((value) => value.index)).toEqual([1, 2, 3, 4]);
+      expect(
+        group?.confirmations?.map((value) => value.session.checkpoint?.observations[0]?.outcome),
+      ).toEqual(["pass", "fail", "pass", "pass"]);
+    }
+    expect(confirmationInputs(run)).toHaveLength(8);
+  });
+
+  it("does not retry interrupted confirmations and stops confirming after cancellation", async () => {
+    const controller = new AbortController();
+    const run = sharedProcess([], (input) => {
+      if (input.mode === "commonjs") controller.abort();
+      return {
+        ...session(input, 0),
+        stopReason: input.mode === "esm" ? "entry_timeout" : "cancelled",
+        exitCode: null,
+      };
+    });
+    const result = await executePlan(helperFirst, [image], { run }, controller.signal);
+    expect(result[2]?.confirmations?.map((value) => value.session.stopReason)).toEqual(
+      Array(4).fill("entry_timeout"),
+    );
+    expect(result[3]?.confirmations?.map((value) => value.session.stopReason)).toEqual([
+      "cancelled",
+    ]);
+    expect(confirmationInputs(run).map((input) => input.entries[0])).toEqual([
+      "fixture/db/adapter",
+      "fixture/db/migration",
+      "fixture/extra/0",
+      "fixture/extra/1",
+      "fixture/db/adapter",
+    ]);
+  });
+
+  it("omits a confirmation that would exceed the evidence budget and keeps the batch", async () => {
+    // A dropped confirmation must return its log share, or the next one would fit as empty logs.
+    const run = sharedProcess([], (input) => ({
+      ...session(input),
+      logs: { ...session(input).logs, stdout: "x".repeat(4 * 1024 ** 2) },
+    }));
+    const result = await executePlan(
+      helperFirst,
+      [image],
+      { run },
+      new AbortController().signal,
+      100_000,
+    );
+    expect(result[2]?.observations).toHaveLength(9);
+    expect(result[2]?.confirmations).toBeUndefined();
+    expect(result[3]?.confirmations).toBeUndefined();
+    expect(confirmationInputs(run)).toHaveLength(2);
+  });
 });

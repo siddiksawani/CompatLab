@@ -9,12 +9,35 @@ export const labels: Record<CompatibilityOutcome, string> = {
   not_applicable: "Not applicable",
   infrastructure_error: "Service error",
 };
-export function coverageSummary(coverage: HostedReport["cells"][number]["coverage"]) {
+type Coverage = HostedReport["cells"][number]["coverage"];
+export function isolationCounts({
+  isolationPassed = 0,
+  isolationUnconfirmed = 0,
+}: Pick<Coverage, "isolationPassed" | "isolationUnconfirmed">) {
+  return [
+    ...(isolationPassed ? [`${isolationPassed} failed only in the shared batch`] : []),
+    ...(isolationUnconfirmed
+      ? [
+          isolationUnconfirmed === 1
+            ? "1 batch failure unconfirmed"
+            : `${isolationUnconfirmed} batch failures unconfirmed`,
+        ]
+      : []),
+  ];
+}
+export function isolationLimited({ coverage }: { coverage: Coverage }) {
+  return (coverage.isolationPassed ?? 0) + (coverage.isolationUnconfirmed ?? 0) > 0;
+}
+export function coverageSummary(coverage: Coverage) {
   const limited = coverage.prerequisiteLimited ?? 0;
+  const explained =
+    limited + (coverage.isolationPassed ?? 0) + (coverage.isolationUnconfirmed ?? 0);
   const counts = [`${coverage.passed} passed`];
-  if (!limited || coverage.failed > limited) counts.push(`${coverage.failed - limited} failed`);
+  if (!explained || coverage.failed > explained)
+    counts.push(`${coverage.failed - explained} failed`);
   if (limited)
     counts.push(limited === 1 ? "1 needs an optional peer" : `${limited} need optional peers`);
+  counts.push(...isolationCounts(coverage));
   if (coverage.interrupted) counts.push(`${coverage.interrupted} interrupted`);
   if (coverage.untested) counts.push(`${coverage.untested} untested`);
   if (!coverage.complete && !coverage.untested) counts.push("coverage limited");

@@ -68,6 +68,12 @@ it("separates mixed outcomes from incomplete coverage", () => {
   expect(coverageSummary({ ...complete, prerequisiteLimited: 1 })).toBe(
     "12 passed · 1 failed · 1 needs an optional peer",
   );
+  expect(coverageSummary({ ...complete, isolationPassed: 1, isolationUnconfirmed: 1 })).toBe(
+    "12 passed · 1 failed only in the shared batch · 1 batch failure unconfirmed",
+  );
+  expect(coverageSummary({ ...complete, failed: 3, isolationUnconfirmed: 2 })).toBe(
+    "12 passed · 1 failed · 2 batch failures unconfirmed",
+  );
   expect(
     coverageSummary({
       ...complete,

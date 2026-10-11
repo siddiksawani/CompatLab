@@ -8,6 +8,7 @@ import {
   classifyLoad,
   classifyStop,
   combineOutcomes,
+  confirmationCandidates,
   failureOutcome,
   optionalPeerContext,
   sanitizeText,
@@ -107,9 +108,20 @@ describe("versioned evidence classification", () => {
     expect(result).toMatchObject({
       outcome: "inconclusive",
       evidenceLevel: "smoke_tested",
-      coverage: { passed: 1, failed: 2, prerequisiteLimited: 1, observed: 3, complete: true },
+      coverage: {
+        passed: 1,
+        failed: 2,
+        prerequisiteLimited: 1,
+        isolationUnconfirmed: 1,
+        observed: 3,
+        complete: true,
+      },
     });
-    expect(result.entries.map((entry) => entry.outcome)).toEqual(["pass", "inconclusive", "fail"]);
+    expect(result.entries.map((entry) => entry.outcome)).toEqual([
+      "pass",
+      "inconclusive",
+      "inconclusive",
+    ]);
     expect(evidence).toEqual(original);
   });
   it.each([
@@ -267,6 +279,212 @@ describe("versioned evidence classification", () => {
       outcome: "inconclusive",
       coverage: { planned: null, complete: false },
     });
+  });
+});
+const raceCondition = {
+  name: "Error",
+  message: "Cannot require() ES Module fixture/db.js in a cycle.",
+  code: "ERR_REQUIRE_ESM_RACE_CONDITION",
+};
+const vitest = optionalPeerContext(
+  "fixture",
+  {
+    name: "fixture",
+    peerDependencies: { vitest: "^3" },
+    peerDependenciesMeta: { vitest: { optional: true } },
+  },
+  ["node_modules/fixture"],
+);
+function failWith(
+  evidence: ProbeGroupResult,
+  index: number,
+  error: Extract<LoadObservation, { outcome: "fail" }>["error"],
+) {
+  const observation = evidence.observations[index];
+  if (observation?.outcome !== "fail") throw new Error("Fixture failure missing.");
+  observation.error = error;
+}
+function helperFirst() {
+  const evidence = group(["fail", "fail", "fail", "fail"]);
+  failWith(evidence, 0, {
+    name: "Error",
+    message: "Cannot find package 'vitest' imported from /workspace/node_modules/fixture/test.js",
+    code: "ERR_MODULE_NOT_FOUND",
+  });
+  for (const index of [1, 2, 3]) failWith(evidence, index, raceCondition);
+  return evidence;
+}
+function confirm(
+  evidence: ProbeGroupResult,
+  index: number,
+  result: "pass" | "fail" | "entry_timeout",
+) {
+  const probeId = randomUUID();
+  const completed = result !== "entry_timeout";
+  const observation: LoadObservation =
+    result === "fail"
+      ? {
+          index: 0,
+          outcome: "fail",
+          resolvedTo: null,
+          durationMs: 1,
+          error: { name: "Error", message: "Fails in a fresh process", code: null },
+        }
+      : { index: 0, outcome: "pass", resolvedTo: null, durationMs: 1, valueType: "object" };
+  evidence.confirmations = [
+    ...(evidence.confirmations ?? []),
+    {
+      method: "fresh_entry_v2",
+      index,
+      session: {
+        probeId,
+        startIndex: 0,
+        stopReason: completed ? "completed" : "entry_timeout",
+        exitCode: completed ? 0 : null,
+        oomKilled: false,
+        durationMs: 3,
+        checkpoint: {
+          schemaVersion: 2,
+          probeId,
+          group: "subpaths",
+          mode: "esm",
+          completed,
+          activeIndex: completed ? null : 0,
+          observations: completed ? [observation] : [],
+        },
+        logs: {
+          stdout: "",
+          stderr: "",
+          stdoutTruncated: false,
+          stderrTruncated: false,
+          emittedBytes: 0,
+        },
+      },
+    },
+  ];
+}
+describe("failures after an earlier failed load in the same batch process", () => {
+  it("keeps historical unconfirmed failures inconclusive without inventing confirmations", () => {
+    const evidence = helperFirst();
+    const original = structuredClone(evidence);
+    const result = cell(evidence, vitest);
+    expect(result).toMatchObject({
+      method: "sequential_batch_v2",
+      outcome: "inconclusive",
+      failure: { classification: "optional_peer_missing" },
+      coverage: {
+        observed: 4,
+        passed: 0,
+        failed: 4,
+        prerequisiteLimited: 1,
+        isolationPassed: 0,
+        isolationUnconfirmed: 3,
+        complete: true,
+      },
+    });
+    expect(result.entries.map((entry) => entry.outcome)).toEqual(Array(4).fill("inconclusive"));
+    expect(result.entries[0]?.isolation).toBeUndefined();
+    expect(result.entries[1]).toMatchObject({
+      failure: null,
+      isolation: {
+        priorFailureIndex: 0,
+        batchFailure: { classification: "esm_import_failed", message: raceCondition.message },
+        confirmation: null,
+      },
+    });
+    expect(evidence).toEqual(original);
+  });
+  it("uses bounded fresh-process confirmations without changing raw counts", () => {
+    const evidence = helperFirst();
+    confirm(evidence, 1, "pass");
+    confirm(evidence, 2, "fail");
+    confirm(evidence, 3, "entry_timeout");
+    const original = structuredClone(evidence);
+    const result = cell(evidence, vitest);
+    expect(result.entries.map((entry) => entry.outcome)).toEqual([
+      "inconclusive",
+      "pass",
+      "fail",
+      "inconclusive",
+    ]);
+    expect(result.coverage).toMatchObject({
+      passed: 0,
+      failed: 4,
+      prerequisiteLimited: 1,
+      isolationPassed: 1,
+      isolationUnconfirmed: 1,
+    });
+    expect(result.entries[1]).toMatchObject({
+      failure: null,
+      isolation: { confirmation: { method: "fresh_entry_v2", stopReason: "completed" } },
+    });
+    expect(result.entries[2]?.failure).toMatchObject({
+      classification: "esm_import_failed",
+      origin: "package",
+      message: "Fails in a fresh process",
+    });
+    expect(result.entries[3]).toMatchObject({
+      failure: null,
+      isolation: { confirmation: { stopReason: "entry_timeout" } },
+    });
+    expect(evidence).toEqual(original);
+  });
+  it("credits a fresh-process pass while keeping the first batch failure", () => {
+    const evidence = group(["pass", "fail", "fail"]);
+    failWith(evidence, 2, raceCondition);
+    confirm(evidence, 2, "pass");
+    expect(cell(evidence).entries.map((entry) => entry.outcome)).toEqual(["pass", "fail", "pass"]);
+    expect(cell(evidence).outcome).toBe("partial");
+  });
+  it("confirms recognized codes and keeps optional peers attributed as observed", () => {
+    const evidence = group(["fail", "fail", "fail", "fail"]);
+    const addon = {
+      name: "Error",
+      message: "Module did not self-register: '/workspace/node_modules/fixture/addon.node'.",
+      code: "ERR_DLOPEN_FAILED",
+    };
+    failWith(evidence, 1, addon);
+    failWith(evidence, 2, addon);
+    failWith(evidence, 3, { name: "Error", message: 'missing "vitest" dependency.', code: null });
+    confirm(evidence, 1, "fail");
+    const result = cell(evidence, vitest);
+    expect(result.entries.map((entry) => entry.outcome)).toEqual([
+      "fail",
+      "fail",
+      "inconclusive",
+      "inconclusive",
+    ]);
+    expect(result.entries[1]?.failure?.message).toBe("Fails in a fresh process");
+    expect(result.entries[2]).toMatchObject({
+      failure: null,
+      isolation: {
+        batchFailure: { classification: "native_addon_load_failed" },
+        confirmation: null,
+      },
+    });
+    expect(result.entries[3]?.isolation).toBeUndefined();
+    expect(result.entries[3]?.failure?.classification).toBe("optional_peer_missing");
+    expect(result.coverage).toMatchObject({
+      failed: 4,
+      prerequisiteLimited: 1,
+      isolationPassed: 0,
+      isolationUnconfirmed: 1,
+    });
+  });
+  it("selects candidates only within one process session", () => {
+    const evidence = group(["fail", "fail", "fail", "fail"]);
+    const [first] = evidence.sessions;
+    if (!first?.checkpoint) throw new Error("Fixture session missing.");
+    const second = structuredClone(first);
+    second.probeId = randomUUID();
+    second.startIndex = 2;
+    if (!second.checkpoint) throw new Error("Fixture session missing.");
+    second.checkpoint.observations = evidence.observations.slice(2);
+    first.checkpoint.observations = evidence.observations.slice(0, 1);
+    first.stopReason = "unexpected_process_exit";
+    evidence.sessions.push(second);
+    expect([...confirmationCandidates(evidence)]).toEqual([[3, 2]]);
+    expect(confirmationCandidates({ ...evidence, group: "root" }).size).toBe(0);
   });
 });
 describe("public evidence text", () => {

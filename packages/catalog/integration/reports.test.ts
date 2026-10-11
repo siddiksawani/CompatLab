@@ -5,6 +5,7 @@ import {
   PREPARATION_PROFILE_REVISION,
   type ProbeGroupResult,
   parseReproductionInputs,
+  probeGroupResultSchema,
   reportSummaryEnvelopeSchema,
 } from "@compatlab/contracts";
 import { eq } from "drizzle-orm";
@@ -190,6 +191,142 @@ describe("immutable report classification", () => {
     expect(
       preview?.cells.find((cell) => cell.group === "subpaths")?.coverage.prerequisiteLimited,
     ).toBe(1);
+  });
+  it("stores fresh-process confirmations separately and reclassifies without inventing them", async () => {
+    const race = {
+      name: "Error",
+      code: "ERR_REQUIRE_ESM_RACE_CONDITION",
+      message: "Cannot require() ES Module fixture/db.js in a cycle.",
+    };
+    const { scan } = await execution({
+      manifest: {
+        exports: {
+          ".": "./index.js",
+          "./test": "./test.js",
+          "./db/adapter": "./adapter.js",
+          "./db/migration": "./migration.js",
+        },
+        peerDependencies: { vitest: "^3" },
+        peerDependenciesMeta: { vitest: { optional: true } },
+      },
+      mutate(job, evidence) {
+        if (job.group !== "subpaths") return;
+        for (const index of [0, 1, 2])
+          evidence.observations[index] = {
+            index,
+            outcome: "fail",
+            durationMs: 1,
+            resolvedTo: null,
+            error: index
+              ? race
+              : {
+                  name: "Error",
+                  code: "ERR_MODULE_NOT_FOUND",
+                  message:
+                    "Cannot find package 'vitest' imported from /workspace/node_modules/fixture/test.js",
+                },
+          };
+        if (job.mode === "esm") return;
+        evidence.confirmations = [1, 2].map((index) => {
+          const probeId = randomUUID();
+          return {
+            method: "fresh_entry_v2",
+            index,
+            session: {
+              probeId,
+              startIndex: 0,
+              stopReason: "completed",
+              exitCode: 0,
+              oomKilled: false,
+              durationMs: 1,
+              checkpoint: {
+                schemaVersion: 2,
+                probeId,
+                mode: job.mode,
+                group: job.group,
+                completed: true,
+                activeIndex: null,
+                observations: [
+                  index === 1
+                    ? {
+                        index: 0,
+                        outcome: "pass",
+                        resolvedTo: null,
+                        durationMs: 1,
+                        valueType: "object",
+                      }
+                    : { index: 0, outcome: "fail", resolvedTo: null, durationMs: 1, error: race },
+                ],
+              },
+              logs: {
+                stdout: "fresh output",
+                stderr: "",
+                stdoutTruncated: false,
+                stderrTruncated: false,
+                emittedBytes: 12,
+              },
+            },
+          };
+        });
+      },
+    });
+    const raw = await catalog.db.select().from(schema.runs);
+    const { report } = await aggregate(scan.scanId);
+    expect(report).toMatchObject({
+      classifierRevision: CLASSIFIER_REVISION,
+      outcome: "inconclusive",
+    });
+    for (const cell of report.cells.filter((cell) => cell.group === "subpaths")) {
+      const confirmed = cell.mode === "commonjs";
+      expect(cell).toMatchObject({
+        method: "sequential_batch_v2",
+        coverage: {
+          observed: 3,
+          passed: 0,
+          failed: 3,
+          prerequisiteLimited: 1,
+          isolationPassed: confirmed ? 1 : 0,
+          isolationUnconfirmed: confirmed ? 0 : 2,
+          complete: true,
+        },
+        failure: { classification: "optional_peer_missing" },
+      });
+      expect(cell.entries.map((entry) => entry.outcome)).toEqual(
+        confirmed ? ["inconclusive", "pass", "fail"] : Array(3).fill("inconclusive"),
+      );
+      expect(cell.entries[1]?.isolation).toMatchObject({
+        priorFailureIndex: 0,
+        batchFailure: { message: race.message },
+        confirmation: confirmed ? { method: "fresh_entry_v2", stopReason: "completed" } : null,
+      });
+    }
+    const stored = raw
+      .map((row) => probeGroupResultSchema.parse(row.rawEvidence))
+      .filter((evidence) => evidence.group === "subpaths");
+    expect(stored.every((evidence) => evidence.method === "sequential_batch_v2")).toBe(true);
+    expect(stored.filter((evidence) => evidence.confirmations)).toHaveLength(4);
+    expect(
+      stored
+        .flatMap((evidence) => evidence.confirmations ?? [])
+        .every(({ session }) => session.logs.stdout === ""),
+    ).toBe(true);
+    const commonjs = report.cells.find(
+      (cell) => cell.group === "subpaths" && cell.mode === "commonjs",
+    );
+    const logs = await readReportLogs(catalog.db, report.id, commonjs?.runId ?? "");
+    expect(logs?.sessions.map(({ stdout, confirmedIndex }) => [stdout, confirmedIndex])).toEqual([
+      ["fixture output", undefined],
+      ["fresh output", 1],
+      ["fresh output", 2],
+    ]);
+    const replacement = await readReport(
+      catalog.db,
+      await reclassifyScan(catalog.db, scan.scanId, actor),
+    );
+    expect(replacement?.report.cells.map(({ entries }) => entries)).toEqual(
+      report.cells.map(({ entries }) => entries),
+    );
+    expect(await catalog.db.select().from(schema.runs)).toEqual(raw);
   });
   it("serves bounded previews from current evidence and withdraws invalidated or quarantined results", async () => {
     const first = await execution({ name: "preview-fixture" });
