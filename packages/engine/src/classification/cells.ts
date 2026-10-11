@@ -3,8 +3,10 @@ import type {
   NormalizedFailure,
   ProbeGroupResult,
   ProbeMode,
+  ProbeSession,
   ReportCell,
 } from "@compatlab/contracts";
+import { confirmationCandidates } from "../execution/confirmation.js";
 import { classifyLoad, classifyStop } from "./failures.js";
 import type { OptionalPeerContext } from "./optional-peers.js";
 import { displayIdentifier, sanitizeText } from "./text.js";
@@ -45,13 +47,15 @@ export function classifyCell(input: {
   const interruptedFailure =
     failures.find((failure) => failure.origin === "infrastructure") ?? failures[0] ?? null;
   const failure = input.failure ?? interruptedFailure;
-  const entries = (input.entries ?? []).map((specifier, index) => {
+  const candidates = evidence ? confirmationCandidates(evidence) : new Map<number, number>();
+  const confirmations = new Map(evidence?.confirmations?.map((item) => [item.index, item.session]));
+  const entries: ReportCell["entries"] = (input.entries ?? []).map((specifier, index) => {
     const observation = observations.get(index);
     const error =
       observation?.outcome === "fail"
         ? classifyLoad(observation, input.mode, input.optionalPeers)
         : (interruptions.get(index) ?? null);
-    return {
+    const entry = {
       index,
       specifier,
       displaySpecifier: displayIdentifier(specifier),
@@ -63,11 +67,36 @@ export function classifyCell(input: {
       resolvedTo: observation?.resolvedTo ? sanitizeText(observation.resolvedTo) : null,
       failure: error,
     };
+    const priorFailureIndex = candidates.get(index);
+    if (priorFailureIndex === undefined || error?.origin !== "package") return entry;
+    const session = confirmations.get(index);
+    return {
+      ...entry,
+      ...confirmedResult(session, input.mode, input.optionalPeers),
+      isolation: {
+        priorFailureIndex,
+        batchFailure: error,
+        confirmation: session
+          ? {
+              method: "fresh_entry_v2" as const,
+              probeId: session.probeId,
+              stopReason: session.stopReason,
+              durationMs: session.durationMs,
+            }
+          : null,
+      },
+    };
   });
   const passed = evidence?.observations.filter((entry) => entry.outcome === "pass").length ?? 0;
   const failed = evidence?.observations.filter((entry) => entry.outcome === "fail").length ?? 0;
   const prerequisiteLimited = entries.filter(
     (entry) => entry.failure?.classification === "optional_peer_missing",
+  ).length;
+  const isolationPassed = entries.filter(
+    (entry) => entry.isolation && entry.outcome === "pass",
+  ).length;
+  const isolationUnconfirmed = entries.filter(
+    (entry) => entry.isolation && entry.isolation.confirmation?.stopReason !== "completed",
   ).length;
   const inapplicable = input.entries !== null && input.entries.length === 0;
   const complete = inapplicable || (!failure && !!evidence?.coverage.complete);
@@ -96,6 +125,8 @@ export function classifyCell(input: {
       passed,
       failed,
       prerequisiteLimited,
+      isolationPassed,
+      isolationUnconfirmed,
       interrupted: evidence?.coverage.interrupted ?? 0,
       untested:
         input.entries === null
@@ -120,4 +151,16 @@ export function classifyCell(input: {
         }),
       ) ?? [],
   };
+}
+
+function confirmedResult(
+  session: ProbeSession | undefined,
+  mode: ProbeMode,
+  optionalPeers: OptionalPeerContext | undefined,
+): { outcome: CompatibilityOutcome; failure: NormalizedFailure | null } {
+  const fresh = session?.stopReason === "completed" ? session.checkpoint?.observations[0] : null;
+  if (!fresh) return { outcome: "inconclusive", failure: null };
+  if (fresh.outcome === "pass") return { outcome: "pass", failure: null };
+  const failure = classifyLoad(fresh, mode, optionalPeers);
+  return { outcome: failure.origin === "prerequisite" ? "inconclusive" : "fail", failure };
 }

@@ -11,6 +11,7 @@ import { Evidence } from "../../../components/evidence";
 import { FailureDetails } from "../../../components/failure-details";
 import {
   coverageSummary,
+  isolationLimited,
   labels,
   observedDate,
   packageEvidencePath,
@@ -158,6 +159,21 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </p>
         </aside>
       )}
+      {report.cells.some(isolationLimited) && (
+        <aside className="notice warning" aria-label="Batch failures after an earlier failure">
+          <strong>Some batch failures followed an earlier failed load</strong>
+          <p>
+            A subpath batch shares one process. An entry that fails after another entry failed in
+            that process may depend on state the earlier load left behind. Up to four such entries
+            per batch are loaded again, each in a fresh sandbox. The fresh result decides the entry;
+            entries without one are inconclusive.
+          </p>
+          <p>
+            The original batch observations remain in the evidence. The cause of the batch failures
+            is not established.
+          </p>
+        </aside>
+      )}
       <SectionNavigation
         sections={[
           { id: "runtime-matrix", label: "Runtime matrix" },
@@ -242,6 +258,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                 <p className="fine">
                   Missing optional peers explain {cell.coverage.prerequisiteLimited} of{" "}
                   {cell.coverage.failed} recorded failed load attempts.
+                </p>
+              )}
+              {isolationLimited(cell) && (
+                <p className="fine">
+                  After an earlier failure in the same batch process,{" "}
+                  {cell.coverage.isolationPassed ?? 0} of {cell.coverage.failed} recorded failed
+                  load attempts loaded in a fresh process and{" "}
+                  {cell.coverage.isolationUnconfirmed ?? 0} were not confirmed.
                 </p>
               )}
               {cell.failure && <FailureDetails failure={cell.failure} />}

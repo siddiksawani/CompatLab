@@ -61,12 +61,14 @@ The harness observes only loading and `typeof` the returned value. It does not e
 
 Before each load, the harness atomically replaces a checkpoint naming the active index. Afterward it adds a bounded observation. The external supervisor checks identity, order, history, schema, byte bounds and progress. A root or batch completes only after exit zero and a matching completed checkpoint, without an overriding termination. Stdout/stderr are logs. Checkpoints are observations from the package process, not adversarial semantic attestations; malicious code in the same process can tamper with them.
 
+A failed load can leave module caches or loader state that affects later entries in the same process. When a batch entry fails after an earlier entry failed in that process, it is a confirmation candidate whatever its error code. After the batch, the first four candidates per mode/runtime load again in planned order, each alone in a fresh sandbox with the same harness and limits. Reports label these `fresh_entry_v2` and keep them separate from the unchanged batch sessions and observations. A confirmation that is interrupted, cancelled or would exceed the evidence budget is not retried; cancellation stops further confirmations. Their logs share the scan log budget. A later failure explained by a missing optional peer can still use one of the four confirmations. The loader cause of the original batch failure is not established.
+
 An interrupted batch retains validated observations. A known crashing or timed-out entry is marked and skipped on continuation, with at most three restarts per mode/runtime. Unknown or malformed checkpoints stop continuation. Even if later entries succeed, the interruption remains visible and coverage is incomplete. Unattempted entries and planner omissions remain separate.
 
 ## Bounds
 
 - Root/entry: 30 seconds; batch: 120 seconds; scan: 15 minutes from preparation/run start, including subsequent waits.
-- At most 512 explicit subpaths; at most four sessions per subpath group.
+- At most 512 explicit subpaths; at most four sessions and four fresh-process confirmations per subpath group.
 - Each job has private 64 MiB temp and an enforced 8 MiB/64-inode result tmpfs.
 - Root checkpoint: 64 KiB; batch checkpoint: 2 MiB; local report: 20 MiB.
 - Error messages: 2,048 characters; stdout/stderr: 128 KiB each per job, 4 MiB retained per scan; terminate after 8 MiB emitted per job.

@@ -11,6 +11,7 @@ const logSchema = z.object({
   sessions: z.array(
     z.object({
       probeId: z.string(),
+      confirmedIndex: z.number().optional(),
       stdout: z.string(),
       stderr: z.string(),
       stdoutTruncated: z.boolean(),
@@ -19,6 +20,21 @@ const logSchema = z.object({
   ),
 });
 type Logs = z.infer<typeof logSchema>;
+function confirmationText({ isolation, outcome }: ReportCell["entries"][number]) {
+  const confirmation = isolation?.confirmation;
+  if (!confirmation)
+    return "No fresh-process confirmation was recorded; this result is inconclusive.";
+  if (confirmation.stopReason !== "completed")
+    return `Its fresh-process confirmation stopped (${confirmation.stopReason.replaceAll("_", " ")}) and was not retried; this result is inconclusive.`;
+  return outcome === "pass"
+    ? "It loaded in a fresh process."
+    : "It also failed in a fresh process; that failure follows.";
+}
+function logTitle({ confirmedIndex }: Logs["sessions"][number], index: number) {
+  return confirmedIndex === undefined
+    ? `Session ${index + 1}`
+    : `Fresh confirmation of entry ${confirmedIndex + 1}`;
+}
 export function Evidence({ reportId, runId }: { reportId: string; runId: string }) {
   const [cell, setCell] = useState<ReportCell | null>(null);
   const [logs, setLogs] = useState<Logs | null>(null);
@@ -84,13 +100,27 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
                     <span className={`result ${entry.outcome}`}>
                       {entry.failure?.optionalPeer
                         ? "Requires optional peer"
-                        : labels[entry.outcome]}
+                        : entry.isolation && entry.outcome !== "fail"
+                          ? entry.outcome === "pass"
+                            ? "Passed in a fresh process"
+                            : "Unconfirmed batch failure"
+                          : labels[entry.outcome]}
                     </span>
                   </div>
                   <p className="fine">
                     {entry.durationMs === null ? "Duration unavailable" : `${entry.durationMs} ms`}
                     {entry.resolvedTo && ` · Resolved to ${entry.resolvedTo}`}
                   </p>
+                  {entry.isolation && (
+                    <>
+                      <p className="fine">
+                        Failed in the shared batch after entry{" "}
+                        {entry.isolation.priorFailureIndex + 1} failed in the same process.{" "}
+                        {confirmationText(entry)}
+                      </p>
+                      <FailureDetails failure={entry.isolation.batchFailure} />
+                    </>
+                  )}
                   {entry.failure && <FailureDetails failure={entry.failure} />}
                 </li>
               ))}
@@ -122,13 +152,13 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
           ) : (
             logs.sessions.map((session, index) => (
               <div key={session.probeId}>
-                <h5>Session {index + 1}</h5>
+                <h5>{logTitle(session, index)}</h5>
                 <p>Standard output{session.stdoutTruncated ? " (truncated)" : ""}</p>
                 <textarea
                   className="log-text"
                   readOnly
                   rows={8}
-                  aria-label={`Session ${index + 1} standard output`}
+                  aria-label={`${logTitle(session, index)} standard output`}
                   value={session.stdout || "(empty)"}
                 />
                 <p>Standard error{session.stderrTruncated ? " (truncated)" : ""}</p>
@@ -136,7 +166,7 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
                   className="log-text"
                   readOnly
                   rows={8}
-                  aria-label={`Session ${index + 1} standard error`}
+                  aria-label={`${logTitle(session, index)} standard error`}
                   value={session.stderr || "(empty)"}
                 />
               </div>

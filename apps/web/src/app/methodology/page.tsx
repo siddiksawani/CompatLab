@@ -80,6 +80,14 @@ export default function Methodology() {
         adding one changes the test inputs and does not guarantee success. Empty or unrelated errors
         remain unexplained failures.
       </p>
+      <p>
+        Subpath batches share one process, so a failed load can leave state that affects later
+        entries. When an entry fails after an earlier failure in the same batch process, whatever
+        its error, up to four such entries per batch are loaded again, each in a fresh sandbox. A
+        fresh pass or failure decides that entry. An entry without a completed fresh observation is
+        inconclusive; interrupted confirmations are not retried. Batch observations are retained and
+        labeled separately from fresh ones. The batch failure's cause is not established.
+      </p>
       <h2 id="limits">What success does not establish</h2>
       <p>
         Loading does not exercise arbitrary functions, test an application, or establish safety.

@@ -51,6 +51,8 @@ PR 29 distinguishes missing optional peers from runtime failures using retained 
 
 PR 30 fixes retained snapshot reuse after a worker VM restart. The worker restores missing read-only mounts before advertising snapshots, validates backing storage and existing mount policy, and preserves snapshot identity and contents. Linux/runsc qualification covers concurrent restoration, unsafe backing rejection, startup inventory and actual loading through every runtime after mount loss.
 
+PR 39 confirms subpath batch failures that follow an earlier failed load in the same process. Up to four such entries per batch group load again in fresh sandboxes, labeled `fresh_entry_v2` and stored beside the unchanged batch evidence. `classifier_v3` uses those results and marks unconfirmed candidates inconclusive instead of attributing them to the package. Historical evidence keeps its method and gains no confirmations on reclassification. The control plane must deploy before workers that submit confirmations. Validation covers bounds, cancellation, budgets, forged confirmations, PostgreSQL storage and reclassification, and report counts.
+
 ### Discovery and adoption follow-ups
 
 On October 9, 2026, the maintainer approved improving programmatic access, evidence discovery, focused coverage and a read-only MCP pilot. Deliver these as separate reviewable slices. Ordinary lookups must remain read-only, historical observations must retain their identities, and public maintainer accounts remain deferred.

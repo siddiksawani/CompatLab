@@ -101,3 +101,53 @@ export function runEvidence(job: JobAssignment): ProbeGroupResult {
     },
   };
 }
+export function failedLoad(index: number, message = "Authored batch failure.") {
+  return {
+    index,
+    outcome: "fail" as const,
+    resolvedTo: null,
+    durationMs: 1,
+    error: { name: "Error", message, code: null },
+  };
+}
+export function confirmation(
+  evidence: ProbeGroupResult,
+  index: number,
+  outcome: "pass" | "fail" | null,
+): NonNullable<ProbeGroupResult["confirmations"]>[number] {
+  const probeId = randomUUID();
+  const observations =
+    outcome === "pass"
+      ? [{ index: 0, outcome, resolvedTo: null, durationMs: 1, valueType: "function" as const }]
+      : outcome === "fail"
+        ? [failedLoad(0, "Authored independent failure.")]
+        : [];
+  return {
+    index,
+    method: "fresh_entry_v2",
+    session: {
+      probeId,
+      startIndex: 0,
+      stopReason: outcome === null ? "entry_timeout" : "completed",
+      exitCode: outcome === null ? null : 0,
+      oomKilled: false,
+      durationMs: 1,
+      checkpoint: {
+        schemaVersion: 2,
+        probeId,
+        mode: evidence.mode,
+        group: evidence.group,
+        completed: outcome !== null,
+        activeIndex: outcome === null ? 0 : null,
+        observations,
+      },
+      logs: {
+        stdout: `confirmation ${index}`,
+        stderr: "",
+        stdoutTruncated: false,
+        stderrTruncated: false,
+        emittedBytes: 14,
+      },
+    },
+  };
+}

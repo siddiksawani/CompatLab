@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizedFailureSchema, reportCoverageSchema } from "../src/report.js";
+import { normalizedFailureSchema, reportCellSchema, reportCoverageSchema } from "../src/report.js";
 
 const failure = {
   classification: "optional_peer_missing",
@@ -38,6 +38,46 @@ describe("optional-peer report contracts", () => {
     expect(reportCoverageSchema.safeParse({ ...coverage, prerequisiteLimited: 3 }).success).toBe(
       false,
     );
+  });
+
+  it("keeps explained subsets within the raw failure count", () => {
+    const explained = { ...coverage, prerequisiteLimited: 1, isolationPassed: 1 };
+    expect(reportCoverageSchema.parse(explained).failed).toBe(2);
+    expect(reportCoverageSchema.safeParse({ ...explained, isolationUnconfirmed: 1 }).success).toBe(
+      false,
+    );
+  });
+
+  it("requires an isolation record to follow an earlier failed entry", () => {
+    const entries = reportCellSchema.shape.entries;
+    const isolated = {
+      index: 2,
+      specifier: "fixture/db",
+      displaySpecifier: "fixture/db",
+      outcome: "inconclusive",
+      durationMs: 1,
+      resolvedTo: null,
+      failure: null,
+      isolation: {
+        priorFailureIndex: 1,
+        batchFailure: {
+          classification: "commonjs_require_failed",
+          phase: "module_evaluation",
+          origin: "package",
+          retryable: false,
+          source: "harness_observation",
+          message: "Cannot require() ES Module fixture/db.js in a cycle.",
+        },
+        confirmation: null,
+      },
+    };
+    expect(entries.parse([isolated])[0]?.isolation?.priorFailureIndex).toBe(1);
+    for (const priorFailureIndex of [2, 3])
+      expect(
+        entries.safeParse([
+          { ...isolated, isolation: { ...isolated.isolation, priorFailureIndex } },
+        ]).success,
+      ).toBe(false);
   });
 
   it("requires corroborating context for the prerequisite classification", () => {

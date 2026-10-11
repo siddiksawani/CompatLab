@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import { type JobAssignment, PREPARATION_PROFILE_REVISION } from "@compatlab/contracts";
+import {
+  type JobAssignment,
+  PREPARATION_PROFILE_REVISION,
+  type ProbeGroupResult,
+} from "@compatlab/contracts";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createControlServer } from "../../../services/control/src/server.js";
@@ -21,7 +25,7 @@ import {
   submitJobResult,
   workerSnapshotPins,
 } from "../src/index.js";
-import { prepared, runEvidence } from "./execution-fixtures.js";
+import { confirmation, failedLoad, prepared, runEvidence } from "./execution-fixtures.js";
 import {
   actor,
   admitted,
@@ -465,6 +469,82 @@ describe("durable worker scheduling", () => {
     expect(
       (await catalog.db.select().from(schema.jobs).where(eq(schema.jobs.id, run.jobId)))[0]?.state,
     ).toBe("leased");
+  });
+  it("accepts only bounded confirmations of genuine batch candidates", async () => {
+    await reserve();
+    const preparation = await next();
+    const result = prepared(preparation);
+    result.manifestJson = JSON.stringify({
+      name: preparation.artifact.name,
+      version: preparation.artifact.version,
+      exports: { ".": "./index.js", "./a": "./a.js", "./b": "./b.js", "./c": "./c.js" },
+    });
+    await submitJobResult(catalog.db, worker.token, { ...attempt(preparation), result });
+    let run = await next();
+    while (run.kind !== "run" || run.group !== "subpaths") {
+      await submitJobResult(catalog.db, worker.token, {
+        ...attempt(run),
+        result: { kind: "run", evidence: runEvidence(run) },
+      });
+      run = await next();
+    }
+    const submit = (evidence: ProbeGroupResult) =>
+      submitJobResult(catalog.db, worker.token, {
+        ...attempt(run),
+        result: { kind: "run", evidence },
+      });
+    const passing = runEvidence(run);
+    await expect(
+      submit({ ...passing, confirmations: [confirmation(passing, 1, "pass")] }),
+    ).rejects.toMatchObject({ code: "invalid_result" });
+    const evidence = runEvidence(run);
+    for (const index of [0, 1, 2]) evidence.observations[index] = failedLoad(index);
+    const first = confirmation(evidence, 1, "pass");
+    const second = confirmation(evidence, 2, "fail");
+    const session = first.session;
+    for (const confirmations of [
+      [confirmation(evidence, 0, "pass")],
+      [second],
+      [second, first],
+      [first, first, second],
+      [{ ...first, session: { ...session, startIndex: 1 } }],
+      [{ ...first, session: { ...session, exitCode: 1 } }],
+      [
+        {
+          ...first,
+          session: {
+            ...session,
+            checkpoint: session.checkpoint && { ...session.checkpoint, probeId: randomUUID() },
+          },
+        },
+      ],
+      Array.from({ length: 5 }, (_, index) => confirmation(evidence, index, "pass")),
+    ])
+      await expect(submit({ ...evidence, confirmations })).rejects.toThrow();
+    expect(
+      (await catalog.db.select().from(schema.jobs).where(eq(schema.jobs.id, run.jobId)))[0]?.state,
+    ).toBe("leased");
+    await submit({ ...evidence, confirmations: [first, second] });
+    const [job] = await catalog.db.select().from(schema.jobs).where(eq(schema.jobs.id, run.jobId));
+    if (!job?.runId) throw new Error("Expected a run job.");
+    const [stored] = await catalog.db
+      .select()
+      .from(schema.runs)
+      .where(eq(schema.runs.id, job.runId));
+    expect(stored?.rawEvidence).toMatchObject({
+      method: "sequential_batch_v2",
+      confirmations: [
+        { index: 1, method: "fresh_entry_v2" },
+        { index: 2, method: "fresh_entry_v2" },
+      ],
+    });
+    expect(stored?.logs).toMatchObject({
+      sessions: [
+        { stdout: "fixture output" },
+        { stdout: "confirmation 1", confirmedIndex: 1 },
+        { stdout: "confirmation 2", confirmedIndex: 2 },
+      ],
+    });
   });
   it("prioritizes another scan and respects global and per-image capacity", async () => {
     const first = await finishPreparation();
