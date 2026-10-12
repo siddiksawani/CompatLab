@@ -133,8 +133,16 @@ test("article content and evidence links are present without JavaScript", async 
     await expect(page.locator("pre").filter({ hasText: "claude mcp add" })).toContainText(
       "https://compatlab.me/mcp",
     );
-    await expect(page.getByRole("table")).toHaveCount(1);
+    await expect(page.getByRole("table")).toHaveCount(2);
     await expect(page.getByRole("link", { name: "express@5.2.1", exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Postgres CommonJS return types" })
+        .getByRole("row")
+        .filter({ hasText: "Bun 1.4.2" })
+        .getByRole("cell", { name: "object", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("article")).toContainText("We made no database connection.");
   } finally {
     await context.close();
   }
