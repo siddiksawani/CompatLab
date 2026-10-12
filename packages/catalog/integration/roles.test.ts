@@ -15,6 +15,7 @@ import {
   setWorkerGuard,
 } from "../src/index.js";
 import { lookupRecorder } from "../src/public/measurement.js";
+import { usageRecorder } from "../src/public/usage.js";
 import { actor, artifact, database, migrateCatalog, options, seedMatrix } from "./fixtures.js";
 
 let catalog: Awaited<ReturnType<typeof database>>;
@@ -67,6 +68,14 @@ it("admits public work using the deployed web grants without operator authority"
 it("separates public measurement, operator curation and background execution grants", async () => {
   await lookupRecorder(web.db)({ name: "fixture", version: "1.0.0", availableReport: null });
   expect((await operator.pool.query("SELECT * FROM lookup_demand")).rowCount).toBe(1);
+  await usageRecorder(web.db)({
+    surface: "lookup_api",
+    availability: "missing",
+    source: "direct",
+    research: true,
+  });
+  expect((await operator.pool.query("SELECT * FROM evidence_usage")).rowCount).toBe(1);
+  await expect(web.pool.query("DELETE FROM evidence_usage")).rejects.toThrow("permission denied");
   await expect(web.pool.query("SELECT * FROM coverage_targets")).rejects.toThrow(
     "permission denied",
   );

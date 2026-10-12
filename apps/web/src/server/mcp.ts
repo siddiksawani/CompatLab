@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import type { EvidenceUsage } from "@compatlab/catalog/web";
 import { packageResponseSchema, reportSummaryEnvelopeSchema } from "@compatlab/contracts";
 import { assertPackageName, isExactVersion } from "@compatlab/engine";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
@@ -35,6 +37,11 @@ type Options = {
   read: (path: string) => Promise<Response>;
   onError: () => void;
   timeoutMs?: number;
+  onRead?: (
+    surface: "mcp_check_package" | "mcp_get_report",
+    availability: EvidenceUsage["availability"],
+    headers: Headers,
+  ) => Promise<void>;
 };
 class ReadError extends Error {}
 
@@ -44,6 +51,18 @@ export function createEvidenceMcp(options: Options) {
   const timeoutMs = options.timeoutMs ?? 12_000;
   let reads = 0;
   let requests = 0;
+  const requestHeaders = new AsyncLocalStorage<Headers>();
+
+  async function record(
+    surface: "mcp_check_package" | "mcp_get_report",
+    availability: EvidenceUsage["availability"],
+  ) {
+    try {
+      await options.onRead?.(surface, availability, requestHeaders.getStore() ?? new Headers());
+    } catch {
+      // Measurement must not turn a valid evidence read into a tool error.
+    }
+  }
 
   async function json(path: string) {
     const response = await options.read(path);
@@ -133,7 +152,10 @@ export function createEvidenceMcp(options: Options) {
     return { ...result, scanUrl: pkg.scanId ? `${origin}/scans/${pkg.scanId}` : null };
   }
 
-  async function call(operation: () => Promise<Evidence>) {
+  async function call(
+    surface: "mcp_check_package" | "mcp_get_report",
+    operation: () => Promise<Evidence>,
+  ) {
     if (reads >= 4)
       return toolError("Evidence service busy. Retry with backoff; no scan was started.");
     reads++;
@@ -153,11 +175,22 @@ export function createEvidenceMcp(options: Options) {
           );
         }),
       ]);
+      await record(
+        surface,
+        result.kind === "missing"
+          ? "missing"
+          : !result.report?.status.current
+            ? "historical"
+            : result.matchesCurrentMatrix
+              ? "current"
+              : "earlier",
+      );
       return {
         content: [{ type: "text" as const, text: JSON.stringify(result) }],
         structuredContent: result,
       };
     } catch (error) {
+      await record(surface, "error");
       if (error instanceof ReadError) return toolError(error.message);
       options.onError();
       return toolError(
@@ -194,7 +227,7 @@ export function createEvidenceMcp(options: Options) {
           outputSchema: mcpEvidenceSchema,
           annotations,
         },
-        ({ name, version }) => call(() => checkPackage(name, version)),
+        ({ name, version }) => call("mcp_check_package", () => checkPackage(name, version)),
       );
       server.registerTool(
         "get_report",
@@ -205,7 +238,7 @@ export function createEvidenceMcp(options: Options) {
           outputSchema: mcpEvidenceSchema,
           annotations,
         },
-        ({ id }) => call(() => getReport(id.toLowerCase())),
+        ({ id }) => call("mcp_get_report", () => getReport(id.toLowerCase())),
       );
       return server;
     },
@@ -237,7 +270,9 @@ export function createEvidenceMcp(options: Options) {
               duplex: "half" as const,
             }
           : {};
-        const response = await handler.fetch(new Request(request, bodyOptions));
+        const response = await requestHeaders.run(request.headers, () =>
+          handler.fetch(new Request(request, bodyOptions)),
+        );
         const body = response.body ? await boundedText(response, 512 * 1024) : null;
         const headers = new Headers(response.headers);
         headers.set("cache-control", "no-store, no-transform");

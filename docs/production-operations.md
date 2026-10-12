@@ -115,6 +115,25 @@ Release directories and images are retained for diagnosis and rollback. Inspect 
 
 ## Lookup demand and curated coverage
 
+`sudo compatlab-admin evidence-usage` returns daily ten-minute activity windows by read surface,
+answer availability, immediate referrer group and research marker for 30 UTC days. Website package
+and report reads, direct HTTP API reads and the two MCP tools remain separate. MCP initialization
+and tool listings are not evidence use. Server-rendering API reads do not double-count as public
+API traffic. HTML HEAD and prefetch requests are excluded. Referrer groups describe the immediate
+request, not its original acquisition source or a conversion funnel. Missing/stripped referrers
+fall into direct; unrecognized hosts fall into other. No arbitrary hostnames or paths are retained.
+
+Mark operator API/MCP requests with `X-CompatLab-Research: 1` or the user agent
+`CompatLab-operator-audit/1.0`. For manual website checks, append `research=1` to each URL being
+tested; it is not a persistent cookie and does not follow navigation. The marker is self-declared.
+Unmarked reads are not proof of independent use. Compare these aggregates with Search Console
+clicks and volunteered feedback; keep those measures separate.
+
+Counts deduplicate each fixed combination within ten minutes across clients and replicas, include
+automation, and are best effort under load or database contention. They are activity windows,
+not requests or unique people. Fixed categories bound the rows to 648 per day. Maintenance removes
+expired daily rows in bounded batches. Measurement failures must not prevent evidence reads.
+
 `sudo compatlab-admin lookup-demand` returns the top 100 package/version/availability
 combinations over the last 30 UTC days. A lookup window is a ten-minute period in
 which the package-version API returned current, earlier or no eligible evidence.

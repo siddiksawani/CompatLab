@@ -305,6 +305,9 @@ export async function applyRetention(db: CatalogDatabase, rawActor: AdminAction)
     await tx.execute(sql`DELETE FROM lookup_demand WHERE (day,package_name,version,availability) IN (
       SELECT day,package_name,version,availability FROM lookup_demand
       WHERE day<(clock_timestamp() AT TIME ZONE 'UTC')::date-29 ORDER BY day LIMIT 1000)`);
+    await tx.execute(sql`DELETE FROM evidence_usage WHERE (day,surface,availability,source,research) IN (
+      SELECT day,surface,availability,source,research FROM evidence_usage
+      WHERE day<(clock_timestamp() AT TIME ZONE 'UTC')::date-29 ORDER BY day LIMIT 1000)`);
     if (Object.values(counts).some(Boolean))
       await tx
         .insert(auditEvents)

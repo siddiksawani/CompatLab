@@ -8,6 +8,7 @@ import { compatibilityDescription } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
+import { recordPageUsage } from "../../../server/usage";
 
 type Props = { params: Promise<{ slug: string[] }> };
 async function load({ params }: Props) {
@@ -39,6 +40,7 @@ export async function generateMetadata(props: Props) {
 
 export default async function PackageEvidencePage(props: Props) {
   const { summary, available } = await load(props);
+  await recordPageUsage("package_page", available.matchesCurrentMatrix ? "current" : "earlier");
   const { name, version } = summary.artifact;
   const reportPath = `/reports/${summary.id}`;
   return (

@@ -4,6 +4,7 @@ import { readError } from "../../components/labels";
 import { PackageEvidence } from "../../components/package-evidence";
 import { VersionPicker } from "../../components/version-picker";
 import { publicRead, webRuntime } from "../../server/runtime";
+import { recordPageUsage } from "../../server/usage";
 
 export const metadata = {
   title: "Select an exact npm package version",
@@ -20,7 +21,8 @@ export default async function PackagePage({
   const response = await publicRead(
     `/api/v1/packages?${new URLSearchParams({ name, ...(version ? { version } : {}) })}`,
   );
-  if (!response.ok)
+  if (!response.ok) {
+    await recordPageUsage("package_page", response.status === 404 ? "missing" : "error");
     return (
       <section className="page narrow">
         <a href="/" className="back">
@@ -30,7 +32,16 @@ export default async function PackagePage({
         <p role="status">{readError(response.status)}</p>
       </section>
     );
+  }
   const pkg = packageResponseSchema.parse(await response.json());
+  await recordPageUsage(
+    "package_page",
+    pkg.availableReport
+      ? pkg.availableReport.matchesCurrentMatrix
+        ? "current"
+        : "earlier"
+      : "missing",
+  );
   const { catalog, config } = webRuntime();
   const otherReports =
     pkg.availableReport || pkg.reportId

@@ -1,11 +1,12 @@
-import { reportControlError } from "@compatlab/catalog/web";
+import { reportControlError, usageContext } from "@compatlab/catalog/web";
 import { webRuntime } from "../../../../server/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 async function handle(request: Request) {
   try {
-    return await webRuntime().api(request);
+    const { api, config } = webRuntime();
+    return await api(request, usageContext(request.headers, config.origin));
   } catch {
     reportControlError("web_configuration_unavailable");
     return Response.json(

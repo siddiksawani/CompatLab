@@ -43,6 +43,15 @@ export default function Privacy() {
         missing evidence before adding packages to the separate coverage queue.
       </p>
       <h2 id="retention">Retention</h2>
+      <p>
+        We also keep aggregate ten-minute activity windows for package pages, report pages, public
+        API reads and MCP evidence tools. We record the UTC day, the read surface, whether evidence
+        was available, an immediate referrer group (such as search, GitHub or internal), and a
+        voluntarily supplied research marker. We discard the full referrer URL and user agent after
+        choosing those fixed categories. These records contain no visitor identifier, package name,
+        report ID or browsing history, and expire after 30 UTC days. They include bots and repeat
+        reads; they do not measure people, conversions or usefulness.
+      </p>
       <ul>
         <li>
           Reports, exact locks, identities and provenance remain available indefinitely. Operators

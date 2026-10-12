@@ -25,6 +25,7 @@ import { SelectedEntry } from "../../../components/selected-entry";
 import { compatibilityDescription } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { publicRead, webRuntime } from "../../../server/runtime";
+import { recordPageUsage } from "../../../server/usage";
 
 const loadReport = cache(async (id: string) => {
   const response = await publicRead(`/api/v1/reports/${encodeURIComponent(id)}`);
@@ -49,6 +50,7 @@ export default async function ReportPage({
   searchParams: Promise<{ cell?: string | string[]; entry?: string | string[] }>;
 }) {
   const { report, status } = await loadReport((await params).id);
+  await recordPageUsage("report_page", status.current ? "available" : "historical");
   const query = await searchParams;
   const selected = selectEntry(report.cells, query);
   const reportPath = selected
