@@ -311,7 +311,7 @@ export default async function ReportPage({
           </details>
         ))}
         {report.omissions && (
-          <details className="omissions">
+          <details className="omissions" id="planner-omissions">
             <summary>Planner omissions</summary>
             <dl className="counts">
               {Object.entries(report.omissions.counts).map(([reason, count]) => (

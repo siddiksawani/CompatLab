@@ -84,7 +84,7 @@ test("discovers the original article and exposes its evidence without admitting 
   expect(data.mainEntityOfPage).toBe(url);
   expect(data.headline).toBe(await page.getByRole("heading", { level: 1 }).textContent());
   expect(data.datePublished).toBe("2026-10-05");
-  expect(data.dateModified).toBe("2026-10-12");
+  expect(data.dateModified).toBe("2026-10-13");
   await expect(page.getByRole("complementary", { name: "Article correction" })).toContainText(
     "this was not a rescan",
   );
@@ -95,7 +95,13 @@ test("discovers the original article and exposes its evidence without admitting 
   await expect(
     results.getByRole("row").filter({ hasText: "@convex-dev/agent@0.7.3" }),
   ).toContainText("8 unconfirmed");
-  expect(data.citation).toHaveLength(4);
+  expect(data.citation).toHaveLength(5);
+  await expect(
+    page.getByRole("heading", {
+      name: "Does Zod load in Bun and Deno when the overall result is inconclusive?",
+    }),
+  ).toBeVisible();
+  await expect(page.locator('a[href="/npm/zod/4.6.7"]')).toBeVisible();
   for (const report of data.citation) {
     await expect(
       page.locator(`article a[href="${new URL(report).pathname}"]`).first(),
@@ -122,7 +128,11 @@ test("article content and evidence links are present without JavaScript", async 
     expect(response?.ok()).toBe(true);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("table")).toHaveCount(2);
-    await expect(page.locator('article a[href^="/reports/"]')).toHaveCount(8);
+    await expect(page.getByRole("link", { name: "Zod 4.6.7", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "zod/v4/core", exact: true })).toHaveAttribute(
+      "href",
+      "/reports/98dbec06-fdb3-4718-b60f-43f42171ad6c?cell=bun_1_4_2-subpaths-esm&entry=7#selected-result",
+    );
     await page.goto(mcpArticlePath);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Check npm compatibility with MCP: a guide for AI agents",

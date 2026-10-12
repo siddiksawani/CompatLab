@@ -71,9 +71,10 @@ export default function ApiGuide() {
         status, exact artifact and runtime pins, preparation, per-runtime outcomes, per-group
         coverage and representative failures. <code>reportPath</code> is the observation link
         relative to this site. Optional peer requirements are deduplicated and limited to 16;{" "}
-        <code>missingOptionalPeersTruncated</code> identifies a longer list. Individual entries,
-        omitted subpaths, raw logs and named assertions remain in the full report. A group’s first
-        failure does not describe every failure in that group.
+        <code>missingOptionalPeersTruncated</code> identifies a longer list. Planner omission counts
+        and up to 64 samples are included as <code>omissions</code>; older responses may omit that
+        field. Individual observations, raw logs and named assertions remain in the full report. A
+        group’s first failure does not describe every failure in that group.
       </p>
       <h2 id="status">Keep outcome, coverage and status separate</h2>
       <p>
@@ -88,10 +89,11 @@ export default function ApiGuide() {
         <code>availableReport.matchesCurrentMatrix</code>.
       </p>
       <p>
-        Each cell has an outcome and separate passed, failed, interrupted and untested counts.
-        Complete coverage means the planned checks ran; it does not mean they all passed. Loading
-        success does not prove functional correctness or safety.{" "}
-        <a href="/methodology">Read the methodology and limitations.</a>
+        Each cell has an outcome and separate passed, failed, interrupted and untested counts. A
+        cell’s complete coverage means its planned checks ran; it does not mean they all passed. The
+        report can still have incomplete coverage when wildcard exports were not enumerated. Omitted
+        exports are untested, not failed imports. Loading success does not prove functional
+        correctness or safety. <a href="/methodology">Read the methodology and limitations.</a>
       </p>
       <h2 id="markdown">Request a Markdown summary</h2>
       <p>

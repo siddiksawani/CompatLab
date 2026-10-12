@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 48 explains omitted export coverage beside the runtime answers and includes the retained planner
+omissions in compact API/MCP evidence and Markdown. A completed plan is distinguished from complete export coverage;
+wildcard patterns are not described as failed imports. Server-rendered explanations and exact next-test
+guidance preserve the existing planner and execution policy. The existing compatibility article adds
+the October 12 Zod 4.6.7 execution, selected-path links and the remaining application-test boundary.
+
 PR 47 adds private aggregate evidence-use measurements alongside existing package demand. It
 separates website, public API and MCP reads, answer availability, fixed referrer categories and
 voluntary research traffic. Ten-minute windows, bounded categories and 30-day retention avoid

@@ -75,6 +75,16 @@ function reportFixture() {
       outcome: "inconclusive",
       evidenceLevel: "smoke_tested",
       coverageComplete: false,
+      omissions: {
+        counts: {
+          pattern: 1,
+          non_executable: 0,
+          not_exported: 0,
+          invalid_subpath: 0,
+          coverage_limit: 0,
+        },
+        samples: [{ subpath: "./locales/*", reason: "pattern" }],
+      },
       limitations: ["Fixture has missing optional peers."],
       preparation: {
         id: randomUUID(),

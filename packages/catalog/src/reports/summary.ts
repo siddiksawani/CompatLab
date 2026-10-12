@@ -20,6 +20,7 @@ export async function readReportSummary(db: CatalogReader, reportId: string) {
         'classifierRevision',payload->'classifierRevision','matrix',payload->'matrix',
         'outcome',payload->'outcome','evidenceLevel',payload->'evidenceLevel',
         'coverageComplete',payload->'coverageComplete','limitations',payload->'limitations',
+        'omissions',payload->'omissions',
         'preparation',(payload->'preparation')-'staticObservations',
         'cells',(SELECT jsonb_agg(cell-'entries'-'sessions' ORDER BY position)
           FROM jsonb_array_elements(payload->'cells') WITH ORDINALITY AS entries(cell,position)),

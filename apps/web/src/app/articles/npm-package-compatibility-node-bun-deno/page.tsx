@@ -21,6 +21,7 @@ const reports = {
   express: "/reports/282cda8a-7447-43b3-a4aa-5bcf57ddbb8f",
   preact: "/reports/141416b5-91ca-443e-98dd-4a077d938f54",
   zod: "/reports/3db91aae-f19a-4ba7-bc04-39443c27e622",
+  zodLatest: "/reports/98dbec06-fdb3-4718-b60f-43f42171ad6c",
   agent: "/reports/6e840923-8326-48c6-8273-c4fe7e85d1c7",
 };
 
@@ -213,6 +214,39 @@ export default async function CompatibilityArticle() {
         observations. If your application imports a particular locale, include that import in your
         own tests. Passing the observed entries and covering all public entries are separate
         requirements.
+      </p>
+      <h3>Does Zod load in Bun and Deno when the overall result is inconclusive?</h3>
+      <p>
+        In a separate execution on October 12, 2026 at 21:26 UTC,{" "}
+        <a href={reports.zodLatest}>Zod 4.6.7</a> again passed all 80 planned loading operations.
+        That includes the root import in{" "}
+        <a href={`${reports.zodLatest}?cell=bun_1_4_2-root-esm&entry=0#selected-result`}>
+          Bun 1.4.2
+        </a>{" "}
+        and{" "}
+        <a href={`${reports.zodLatest}?cell=deno_2_9_7-root-esm&entry=0#selected-result`}>
+          Deno 2.9.7
+        </a>
+        , plus the root and explicit subpaths in Node.js 24.21.0 and 26.10.0. The unexpanded
+        <code> ./v4/locales/*</code> pattern keeps overall coverage incomplete. It is not a recorded
+        Bun or Deno loading failure.
+      </p>
+      <p>
+        Match your actual import before using the result: <code>zod</code>, <code>zod/mini</code>{" "}
+        and{" "}
+        <a href={`${reports.zodLatest}?cell=bun_1_4_2-subpaths-esm&entry=7#selected-result`}>
+          <code>zod/v4/core</code>
+        </a>{" "}
+        are different planned entries. A wildcard locale import needs its own check. In your
+        application’s pinned dependency installation, load the same path and test a representative
+        valid input, invalid input, transform and locale you depend on. Those schema behaviors were
+        not exercised by this report. These observations use Linux amd64/glibc with install scripts
+        and execution networking disabled.
+      </p>
+      <p>
+        Use the <a href="/npm/zod/4.6.7">Zod 4.6.7 version summary</a> to find retained evidence for
+        that version, or <a href="/packages?name=zod">choose another Zod version</a>. An older
+        version’s pass does not answer the question for a new release.
       </p>
       <h2 id="agent">Different error messages do not confirm an independent failure</h2>
       <p>

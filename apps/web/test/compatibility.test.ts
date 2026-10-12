@@ -3,6 +3,8 @@ import {
   type CompatibilityEvidence,
   compatibilityDescription,
   compatibilityScope,
+  omittedCoverage,
+  plannedCoverageSummary,
   runtimeAnswers,
 } from "../src/server/compatibility-copy.js";
 
@@ -39,6 +41,45 @@ function evidence(): CompatibilityEvidence {
 }
 
 describe("evidence-based compatibility answers", () => {
+  it("explains omitted exports without inventing missing planned observations", () => {
+    const report = evidence();
+    report.coverageComplete = false;
+    report.omissions = {
+      counts: {
+        pattern: 1,
+        invalid_subpath: 0,
+        coverage_limit: 0,
+        non_executable: 1,
+        not_exported: 1,
+      },
+      samples: [
+        { subpath: "./locales/*", reason: "pattern" },
+        { subpath: "./package.json", reason: "non_executable" },
+        { subpath: "./private", reason: "not_exported" },
+      ],
+    };
+    expect(plannedCoverageSummary(report)).toBe(
+      "All applicable planned checks completed, but some public exports were not included in the plan.",
+    );
+    expect(omittedCoverage(report)).toEqual({
+      count: 1,
+      samples: [
+        {
+          subpath: "./locales/*",
+          explanation: "Wildcard export pattern; matching imports were not enumerated",
+        },
+      ],
+    });
+    const firstCell = report.cells[0];
+    if (!firstCell) throw new Error("Expected a planned cell.");
+    firstCell.coverage.complete = false;
+    expect(plannedCoverageSummary(report)).toContain("incomplete or unavailable");
+    report.omissions.counts.pattern = 0;
+    expect(omittedCoverage(report)).toBeNull();
+    delete report.omissions;
+    expect(omittedCoverage(report)).toBeNull();
+  });
+
   it("uses actual pins, keeps multiple Node profiles and never invents an absent runtime", () => {
     const report = evidence();
     const answers = runtimeAnswers(report);

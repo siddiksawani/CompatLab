@@ -97,6 +97,7 @@ export const reportSummarySchema = hostedReportSchema
   })
   .extend({
     preparation: hostedReportSchema.shape.preparation.omit({ staticObservations: true }),
+    omissions: hostedReportSchema.shape.omissions.optional(),
     cells: z
       .array(reportCellSchema.omit({ entries: true, sessions: true }))
       .min(4)

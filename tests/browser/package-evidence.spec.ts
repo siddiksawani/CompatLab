@@ -16,6 +16,44 @@ test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
 });
 
+test("explains successful planned checks with omitted exports without JavaScript", async ({
+  page,
+  request,
+  browser,
+}) => {
+  await requestScan(page, "compatlab-browser-fixture");
+  await finish(page, request, "execute-omitted");
+  const reportPath = new URL(page.url()).pathname;
+  const before = await (await fixture(request, "counts")).json();
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const reader = await context.newPage();
+    await reader.goto(new URL("/npm/compatlab-browser-fixture/1.0.0", page.url()).href);
+    await expect(reader.locator(".lede")).toContainText(
+      "All applicable planned checks completed, but some public exports were not included",
+    );
+    await expect(
+      reader.getByRole("heading", { name: "Exports outside these checks" }),
+    ).toBeVisible();
+    await expect(reader.getByText("./locales/*", { exact: true })).toBeVisible();
+    await expect(reader.getByText("This is untested coverage", { exact: false })).toBeVisible();
+    await expect(
+      reader.getByRole("link", { name: "See all recorded planner omissions" }),
+    ).toHaveAttribute("href", `${reportPath}#planner-omissions`);
+    const markdown = await request.get(reportPath, { headers: { accept: "text/markdown" } });
+    expect(markdown.headers()["content-type"]).toContain("text/markdown");
+    const explanation = await markdown.text();
+    expect(explanation).toContain(
+      "All applicable planned checks completed, but some public exports",
+    );
+    expect(explanation).toContain("Wildcard export pattern; matching imports were not enumerated");
+    expect(explanation).toContain("Untested exports are not evidence of failed imports");
+    expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  } finally {
+    await context.close();
+  }
+});
+
 test("distinguishes missing evidence, another tested version and an active scan", async ({
   page,
   request,

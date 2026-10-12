@@ -4,7 +4,10 @@ import { CompatibilityAnswers } from "../../../components/compatibility-answers"
 import { FailureDetails } from "../../../components/failure-details";
 import { labels, observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
-import { compatibilityDescription } from "../../../server/compatibility-copy";
+import {
+  compatibilityDescription,
+  plannedCoverageSummary,
+} from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
@@ -62,11 +65,8 @@ export default async function PackageEvidencePage(props: Props) {
       <h2>Node.js, Bun and Deno compatibility results</h2>
       <p className="lede">
         Does {name} {version} load in Node.js, Bun and Deno? In the recorded environment, the
-        results were {runtimeSummary(summary)}.{" "}
-        {summary.coverageComplete
-          ? "All applicable planned checks completed."
-          : "Some planned checks are missing or incomplete."}{" "}
-        Loading success does not establish functional correctness or package safety.
+        results were {runtimeSummary(summary)}. {plannedCoverageSummary(summary)} Loading success
+        does not establish functional correctness or package safety.
       </p>
       <p className="muted">Observed {observedDate(summary.observedAt)} · Linux amd64 / glibc</p>
       {!available.matchesCurrentMatrix && (
