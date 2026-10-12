@@ -55,6 +55,11 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 46 gives the full browser qualification job 25 minutes, including browser installation, the
+production build and cleanup. A release run completed all 176 tests but reached the former
+15-minute deadline before cleanup. Test coverage, per-test timeouts, retries and required checks
+remain unchanged.
+
 PR 45 updates the agent guide with three completed demonstrations: Express root loading, Hono
 adapter selection and Postgres.js return-type differences. Each cites retained October 9 evidence,
 distinguishes the October 11 classification, links selected imports and names the application test
