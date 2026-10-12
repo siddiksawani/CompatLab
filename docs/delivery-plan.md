@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 40 corrects the original compatibility article after optional-peer and batch-isolation
+reclassification. It links the current classifications of the original October 5 executions,
+separates missing prerequisites from unknown and unconfirmed failures, and publishes an explicit
+correction and modification date without implying a rescan. Validation covers article metadata,
+result explanations, evidence links and responsive browser presentation.
+
 On October 9, 2026, the maintainer approved improving programmatic access, evidence discovery, focused coverage and a read-only MCP pilot. Deliver these as separate reviewable slices. Ordinary lookups must remain read-only, historical observations must retain their identities, and public maintainer accounts remain deferred.
 
 | Slice | Deliverable | Validation |

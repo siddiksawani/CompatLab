@@ -4,6 +4,7 @@ export const compatibilityArticle = {
   description:
     "Real npm package compatibility results for Express, Preact, Zod and the Convex agent across Node.js, Bun and Deno, with failures, coverage and linked evidence.",
   publishedAt: "2026-10-05",
+  modifiedAt: "2026-10-12",
   author: "CompatLab",
 } as const;
 
