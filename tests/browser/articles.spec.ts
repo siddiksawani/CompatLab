@@ -83,7 +83,18 @@ test("discovers the original article and exposes its evidence without admitting 
   );
   expect(data.mainEntityOfPage).toBe(url);
   expect(data.headline).toBe(await page.getByRole("heading", { level: 1 }).textContent());
-  expect(data.datePublished).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(data.datePublished).toBe("2026-10-05");
+  expect(data.dateModified).toBe("2026-10-12");
+  await expect(page.getByRole("complementary", { name: "Article correction" })).toContainText(
+    "this was not a rescan",
+  );
+  const results = page.getByRole("region", { name: "Package loading results", exact: true });
+  await expect(results.getByRole("row").filter({ hasText: "preact@11.0.0" })).toContainText(
+    "Inconclusive",
+  );
+  await expect(
+    results.getByRole("row").filter({ hasText: "@convex-dev/agent@0.7.3" }),
+  ).toContainText("8 unconfirmed");
   expect(data.citation).toHaveLength(4);
   for (const report of data.citation) {
     await expect(

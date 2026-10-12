@@ -12,15 +12,16 @@ export const metadata: Metadata = {
     ...baseMetadata.openGraph,
     type: "article",
     publishedTime: article.publishedAt,
+    modifiedTime: article.modifiedAt,
     authors: [article.author],
   },
 };
 
 const reports = {
-  express: "/reports/9368053f-f1bb-43cc-95e0-7c8e938fcb4c",
-  preact: "/reports/cb8cdf3c-7a5d-41c6-9380-1175eb69811c",
-  zod: "/reports/673f4173-fdec-4d29-a02d-d0cf6f20b08d",
-  agent: "/reports/c060462b-103e-4704-9522-431d02acfce3",
+  express: "/reports/282cda8a-7447-43b3-a4aa-5bcf57ddbb8f",
+  preact: "/reports/141416b5-91ca-443e-98dd-4a077d938f54",
+  zod: "/reports/3db91aae-f19a-4ba7-bc04-39443c27e622",
+  agent: "/reports/6e840923-8326-48c6-8273-c4fe7e85d1c7",
 };
 
 export default async function CompatibilityArticle() {
@@ -32,7 +33,7 @@ export default async function CompatibilityArticle() {
     headline: article.title,
     description: article.description,
     datePublished: article.publishedAt,
-    dateModified: article.publishedAt,
+    dateModified: article.modifiedAt,
     inLanguage: "en",
     author: {
       "@type": "Organization",
@@ -51,7 +52,7 @@ export default async function CompatibilityArticle() {
         { id: "express", label: "Express: loading passes" },
         { id: "preact", label: "Preact: missing peer" },
         { id: "zod", label: "Zod: coverage matters" },
-        { id: "agent", label: "Different runtime errors" },
+        { id: "agent", label: "Unconfirmed batch failures" },
         { id: "method", label: "How we test" },
         { id: "your-package", label: "Check your package" },
       ]}
@@ -64,11 +65,14 @@ export default async function CompatibilityArticle() {
         <h1>{article.title}</h1>
         <p className="muted">
           By {article.author} · <time dateTime={article.publishedAt}>October 5, 2026</time>
+          {" · Updated "}
+          <time dateTime={article.modifiedAt}>October 12, 2026</time>
         </p>
         <p className="lede">
-          Express loaded in all four runtime profiles. Preact’s root did too, but two of its
-          subpaths failed. Zod passed 80 loading checks and still received an inconclusive result.
-          Each finding answers a different part of the compatibility question.
+          Express loaded in all four runtime profiles. Preact’s root did too, while its server
+          entries exposed missing prerequisites and uncertain results. Zod passed 80 loading checks
+          and still received an inconclusive result. Each finding answers a different part of the
+          compatibility question.
         </p>
       </header>
       <p>
@@ -84,10 +88,22 @@ export default async function CompatibilityArticle() {
         <a href="https://github.com/siddiksawani/CompatLab">open source</a>.
       </p>
       <h2 id="results">Four packages, with the reports attached</h2>
+      <aside className="notice" aria-label="Article correction">
+        <strong>Correction, October 12, 2026</strong>
+        <p>
+          The original article called Preact and the Convex agent “Mixed results.” Their retained
+          reports are now inconclusive. The classifier distinguishes missing optional peers and
+          failures after an earlier failed load in the same batch. In particular, the Convex
+          <code> /test</code> results were not confirmed in fresh processes and do not establish a
+          runtime-specific defect. The links below use the October 11 classifications of the same
+          October 5 executions. Raw evidence and observation dates are unchanged; this was not a
+          rescan.
+        </p>
+      </aside>
       <p>
-        We reviewed these reports on October 5, 2026. Each uses Linux amd64 with glibc, Node.js
-        24.21.0, Node.js 26.10.0, Bun 1.4.2 and Deno 2.9.7. Install scripts stay disabled. Within
-        each report, the runtimes read the same prepared dependency files.
+        These packages were tested on October 5, 2026. Each report uses Linux amd64 with glibc,
+        Node.js 24.21.0, Node.js 26.10.0, Bun 1.4.2 and Deno 2.9.7. Install scripts stay disabled.
+        Within each report, the runtimes read the same prepared dependency files.
       </p>
       <section
         className="article-table"
@@ -96,7 +112,7 @@ export default async function CompatibilityArticle() {
         tabIndex={0}
       >
         <table>
-          <caption>Recorded checks across four runtimes and both loading modes</caption>
+          <caption>October 5 observations with their October 11 classifications</caption>
           <thead>
             <tr>
               <th scope="col">Package and report</th>
@@ -119,8 +135,8 @@ export default async function CompatibilityArticle() {
                 <a href={reports.preact}>preact@11.0.0</a>
               </th>
               <td>8 passed</td>
-              <td>96 passed · 16 failed</td>
-              <td>Mixed results</td>
+              <td>96 passed · 13 missing peer · 2 unconfirmed · 1 failure without diagnostics</td>
+              <td>Inconclusive</td>
             </tr>
             <tr>
               <th scope="row">
@@ -135,8 +151,8 @@ export default async function CompatibilityArticle() {
                 <a href={reports.agent}>@convex-dev/agent@0.7.3</a>
               </th>
               <td>8 passed</td>
-              <td>24 passed · 16 failed</td>
-              <td>Mixed results</td>
+              <td>24 passed · 6 missing peer · 8 unconfirmed · 2 failures without diagnostics</td>
+              <td>Inconclusive</td>
             </tr>
           </tbody>
         </table>
@@ -160,23 +176,29 @@ export default async function CompatibilityArticle() {
         requests, exercise middleware or connect to a database. Before migrating an application, run
         its integration tests under the runtime you plan to deploy.
       </p>
-      <h2 id="preact">Preact’s missing peer explains a mixed result</h2>
+      <h2 id="preact">Preact’s server entries need context</h2>
       <p>
         <a href={reports.preact}>Preact 11.0.0</a> passed its root checks across the matrix. Each
-        runtime and loading mode then passed 12 of 14 subpath checks. The two failures were
+        runtime and loading mode then passed 12 of 14 subpath checks. The two non-passing entries
+        were
         <code> preact/compat/server</code> and <code>preact/compat/server.browser</code>.
       </p>
       <p>
-        The retained errors identify a missing <code>preact-render-to-string</code> dependency.
+        Thirteen subpath checks identify a missing <code>preact-render-to-string</code> dependency.
         Preact’s <a href="https://registry.npmjs.org/preact/11.0.0">published manifest</a> declares
         it as an optional peer. The consumer workspace for this report installed Preact alone. A
         project that uses those server-rendering entry points needs to account for that peer.
       </p>
       <p>
+        The remaining three checks are in Bun: one import failure has no captured diagnostic, and
+        two later batch failures have no fresh-process confirmation. Their causes cannot all be
+        attributed to the missing peer. The current overall result is inconclusive.
+      </p>
+      <p>
         The useful next step is to install the intended peer in your application and test its
         server-rendering path. We have not performed that follow-up in this report, so we cannot
-        claim it resolves the full workflow. The observed failure affects this dependency snapshot
-        on all four profiles; it does not establish a Bun-only or Deno-only defect.
+        claim it resolves the full workflow. These observations describe this dependency snapshot;
+        they do not establish a Bun-only or Deno-only defect.
       </p>
       <h2 id="zod">Zod passes its checks, but the wildcard remains untested</h2>
       <p>
@@ -192,11 +214,13 @@ export default async function CompatibilityArticle() {
         own tests. Passing the observed entries and covering all public entries are separate
         requirements.
       </p>
-      <h2 id="agent">The same failed subpath can produce different runtime errors</h2>
+      <h2 id="agent">Different error messages do not confirm an independent failure</h2>
       <p>
         In <a href={reports.agent}>@convex-dev/agent 0.7.3</a>, all root checks passed. Each subpath
-        batch passed three entries and failed two. The <code>/react</code> entry lacked React in
-        this snapshot. The <code>/test</code> entry exposed a different distinction:
+        batch passed three entries and recorded two failures. For <code>/react</code>, Node and Deno
+        identify a missing optional React peer; Bun captured no error message. The later
+        <code> /test</code> entry failed in the same process and was not independently confirmed in
+        any of the eight runtime/mode combinations. Those entries are now inconclusive.
       </p>
       <section
         className="article-table"
@@ -205,11 +229,11 @@ export default async function CompatibilityArticle() {
         tabIndex={0}
       >
         <table>
-          <caption>ESM loading of @convex-dev/agent/test in the linked report</caption>
+          <caption>Historical ESM batch errors for @convex-dev/agent/test; all unconfirmed</caption>
           <thead>
             <tr>
               <th scope="col">Runtime</th>
-              <th scope="col">Recorded failure</th>
+              <th scope="col">Recorded batch error, not an independently confirmed cause</th>
             </tr>
           </thead>
           <tbody>
@@ -231,12 +255,11 @@ export default async function CompatibilityArticle() {
         </table>
       </section>
       <p>
-        Bun reached a call to <code>import.meta.glob</code>; Node and Deno reported a TypeScript
-        loading restriction first. Vite documents{" "}
-        <a href="https://vite.dev/guide/features.html#glob-import">glob imports</a> as a
-        Vite-specific feature. This points toward a test-tooling assumption that a plain runtime
-        loading check does not supply. It is not enough evidence to call the package’s application
-        entry point broken, or to promise that changing runtimes fixes the test entry.
+        These messages remain useful investigation clues, but a shared batch’s earlier failure can
+        affect later loads. They cannot establish how this entry behaves in a fresh process or which
+        runtime is more compatible. Test the documented entry with its required tooling and
+        dependencies in isolation before drawing that conclusion. The package root passed; its
+        application behavior was not tested.
       </p>
       <h2 id="method">How we test Node, Bun and Deno compatibility</h2>
       <p>
