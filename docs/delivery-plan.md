@@ -55,6 +55,11 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 44 includes bounded non-passing import details in the initial report HTML. Readers can inspect
+prerequisites and failure context and follow exact-entry links without JavaScript or fetching raw
+logs. The full observation view remains available for larger groups. The browser regression verifies
+the report-to-entry journey with JavaScript disabled; indexing policy and report selection are unchanged.
+
 PR 43 separates execution and classification dates in report history and comparisons. Replacement
 links retain an explicitly selected import result. Comparisons normalize absent optional coverage
 counters to zero, so classifier schema additions do not create false loading changes. The comparison

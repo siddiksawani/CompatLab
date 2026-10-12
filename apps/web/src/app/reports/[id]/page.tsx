@@ -18,6 +18,7 @@ import {
   packageEvidencePath,
   packageUrl,
 } from "../../../components/labels";
+import { NonPassingEntries } from "../../../components/non-passing-entries";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { SectionNavigation } from "../../../components/section-navigation";
 import { SelectedEntry } from "../../../components/selected-entry";
@@ -298,6 +299,7 @@ export default async function ReportPage({
                 </p>
               )}
               {cell.failure && <FailureDetails failure={cell.failure} />}
+              <NonPassingEntries reportId={report.id} cell={cell} />
               {cell.runId ? (
                 <Evidence reportId={report.id} runId={cell.runId} anchor={cellAnchor(cell)} />
               ) : (

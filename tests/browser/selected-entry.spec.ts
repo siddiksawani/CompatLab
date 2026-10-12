@@ -56,6 +56,18 @@ test("matrix results open their entries and share one prerequisite result", asyn
   const context = await browser.newContext({ javaScriptEnabled: false });
   try {
     const reader = await context.newPage();
+    await reader.goto(reportUrl);
+    const preview = reader.locator(`#${anchor}`);
+    await preview.locator("summary").first().click();
+    await expect(preview.getByRole("region", { name: "Non-passing import results" })).toContainText(
+      "Requires optional peer: @fixture/renderer",
+    );
+    await preview
+      .getByRole("link", { name: "@compatlab/browser-fixture/missing", exact: true })
+      .click();
+    await expect(reader.getByRole("region", { name: "Selected import result" })).toContainText(
+      "@fixture/renderer",
+    );
     await reader.goto(page.url());
     await expect(reader.getByRole("region", { name: "Selected import result" })).toContainText(
       "@fixture/renderer",
