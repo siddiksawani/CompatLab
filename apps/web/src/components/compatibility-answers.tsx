@@ -16,8 +16,8 @@ export function CompatibilityAnswers({ report }: { report: CompatibilityEvidence
         <aside className="notice warning">
           <h3>Exports outside these checks</h3>
           <p>
-            The planner omitted {omitted.count} export {omitted.count === 1 ? "entry" : "entries"}{" "}
-            that limit coverage. This is untested coverage, not evidence that those imports fail.
+            The planner omitted {omitted.count} export {omitted.count === 1 ? "entry" : "entries"}.
+            This is untested coverage, not evidence that those imports fail.
           </p>
           <ul>
             {omitted.samples.map((entry) => (
