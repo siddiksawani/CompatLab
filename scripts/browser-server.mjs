@@ -84,9 +84,13 @@ const fixtureServer = createServer(async (request, response) => {
       response.end(JSON.stringify({ scanId: scan.scanId }));
       return;
     } else if (
-      ["/execute", "/execute-mixed", "/execute-optional-peers", "/execute-value-types"].includes(
-        request.url,
-      )
+      [
+        "/execute",
+        "/execute-mixed",
+        "/execute-optional-peers",
+        "/execute-value-types",
+        "/execute-omitted",
+      ].includes(request.url)
     ) {
       const mixed = request.url === "/execute-mixed";
       const optionalPeers = request.url === "/execute-optional-peers";
@@ -117,6 +121,7 @@ const fixtureServer = createServer(async (request, response) => {
             exports: {
               ".": "./index.js",
               "./util": "./util.js",
+              ...(request.url === "/execute-omitted" ? { "./locales/*": "./locales/*.js" } : {}),
               ...(mixed || optionalPeers ? { "./missing": "./missing.js" } : {}),
             },
             ...(optionalPeers

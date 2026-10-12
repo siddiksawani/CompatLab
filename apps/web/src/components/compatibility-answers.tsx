@@ -1,14 +1,40 @@
+import { displayIdentifier } from "@compatlab/engine";
 import {
   type CompatibilityEvidence,
   compatibilityScope,
+  omittedCoverage,
   runtimeAnswers,
 } from "../server/compatibility-copy";
 
 export function CompatibilityAnswers({ report }: { report: CompatibilityEvidence }) {
+  const omitted = omittedCoverage(report);
   return (
     <section className="report-section compatibility-answers" id="compatibility">
       <h2>Does {report.artifact.name} work in Node.js, Bun and Deno?</h2>
       <p>{compatibilityScope(report)}</p>
+      {omitted && (
+        <aside className="notice warning">
+          <h3>Exports outside these checks</h3>
+          <p>
+            The planner omitted {omitted.count} export {omitted.count === 1 ? "entry" : "entries"}{" "}
+            that limit coverage. This is untested coverage, not evidence that those imports fail.
+          </p>
+          <ul>
+            {omitted.samples.map((entry) => (
+              <li key={`${entry.subpath}-${entry.explanation}`}>
+                <code>{displayIdentifier(entry.subpath)}</code>: {entry.explanation}.
+              </li>
+            ))}
+          </ul>
+          <p>
+            Test the exact import your application uses, then exercise its expected behavior.{" "}
+            <a href={`/reports/${report.id}#planner-omissions`}>
+              See all recorded planner omissions
+            </a>
+            .
+          </p>
+        </aside>
+      )}
       {runtimeAnswers(report).map(({ kind, question, results }) => (
         <section key={kind} id={`compatibility-${kind}`}>
           <h3>{question}</h3>

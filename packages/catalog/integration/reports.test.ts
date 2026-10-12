@@ -747,7 +747,12 @@ describe("public report reads", () => {
   it("projects compact evidence without losing failures, coverage, runtime pins or status", async () => {
     const { scan } = await execution({
       manifest: {
-        exports: { ".": "./index.js", "./util": "./util.js", "./server": "./server.js" },
+        exports: {
+          ".": "./index.js",
+          "./util": "./util.js",
+          "./server": "./server.js",
+          "./locales/*": "./locales/*.js",
+        },
         peerDependencies: { renderer: "^2" },
         peerDependenciesMeta: { renderer: { optional: true } },
       },
@@ -784,10 +789,20 @@ describe("public report reads", () => {
       classifiedAt: report.classifiedAt,
       classifierRevision: CLASSIFIER_REVISION,
       outcome: "inconclusive",
-      coverageComplete: true,
+      coverageComplete: false,
+      omissions: report.omissions,
       missingOptionalPeers: [{ name: "renderer", range: "^2" }],
       missingOptionalPeersTruncated: false,
     });
+    expect(compact.summary.omissions?.counts.pattern).toBe(1);
+    expect(compact.summary.omissions?.samples).toContainEqual({
+      subpath: "./locales/*",
+      reason: "pattern",
+    });
+    const { omissions: _omissions, ...legacySummary } = compact.summary;
+    expect(
+      reportSummaryEnvelopeSchema.parse({ ...compact, summary: legacySummary }).summary.omissions,
+    ).toBeUndefined();
     expect(compact.summary.runtimes).toEqual(
       report.matrix.images.map(({ profileId }) => ({ profileId, outcome: "inconclusive" })),
     );

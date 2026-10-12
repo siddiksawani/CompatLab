@@ -2,7 +2,12 @@ import type { ReportPreview } from "@compatlab/catalog/web";
 import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
 import { coverageSummary, isolationLimited, labels } from "../components/labels";
 import { articles } from "../content/articles";
-import { compatibilityScope, runtimeAnswers } from "./compatibility-copy";
+import {
+  compatibilityScope,
+  omittedCoverage,
+  plannedCoverageSummary,
+  runtimeAnswers,
+} from "./compatibility-copy";
 
 function text(value: string) {
   return value.replace(/[\r\n]+/g, " ").replace(/[\\`*_[\]{}()<>#+.!|~-]/g, "\\$&");
@@ -65,17 +70,26 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
 
 export function reportMarkdown(origin: string, { report, status }: ReportEnvelope) {
   const api = `${origin}/api/v1/reports/${report.id}`;
+  const omitted = omittedCoverage(report);
   return [
     `# ${text(report.artifact.name)} ${text(report.artifact.version)}`,
     `Report: ${origin}/reports/${report.id}`,
     status.current
       ? "Status: current evidence."
       : `Status: historical evidence. ${text(status.invalidationReason ?? "This report is superseded or unavailable under the current policy.")}${status.replacedBy ? ` Replacement: ${origin}/reports/${status.replacedBy}` : ""}`,
-    `Outcome: ${labels[report.outcome]}. ${report.coverageComplete ? "Planned coverage complete." : "Coverage is limited."}`,
+    `Outcome: ${labels[report.outcome]}. ${plannedCoverageSummary(report)}`,
     `Observed: ${report.observedAt ?? "not retained"}. Platform: Linux amd64 / glibc. Evidence: ${report.evidenceLevel}.`,
     "Loading success does not establish functional correctness or package safety. These are observations of specific inputs, not a general compatibility guarantee.",
     "## Compatibility questions",
     text(compatibilityScope(report)),
+    ...(omitted
+      ? [
+          "## Exports outside these checks",
+          `The planner omitted ${omitted.count} export ${omitted.count === 1 ? "entry" : "entries"} that limit coverage. Untested exports are not evidence of failed imports.`,
+          ...omitted.samples.map((entry) => `- ${text(entry.subpath)}: ${entry.explanation}.`),
+          `Test the exact import your application uses, then exercise its expected behavior. [Recorded planner omissions](${origin}/reports/${report.id}#planner-omissions).`,
+        ]
+      : []),
     ...runtimeAnswers(report).flatMap(({ question, results }) => [
       `### ${text(question)}`,
       ...results.flatMap((result) => [

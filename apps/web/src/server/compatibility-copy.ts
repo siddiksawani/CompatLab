@@ -2,7 +2,7 @@ import type { CompatibilityOutcome, ReportSummary } from "@compatlab/contracts";
 import { combineOutcomes } from "@compatlab/engine";
 import { isolationCounts, labels } from "../components/labels";
 
-export type CompatibilityEvidence = Pick<ReportSummary, "id" | "coverageComplete"> & {
+export type CompatibilityEvidence = Pick<ReportSummary, "id" | "coverageComplete" | "omissions"> & {
   artifact: Pick<ReportSummary["artifact"], "name" | "version">;
   matrix: {
     images: Pick<ReportSummary["matrix"]["images"][number], "kind" | "profileId" | "version">[];
@@ -99,4 +99,39 @@ export function compatibilityScope(report: CompatibilityEvidence) {
       : "The runtimes used the same installed dependency snapshot.",
     "Test environment: Linux amd64 / glibc, with install scripts and execution networking disabled. Successful import or require does not prove that package functions, native features or your application work.",
   ].join(" ");
+}
+
+const coverageReasons = ["pattern", "invalid_subpath", "coverage_limit"] as const;
+const omissionLabels = {
+  pattern: "Wildcard export pattern; matching imports were not enumerated",
+  invalid_subpath: "Export path could not be planned",
+  coverage_limit: "Export omitted by the bounded coverage limit",
+};
+
+export function omittedCoverage(report: CompatibilityEvidence) {
+  const omissions = report.omissions;
+  if (!omissions) return null;
+  const count = coverageReasons.reduce((sum, reason) => sum + omissions.counts[reason], 0);
+  if (!count) return null;
+  const samples = omissions.samples
+    .filter((entry) => coverageReasons.some((reason) => reason === entry.reason))
+    .slice(0, 6)
+    .map((entry) => ({
+      subpath: entry.subpath,
+      explanation: omissionLabels[entry.reason as keyof typeof omissionLabels],
+    }));
+  return { count, samples };
+}
+
+export function plannedCoverageSummary(report: CompatibilityEvidence) {
+  if (report.coverageComplete) return "All applicable planned checks completed.";
+  if (
+    report.preparation.outcome === "pass" &&
+    report.cells.length > 0 &&
+    report.cells.every((cell) => cell.coverage.complete) &&
+    omittedCoverage(report)
+  ) {
+    return "All applicable planned checks completed, but some public exports were not included in the plan.";
+  }
+  return "Coverage is limited: some exports or checks were omitted, incomplete or unavailable.";
 }
