@@ -55,6 +55,14 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 42 makes individual loading results shareable. Matrix links open and load the selected group,
+then each entry links to a server-rendered summary with its exact package version, runtime, mode,
+observation date and prerequisite or failure. Recorded return types come from the matching retained
+observation, including fresh-process confirmations; an `undefined` return is not described as a
+usable API. Raw logs remain an explicit lazy read. Shared selections keep the report's canonical
+URL and historical-evidence warning. Browser validation covers direct links without JavaScript,
+invalid selections, lazy logs, accessible mobile layouts and unchanged scan counts.
+
 PR 41 explains absent evidence for the selected version, preserves active-scan and earlier-environment
 states, and offers up to five other tested versions without scheduling work. Other-version selection
 uses the same current-classifier and service-policy restrictions as package discovery. Database and

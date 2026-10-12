@@ -7,6 +7,7 @@ import { cache } from "react";
 import { Breadcrumbs } from "../../../components/breadcrumbs";
 import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { Copy } from "../../../components/copy";
+import { cellAnchor, entryPath, selectEntry } from "../../../components/entry-result";
 import { Evidence } from "../../../components/evidence";
 import { FailureDetails } from "../../../components/failure-details";
 import {
@@ -19,6 +20,7 @@ import {
 } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { SectionNavigation } from "../../../components/section-navigation";
+import { SelectedEntry } from "../../../components/selected-entry";
 import { compatibilityDescription } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { publicRead, webRuntime } from "../../../server/runtime";
@@ -38,8 +40,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     status.current && (await reportIsDiscoverable(webRuntime().catalog.db, report.id)),
   );
 }
-export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ cell?: string | string[]; entry?: string | string[] }>;
+}) {
   const { report, status } = await loadReport((await params).id);
+  const query = await searchParams;
+  const selected = selectEntry(report.cells, query);
+  const reportPath = selected
+    ? entryPath(report.id, selected.cell, selected.entry.index)
+    : `/reports/${report.id}`;
   const base = `/api/v1/reports/${report.id}`;
   const command = `sudo "$(command -v node)" apps/cli/dist/bin.js reproduce ./${report.id}-reproduction.json --rebuild --lockfile ./package-lock.json --json`;
   const runtimeLabels = new Map(
@@ -78,10 +91,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           <a className="button secondary" href={`${base}/json`}>
             Download JSON
           </a>
-          <Copy
-            label="Copy report link"
-            value={`${webRuntime().config.origin}/reports/${report.id}`}
-          />
+          <Copy label="Copy report link" value={`${webRuntime().config.origin}${reportPath}`} />
         </div>
       </div>
       {!status.current && (
@@ -115,6 +125,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           </a>
         </p>
       )}
+      {selected ? (
+        <SelectedEntry report={report} selected={selected} origin={webRuntime().config.origin} />
+      ) : query.cell !== undefined || query.entry !== undefined ? (
+        <aside className="notice warning" role="status">
+          This entry selection is not available in this report. Choose an entry from the runtime
+          matrix below.
+        </aside>
+      ) : null}
       <div className="report-sharing">
         <a className="badge-preview" href={`/api/v1/badges/${report.id}.svg`}>
           <Image
@@ -238,7 +256,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         {report.cells.map((cell) => (
           <details
             className="cell-details"
-            id={`${cell.profileId}-${cell.group}-${cell.mode}`}
+            id={cellAnchor(cell)}
             key={`${cell.profileId}-${cell.group}-${cell.mode}`}
           >
             <summary>
@@ -270,7 +288,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
               )}
               {cell.failure && <FailureDetails failure={cell.failure} />}
               {cell.runId ? (
-                <Evidence reportId={report.id} runId={cell.runId} />
+                <Evidence reportId={report.id} runId={cell.runId} anchor={cellAnchor(cell)} />
               ) : (
                 <p>No runtime observation was recorded for this group.</p>
               )}
