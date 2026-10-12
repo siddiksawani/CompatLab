@@ -83,7 +83,11 @@ const fixtureServer = createServer(async (request, response) => {
       await catalog.pool.query("UPDATE jobs SET state='queued' WHERE scan_id=$1", [scan.scanId]);
       response.end(JSON.stringify({ scanId: scan.scanId }));
       return;
-    } else if (["/execute", "/execute-mixed", "/execute-optional-peers"].includes(request.url)) {
+    } else if (
+      ["/execute", "/execute-mixed", "/execute-optional-peers", "/execute-value-types"].includes(
+        request.url,
+      )
+    ) {
       const mixed = request.url === "/execute-mixed";
       const optionalPeers = request.url === "/execute-optional-peers";
       sessionId = randomUUID();
@@ -125,6 +129,10 @@ const fixtureServer = createServer(async (request, response) => {
         } else if (job.kind === "assertion") result = assertionResult(job);
         else {
           const evidence = runEvidence(job);
+          if (request.url === "/execute-value-types" && job.mode === "commonjs") {
+            for (const observation of evidence.observations)
+              if (observation.outcome === "pass") observation.valueType = "undefined";
+          }
           if ((mixed || optionalPeers) && job.group === "subpaths") {
             evidence.observations[1] = {
               index: 1,

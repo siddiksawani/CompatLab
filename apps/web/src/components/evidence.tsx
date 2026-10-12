@@ -1,9 +1,9 @@
 "use client";
 import { type ReportCell, reportCellSchema } from "@compatlab/contracts";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { FailureDetails } from "./failure-details";
-import { labels } from "./labels";
+import { EntryDetails, entryLabel } from "./entry-details";
+import { entryPath } from "./entry-result";
 
 const logSchema = z.object({
   availability: z.enum(["available", "expired", "not_recorded"]),
@@ -20,46 +20,74 @@ const logSchema = z.object({
   ),
 });
 type Logs = z.infer<typeof logSchema>;
-function confirmationText({ isolation, outcome }: ReportCell["entries"][number]) {
-  const confirmation = isolation?.confirmation;
-  if (!confirmation)
-    return "No fresh-process confirmation was recorded; this result is inconclusive.";
-  if (confirmation.stopReason !== "completed")
-    return `Its fresh-process confirmation stopped (${confirmation.stopReason.replaceAll("_", " ")}) and was not retried; this result is inconclusive.`;
-  return outcome === "pass"
-    ? "It loaded in a fresh process."
-    : "It also failed in a fresh process; that failure follows.";
-}
 function logTitle({ confirmedIndex }: Logs["sessions"][number], index: number) {
   return confirmedIndex === undefined
     ? `Session ${index + 1}`
     : `Fresh confirmation of entry ${confirmedIndex + 1}`;
 }
-export function Evidence({ reportId, runId }: { reportId: string; runId: string }) {
+export function Evidence({
+  reportId,
+  runId,
+  anchor,
+}: {
+  reportId: string;
+  runId: string;
+  anchor: string;
+}) {
   const [cell, setCell] = useState<ReportCell | null>(null);
   const [logs, setLogs] = useState<Logs | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const pending = useRef(false);
   useEffect(() => setReady(true), []);
-  async function load(includeLogs: boolean) {
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch(
-        `/api/v1/reports/${reportId}/${includeLogs ? "logs" : "cell"}?runId=${runId}`,
-        { signal: AbortSignal.timeout(10_000) },
-      );
-      if (!response.ok) throw new Error("Evidence is temporarily unavailable. Try again.");
-      const value: unknown = await response.json();
-      if (includeLogs) setLogs(logSchema.parse(value));
-      else setCell(z.object({ cell: reportCellSchema }).parse(value).cell);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Evidence unavailable.");
-    } finally {
-      setBusy(false);
+  const load = useCallback(
+    async (includeLogs: boolean) => {
+      if (pending.current) return;
+      pending.current = true;
+      setBusy(true);
+      setError("");
+      try {
+        const response = await fetch(
+          `/api/v1/reports/${reportId}/${includeLogs ? "logs" : "cell"}?runId=${runId}`,
+          { signal: AbortSignal.timeout(10_000) },
+        );
+        if (!response.ok) throw new Error("Evidence is temporarily unavailable. Try again.");
+        const value: unknown = await response.json();
+        if (includeLogs) setLogs(logSchema.parse(value));
+        else setCell(z.object({ cell: reportCellSchema }).parse(value).cell);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Evidence unavailable.");
+      } finally {
+        pending.current = false;
+        setBusy(false);
+      }
+    },
+    [reportId, runId],
+  );
+  useEffect(() => {
+    function openTarget() {
+      if (window.location.hash !== `#${anchor}`) return;
+      const details = document.getElementById(anchor);
+      if (details instanceof HTMLDetailsElement) details.open = true;
+      if (!cell) void load(false);
     }
-  }
+    function followTarget(event: MouseEvent) {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      if (link?.getAttribute("href") === `#${anchor}`) {
+        const details = document.getElementById(anchor);
+        if (details instanceof HTMLDetailsElement) details.open = true;
+        if (!cell) void load(false);
+      }
+    }
+    openTarget();
+    window.addEventListener("hashchange", openTarget);
+    document.addEventListener("click", followTarget);
+    return () => {
+      window.removeEventListener("hashchange", openTarget);
+      document.removeEventListener("click", followTarget);
+    };
+  }, [anchor, cell, load]);
   return (
     <div className="evidence">
       <div className="actions">
@@ -97,31 +125,12 @@ export function Evidence({ reportId, runId }: { reportId: string; runId: string 
                 <li key={entry.index}>
                   <div className="row">
                     <code className="break">{entry.displaySpecifier}</code>
-                    <span className={`result ${entry.outcome}`}>
-                      {entry.failure?.optionalPeer
-                        ? "Requires optional peer"
-                        : entry.isolation && entry.outcome !== "fail"
-                          ? entry.outcome === "pass"
-                            ? "Passed in a fresh process"
-                            : "Unconfirmed batch failure"
-                          : labels[entry.outcome]}
-                    </span>
+                    <span className={`result ${entry.outcome}`}>{entryLabel(entry)}</span>
                   </div>
-                  <p className="fine">
-                    {entry.durationMs === null ? "Duration unavailable" : `${entry.durationMs} ms`}
-                    {entry.resolvedTo && ` · Resolved to ${entry.resolvedTo}`}
+                  <p>
+                    <a href={entryPath(reportId, cell, entry.index)}>Open and share this result</a>
                   </p>
-                  {entry.isolation && (
-                    <>
-                      <p className="fine">
-                        Failed in the shared batch after entry{" "}
-                        {entry.isolation.priorFailureIndex + 1} failed in the same process.{" "}
-                        {confirmationText(entry)}
-                      </p>
-                      <FailureDetails failure={entry.isolation.batchFailure} />
-                    </>
-                  )}
-                  {entry.failure && <FailureDetails failure={entry.failure} />}
+                  <EntryDetails entry={entry} />
                 </li>
               ))}
             </ol>

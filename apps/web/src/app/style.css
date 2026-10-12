@@ -843,6 +843,16 @@ summary {
   padding: 0;
   list-style: none;
 }
+.selected-result {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 24px;
+  background: white;
+  overflow-wrap: anywhere;
+}
+.selected-result h3 {
+  min-width: 0;
+}
 .entry-list li {
   padding: 15px 0;
   border-top: 1px solid var(--line);
