@@ -55,6 +55,11 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 45 updates the agent guide with three completed demonstrations: Express root loading, Hono
+adapter selection and Postgres.js return-type differences. Each cites retained October 9 evidence,
+distinguishes the October 11 classification, links selected imports and names the application test
+still needed. The article keeps its original canonical URL and publication date.
+
 PR 44 includes bounded non-passing import details in the initial report HTML. Readers can inspect
 prerequisites and failure context and follow exact-entry links without JavaScript or fetching raw
 logs. The full observation view remains available for larger groups. The browser regression verifies

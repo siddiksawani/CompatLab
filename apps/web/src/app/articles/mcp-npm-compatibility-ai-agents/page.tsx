@@ -12,14 +12,15 @@ export const metadata: Metadata = {
     ...baseMetadata.openGraph,
     type: "article",
     publishedTime: article.publishedAt,
+    modifiedTime: article.modifiedAt,
     authors: [article.author],
   },
 };
 
 const reports = {
-  express: "/reports/da17ba56-ca33-481f-8f29-86524e4d35a2",
-  zod: "/reports/4cd31f95-7f85-4e52-8f09-3a75df7f8f04",
-  hono: "/reports/2e83aa94-e443-4c73-a271-37a5c31cffde",
+  express: "/reports/b11c22bc-4e1d-4b64-a553-f617275c52fd",
+  hono: "/reports/7df2a381-6050-44b3-a761-e02daef89368",
+  postgres: "/reports/d6f07052-08c8-4ef8-a212-6544ae1d4807",
 };
 const agentInstructions = `When assessing npm runtime compatibility:
 - Read exact dependency versions from the project's lockfile.
@@ -43,7 +44,7 @@ export default async function McpArticle() {
       headline: article.title,
       description: article.description,
       datePublished: article.publishedAt,
-      dateModified: article.publishedAt,
+      dateModified: article.modifiedAt,
       inLanguage: "en",
       author: {
         "@type": "Organization",
@@ -89,6 +90,8 @@ export default async function McpArticle() {
         <p className="muted">
           By {article.author} ·{" "}
           <time dateTime={article.publishedAt}>{articleDate(article.publishedAt)}</time>
+          {" · Updated "}
+          <time dateTime={article.modifiedAt}>{articleDate(article.modifiedAt)}</time>
         </p>
         <p className="lede">
           Give your AI coding agent recorded npm package results before it recommends a move to Bun
@@ -189,7 +192,7 @@ codex mcp list`}</code>
       <pre>
         <code>{`{
   "name": "get_report",
-  "arguments": { "id": "da17ba56-ca33-481f-8f29-86524e4d35a2" }
+  "arguments": { "id": "b11c22bc-4e1d-4b64-a553-f617275c52fd" }
 }`}</code>
       </pre>
       <p>
@@ -240,9 +243,10 @@ Do not request a new scan.`}</code>
 
       <h2 id="examples">Three real results and how an agent should interpret them</h2>
       <p>
-        We checked these examples through the public MCP endpoint on October 9, 2026. The linked
-        observations use Linux amd64 with glibc, Node.js 24.21.0 and 26.10.0, Bun 1.4.2, and Deno
-        2.9.7. They are fixed examples; a future package lookup can select a different report.
+        These completed scans ran on October 9, 2026, using Linux amd64 with glibc, Node.js 24.21.0
+        and 26.10.0, Bun 1.4.2, and Deno 2.9.7. The links now use the October 11 classifications of
+        those same executions. We verified the retained evidence on October 13; this update did not
+        rerun the packages. Future lookups can select different reports or execution environments.
       </p>
       <section
         className="article-table"
@@ -251,7 +255,7 @@ Do not request a new scan.`}</code>
         tabIndex={0}
       >
         <table>
-          <caption>Recorded evidence retrieved through check_package</caption>
+          <caption>Three questions answered by retained loading evidence</caption>
           <thead>
             <tr>
               <th scope="col">Package</th>
@@ -271,36 +275,29 @@ Do not request a new scan.`}</code>
             </tr>
             <tr>
               <th scope="row">
-                <a href={reports.zod}>zod@4.6.5</a>
+                <a href={reports.hono}>hono@4.13.13</a>
               </th>
               <td>
-                80 loading checks passed; overall inconclusive because coverage is incomplete.
+                8 root checks passed; some runtime-specific subpaths failed or remain unconfirmed.
               </td>
               <td>
-                The wildcard exports remain outside tested coverage. This lookup returned an earlier
-                environment.
+                Select the adapter intended for your runtime. The overall result is inconclusive.
               </td>
             </tr>
             <tr>
               <th scope="row">
-                <a href={reports.hono}>hono@4.13.13</a>
+                <a href={reports.postgres}>postgres@3.4.9</a>
               </th>
-              <td>8 root checks passed; some runtime-specific subpaths failed.</td>
+              <td>8 root checks passed; CommonJS returned different value types.</td>
               <td>
-                Inspect the adapter you use. Loading hono/deno in Bun is not a test of Hono’s Bun
-                adapter.
+                Check the export your application calls. Loading does not test database queries.
               </td>
             </tr>
           </tbody>
         </table>
       </section>
-      <p>
-        In Hono’s report, <code>hono/deno</code> encounters <code>Deno is not defined</code> under
-        Bun, while <code>hono/bun</code> encounters <code>Bun is not defined</code> under Deno. The
-        package root loads in both. An agent answering “does Hono work with Bun?” should distinguish
-        these entry points rather than turning the overall label into a blanket no.
-      </p>
-      <p>A supported answer for the Express example would be:</p>
+      <h3 id="express-example">Will Express load when I move an HTTP app to Bun?</h3>
+      <p>A supported answer for the Express example is:</p>
       <blockquote>
         <p>
           CompatLab observed express@5.2.1 loading through import and require on Bun 1.4.2 at 11:09
@@ -310,6 +307,102 @@ Do not request a new scan.`}</code>
           <a href={reports.express}>recorded report</a>.
         </p>
       </blockquote>
+      <p>
+        Open the{" "}
+        <a href={`${reports.express}?cell=bun_1_4_2-root-esm&entry=0#selected-result`}>
+          Bun import result
+        </a>{" "}
+        to inspect that exact check. Next, start your own server under the intended Bun version and
+        test a route, middleware and an error path. CompatLab did not run those HTTP tests.
+      </p>
+
+      <h3 id="hono-example">Does a failed Hono adapter mean Hono does not work on Bun?</h3>
+      <p>
+        At 11:15 UTC on October 9, the Hono root loaded in all four profiles. In Bun, the
+        <a href={`${reports.hono}?cell=bun_1_4_2-subpaths-esm&entry=64#selected-result`}>
+          {" "}
+          hono/bun import passed
+        </a>
+        , while{" "}
+        <a href={`${reports.hono}?cell=bun_1_4_2-subpaths-esm&entry=63#selected-result`}>
+          hono/deno failed with Deno is not defined
+        </a>
+        . Under Deno, <code>hono/deno</code> passed and
+        <code> hono/bun</code> failed with <code>Bun is not defined</code>.
+      </p>
+      <p>
+        Hono provides runtime-specific adapters on purpose. Its official{" "}
+        <a href="https://hono.dev/docs/getting-started/bun">Bun</a>
+        {" and "}
+        <a href="https://hono.dev/docs/getting-started/deno">Deno</a> guides describe the intended
+        deployment setup. A failure in an adapter for another runtime does not establish a defect in
+        the adapter you use. The Node observations for <code>hono/bun</code> followed an earlier
+        failed load and lack fresh-process confirmation, so those entries remain inconclusive.
+      </p>
+      <p>
+        Next, select the adapter and package version used by your application, then test a request
+        through that adapter. Include any static-file, streaming or WebSocket feature you depend on.
+        The report did not exercise those features.
+      </p>
+
+      <h3 id="postgres-example">
+        If Postgres.js loads, can I call it the same way in each runtime?
+      </h3>
+      <p>
+        The <a href={reports.postgres}>Postgres.js 3.4.9 report</a> records eight passing root loads
+        at 15:56 UTC on October 9. ESM import returned an object, the module namespace, in all four
+        profiles. CommonJS require returned a function on Node.js and Deno, but an object on Bun.
+      </p>
+      <section
+        className="article-table"
+        aria-label="Postgres CommonJS return types"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need to scroll this table.
+        tabIndex={0}
+      >
+        <table>
+          <caption>Value returned by require('postgres') in the recorded environment</caption>
+          <thead>
+            <tr>
+              <th scope="col">Runtime</th>
+              <th scope="col">Recorded value type</th>
+              <th scope="col">Evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["Node.js 24.21.0", "node_24_21_0", "function"],
+              ["Node.js 26.10.0", "node_26_10_0", "function"],
+              ["Bun 1.4.2", "bun_1_4_2", "object"],
+              ["Deno 2.9.7", "deno_2_9_7", "function"],
+            ].map(([runtime, profile, valueType]) => (
+              <tr key={profile}>
+                <th scope="row">{runtime}</th>
+                <td>
+                  <code>{valueType}</code>
+                </td>
+                <td>
+                  <a
+                    href={`${reports.postgres}?cell=${profile}-root-commonjs&entry=0#selected-result`}
+                  >
+                    Inspect result
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <p>
+        The harness records the returned value’s type, without checking its properties or calling
+        it. These observations do not establish which export shape your application should use, why
+        the types differ, or whether a database operation succeeds. We made no database connection.
+      </p>
+      <p>
+        Next, follow the <a href="https://github.com/porsager/postgres">Postgres.js usage guide</a>,
+        check the export your code calls, and run a parameterized query and transaction against a
+        disposable database under your target runtime. An agent should recommend those tests rather
+        than equating a loading pass with database compatibility.
+      </p>
       <p>
         Install scripts are disabled during preparation and networking is disabled during execution.
         This limits conclusions about packages that need setup downloads, native builds or external
@@ -327,9 +420,9 @@ Do not request a new scan.`}</code>
       <p>
         <code>report.status.current: true</code> means the report remains eligible under the
         service’s invalidation, replacement and policy rules. It does not mean “tested on the latest
-        runtime.” <code>matchesCurrentMatrix</code> answers the environment question. The Zod lookup
-        above had eligible evidence from an earlier matrix despite showing the same runtime version
-        numbers; matrix identity includes more than those version labels.
+        runtime.” <code>matchesCurrentMatrix</code> answers the environment question. A report can
+        remain eligible after the execution environment changes. Matrix identity includes more than
+        the displayed runtime version numbers.
       </p>
       <p>
         <code>get_report</code> can return a retained report whose status is no longer current.
@@ -373,7 +466,7 @@ Do not request a new scan.`}</code>
   --data-urlencode 'name=express' \\
   --data-urlencode 'version=5.2.1'
 
-curl 'https://compatlab.me/api/v1/reports/da17ba56-ca33-481f-8f29-86524e4d35a2/summary'`}</code>
+curl 'https://compatlab.me/api/v1/reports/b11c22bc-4e1d-4b64-a553-f617275c52fd/summary'`}</code>
       </pre>
       <p>
         For another package, use <code>availableReport.id</code> from its lookup response, or the
@@ -382,7 +475,7 @@ curl 'https://compatlab.me/api/v1/reports/da17ba56-ca33-481f-8f29-86524e4d35a2/s
       </p>
       <pre>
         <code>{`curl -H 'Accept: text/markdown' \\
-  'https://compatlab.me/reports/da17ba56-ca33-481f-8f29-86524e4d35a2'`}</code>
+  'https://compatlab.me/reports/b11c22bc-4e1d-4b64-a553-f617275c52fd'`}</code>
       </pre>
       <p>
         Use the <a href="/api">API reference</a>, <a href="/openapi.json">OpenAPI specification</a>{" "}

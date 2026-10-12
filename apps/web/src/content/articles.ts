@@ -14,6 +14,7 @@ export const mcpArticle = {
   description:
     "Connect Claude Code, Cursor or Codex to CompatLab's MCP server. Check npm packages across Node.js, Bun and Deno, interpret real reports and cite evidence.",
   publishedAt: "2026-10-09",
+  modifiedAt: "2026-10-13",
   author: "CompatLab",
 } as const;
 
