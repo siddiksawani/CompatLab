@@ -20,6 +20,7 @@ import {
   readAdmissionBody,
   requesterIdentity,
 } from "./security.js";
+import { type UsageContext, usageRecorder } from "./usage.js";
 
 export function createPublicApi(
   db: CatalogDatabase,
@@ -31,14 +32,15 @@ export function createPublicApi(
   const discovery = publicDiscovery(db, config.matrixId, config.scansEnabled, registry);
   const reports = createReportApi(db);
   const recordLookup = lookupRecorder(db);
+  const recordUsage = usageRecorder(db);
   let inFlight = 0;
-  return async (request: Request): Promise<Response> => {
-    const response = await handle(request);
+  return async (request: Request, usage?: UsageContext): Promise<Response> => {
+    const response = await handle(request, usage);
     return request.method === "HEAD"
       ? new Response(null, { status: response.status, headers: response.headers })
       : response;
   };
-  async function handle(request: Request): Promise<Response> {
+  async function handle(request: Request, usage?: UsageContext): Promise<Response> {
     if (inFlight >= 8) return json({ error: "busy" }, 503, { "retry-after": "2" });
     inFlight++;
     try {
@@ -47,8 +49,25 @@ export function createPublicApi(
         /^\/api\/v1\/(?:reports\/|scans\/|comparisons(?:\/|$)|history(?:\/|$)|badges\/)/.test(
           url.pathname,
         )
-      )
-        return await reports(request);
+      ) {
+        const response = await reports(request);
+        if (
+          usage &&
+          request.method === "GET" &&
+          /^\/api\/v1\/reports\/[0-9a-f-]{36}(?:\/|$)/i.test(url.pathname)
+        )
+          await recordUsage({
+            ...usage,
+            surface: "report_api",
+            availability:
+              response.ok || response.status === 304
+                ? "available"
+                : response.status === 404
+                  ? "missing"
+                  : "error",
+          });
+        return response;
+      }
       if (url.pathname === "/api/v1/scans" && request.method === "POST") {
         const identity = requesterIdentity(request, config);
         const accountKey = await accountQuota?.(request);
@@ -89,6 +108,16 @@ export function createPublicApi(
           url.searchParams.get("version") ?? undefined,
         );
         if (request.method === "GET") await recordLookup(pkg);
+        if (usage && request.method === "GET")
+          await recordUsage({
+            ...usage,
+            surface: "lookup_api",
+            availability: pkg.availableReport
+              ? pkg.availableReport.matchesCurrentMatrix
+                ? "current"
+                : "earlier"
+              : "missing",
+          });
         response = json(pkg);
       } else response = json({ error: "not_found" }, 404);
       return request.method === "HEAD"

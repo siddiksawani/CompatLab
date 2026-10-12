@@ -4,6 +4,7 @@ const events = [
   "public_request_failed",
   "mcp_read_failed",
   "lookup_measurement_failed",
+  "usage_measurement_failed",
   "coverage_failed",
   "maintainer_request_failed",
   "monitoring_failed",

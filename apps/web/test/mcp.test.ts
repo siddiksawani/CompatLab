@@ -115,7 +115,14 @@ function reportFixture() {
   });
 }
 
-function setup(settings: { earlier?: boolean; missing?: boolean; timeoutMs?: number } = {}) {
+function setup(
+  settings: {
+    earlier?: boolean;
+    missing?: boolean;
+    timeoutMs?: number;
+    onRead?: NonNullable<Parameters<typeof createEvidenceMcp>[0]["onRead"]>;
+  } = {},
+) {
   const report = reportFixture();
   if (settings.earlier) report.summary.matrix.id = randomUUID();
   const pkg = {
@@ -154,7 +161,11 @@ function setup(settings: { earlier?: boolean; missing?: boolean; timeoutMs?: num
   return { handler, read, onError, report, pkg };
 }
 
-async function connect(handler: ReturnType<typeof createEvidenceMcp>, modern = false) {
+async function connect(
+  handler: ReturnType<typeof createEvidenceMcp>,
+  modern = false,
+  research = false,
+) {
   const client = new Client(
     { name: "compatlab-test", version: "1.0.0" },
     modern ? { versionNegotiation: { mode: "auto" } } : {},
@@ -163,6 +174,7 @@ async function connect(handler: ReturnType<typeof createEvidenceMcp>, modern = f
   const transport = new StreamableHTTPClientTransport(new URL(`${origin}/mcp`), {
     fetch: async (input, init) => {
       const request = new Request(input, init);
+      if (research) request.headers.set("x-compatlab-research", "1");
       methods.push(request.method);
       return handler.fetch(request);
     },
@@ -171,6 +183,34 @@ async function connect(handler: ReturnType<typeof createEvidenceMcp>, modern = f
   cleanups.push(() => client.close());
   return { client, methods };
 }
+
+it("measures tool reads without counting discovery or mixing concurrent request context", async () => {
+  const events: { surface: string; availability: string; research: string | null }[] = [];
+  const { handler, report } = setup({
+    onRead: async (surface, availability, headers) => {
+      events.push({ surface, availability, research: headers.get("x-compatlab-research") });
+      throw new Error("Measurement failure must not fail the tool.");
+    },
+  });
+  const first = await connect(handler, false, true);
+  const second = await connect(handler);
+  await first.client.listTools();
+  expect(events).toEqual([]);
+  const results = await Promise.all([
+    first.client.callTool({
+      name: "check_package",
+      arguments: { name: "@scope/example", version: "1.2.3" },
+    }),
+    second.client.callTool({ name: "get_report", arguments: { id: report.status.id } }),
+  ]);
+  expect(results.every((result) => !result.isError)).toBe(true);
+  expect(events).toEqual(
+    expect.arrayContaining([
+      { surface: "mcp_check_package", availability: "current", research: "1" },
+      { surface: "mcp_get_report", availability: "current", research: null },
+    ]),
+  );
+});
 
 describe.each([false, true])("MCP client (modern=%s)", (modern) => {
   it("lists only read tools and preserves compact evidence, pins and optional peers", async () => {

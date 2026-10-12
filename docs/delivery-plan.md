@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 47 adds private aggregate evidence-use measurements alongside existing package demand. It
+separates website, public API and MCP reads, answer availability, fixed referrer categories and
+voluntary research traffic. Ten-minute windows, bounded categories and 30-day retention avoid
+visitor tracking. Operator output states the attribution and counting limitations. Validation
+covers concurrency, retention, role grants, context isolation and measurement outages.
+
 PR 46 gives the full browser qualification job 25 minutes, including browser installation, the
 production build and cleanup. A release run completed all 176 tests but reached the former
 15-minute deadline before cleanup. Test coverage, per-test timeouts, retries and required checks

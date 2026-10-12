@@ -18,6 +18,7 @@ export { findCachedReport } from "./policy.js";
 export * from "./public/api.js";
 export { lookupDemand } from "./public/measurement.js";
 export { type PublicConfig, publicConfigSchema } from "./public/security.js";
+export { evidenceUsage } from "./public/usage.js";
 export * from "./reports/aggregate.js";
 export * from "./reports/discovery.js";
 export * from "./reports/package.js";

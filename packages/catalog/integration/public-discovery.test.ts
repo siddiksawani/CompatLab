@@ -153,6 +153,45 @@ it("measures successful selected-package GETs without counting HEAD or search re
   ]);
 });
 
+it("separates external API activity from internal reads and excludes HEAD requests", async () => {
+  await catalog.pool.query("TRUNCATE evidence_usage");
+  const path = `${origin}/api/v1/packages?${new URLSearchParams({ name: source.name, version: source.version })}`;
+  const usage = { source: "github", research: true } as const;
+  await api(new Request(path));
+  await api(new Request(path, { method: "HEAD" }), usage);
+  expect((await catalog.pool.query("SELECT * FROM evidence_usage")).rowCount).toBe(0);
+  expect((await api(new Request(path), usage)).status).toBe(200);
+  expect((await api(new Request(path.replace(source.version, "2.0.0")), usage)).status).toBe(200);
+  expect(
+    (
+      await catalog.pool.query(
+        "SELECT surface,availability,source,research,windows FROM evidence_usage ORDER BY availability",
+      )
+    ).rows,
+  ).toEqual([
+    {
+      surface: "lookup_api",
+      availability: "earlier",
+      source: "github",
+      research: true,
+      windows: 1,
+    },
+    {
+      surface: "lookup_api",
+      availability: "missing",
+      source: "github",
+      research: true,
+      windows: 1,
+    },
+  ]);
+  const missing = `${origin}/api/v1/reports/00000000-0000-4000-8000-000000000000`;
+  expect((await api(new Request(missing), usage)).status).toBe(404);
+  expect(
+    (await catalog.pool.query("SELECT availability FROM evidence_usage WHERE surface='report_api'"))
+      .rows,
+  ).toEqual([{ availability: "missing" }]);
+});
+
 beforeAll(async () => {
   catalog = await database();
   await migrateCatalog(catalog.pool);

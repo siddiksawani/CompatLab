@@ -14,6 +14,7 @@ import {
   admitScan,
   aggregatePendingReports,
   claimJob,
+  createPublicApi,
   createReportApi,
   discoverCompatibility,
   discoverRecentReports,
@@ -799,6 +800,24 @@ describe("public report reads", () => {
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(envelope).length);
     const etag = response.headers.get("etag") ?? "";
     expect((await api(new Request(url, { headers: { "if-none-match": etag } }))).status).toBe(304);
+    await catalog.pool.query("TRUNCATE evidence_usage");
+    const publicApi = createPublicApi(catalog.db, {
+      origin: "http://localhost",
+      matrixId: report.matrix.id,
+      requesterSecret: "a".repeat(64),
+      scansEnabled: false,
+    });
+    expect(
+      (
+        await publicApi(new Request(url, { headers: { "if-none-match": etag } }), {
+          source: "direct",
+          research: true,
+        })
+      ).status,
+    ).toBe(304);
+    expect(
+      (await catalog.pool.query("SELECT surface,availability FROM evidence_usage")).rows,
+    ).toEqual([{ surface: "report_api", availability: "available" }]);
     const head = await api(new Request(url, { method: "HEAD" }));
     expect(head.status).toBe(200);
     expect(await head.text()).toBe("");

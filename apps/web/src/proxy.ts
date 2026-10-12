@@ -14,6 +14,9 @@ export function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.set("content-security-policy", policy);
   headers.set("x-nonce", nonce);
+  headers.set("x-compatlab-method", request.method);
+  if (request.nextUrl.searchParams.get("research") === "1")
+    headers.set("x-compatlab-research", "1");
   const alternate = markdownPath(request.nextUrl.pathname);
   const markdown =
     alternate &&

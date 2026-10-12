@@ -13,6 +13,8 @@ GRANT UPDATE ON workers,preparations,scans,jobs,runs,reports TO compatlab_contro
 GRANT DELETE ON audit_events TO compatlab_control;
 GRANT SELECT,INSERT,UPDATE ON lookup_demand TO compatlab_web;
 GRANT DELETE ON lookup_demand TO compatlab_control,compatlab_operator;
+GRANT SELECT,INSERT,UPDATE ON evidence_usage TO compatlab_web;
+GRANT DELETE ON evidence_usage TO compatlab_control,compatlab_operator;
 GRANT INSERT,UPDATE ON coverage_targets TO compatlab_operator;
 GRANT UPDATE ON coverage_targets TO compatlab_control;
 GRANT INSERT ON packages,package_versions,preparations,scans TO compatlab_control;

@@ -10,6 +10,7 @@ import {
   blockSubject,
   cancelScan,
   coverageStatus,
+  evidenceUsage,
   invalidateReport,
   lookupDemand,
   migrateCatalog,
@@ -37,7 +38,7 @@ import {
 import { z } from "zod";
 
 export const adminUsage = `Usage: compatlab admin status | migrate | retention
-       compatlab admin lookup-demand | coverage-status
+       compatlab admin lookup-demand | evidence-usage | coverage-status
        compatlab admin coverage-add MATRIX_UUID targets.json
        compatlab admin coverage-pause | coverage-resume
        compatlab admin coverage-skip TARGET_UUID
@@ -61,6 +62,7 @@ Cancellation during preparation cancels all scans sharing that unfinished prepar
 `;
 const counts: Record<string, number> = {
   "lookup-demand": 0,
+  "evidence-usage": 0,
   "coverage-status": 0,
   "coverage-add": 2,
   "coverage-pause": 0,
@@ -124,7 +126,13 @@ export async function runAdmin(
       throw new TypeError();
     if (!Object.hasOwn(counts, command) || counts[command] !== positionals.length)
       throw new TypeError();
-    reason = ["status", "host-status", "lookup-demand", "coverage-status"].includes(command)
+    reason = [
+      "status",
+      "host-status",
+      "lookup-demand",
+      "evidence-usage",
+      "coverage-status",
+    ].includes(command)
       ? "Read-only operator inspection."
       : z.string().trim().min(1).max(1024).parse(parsed.values.reason);
   } catch {
@@ -153,6 +161,9 @@ export async function runAdmin(
     switch (command) {
       case "lookup-demand":
         result = await lookupDemand(db);
+        break;
+      case "evidence-usage":
+        result = await evidenceUsage(db);
         break;
       case "coverage-status":
         result = await coverageStatus(db);

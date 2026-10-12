@@ -7,6 +7,8 @@ import {
   openCatalog,
   publicConfigSchema,
   reportControlError,
+  usageContext,
+  usageRecorder,
 } from "@compatlab/catalog/web";
 import { createEvidenceMcp } from "./mcp";
 
@@ -26,16 +28,20 @@ function initialize() {
     ? createMaintainerService(catalog.db, config, accountConfig)
     : undefined;
   const api = createPublicApi(catalog.db, config, undefined, maintainer?.quotaKey);
+  const recordUsage = usageRecorder(catalog.db);
   return {
     catalog,
     config,
     maintainer,
     api,
+    recordUsage,
     mcp: createEvidenceMcp({
       origin: config.origin,
       matrixId: config.matrixId,
       read: (path) => api(new Request(`${config.origin}${path}`)),
       onError: () => reportControlError("mcp_read_failed"),
+      onRead: (surface, availability, headers) =>
+        recordUsage({ surface, availability, ...usageContext(headers, config.origin) }),
     }),
   };
 }
