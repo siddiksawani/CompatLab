@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 43 separates execution and classification dates in report history and comparisons. Replacement
+links retain an explicitly selected import result. Comparisons normalize absent optional coverage
+counters to zero, so classifier schema additions do not create false loading changes. The comparison
+revision advances while retained earlier comparison records remain readable. Validation covers
+historical counter shapes, real coverage changes, database dates and desktop/mobile replacement flows.
+
 PR 42 makes individual loading results shareable. Matrix links open and load the selected group,
 then each entry links to a server-rendered summary with its exact package version, runtime, mode,
 observation date and prerequisite or failure. Recorded return types come from the matching retained

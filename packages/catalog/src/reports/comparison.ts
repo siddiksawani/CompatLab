@@ -19,6 +19,19 @@ export async function readComparison(db: CatalogDatabase, before: string, after:
     comparison: compareReports(left.report, right.report),
     beforeStatus: left.status,
     afterStatus: right.status,
+    observations: {
+      sameExecution: left.report.scanId === right.report.scanId,
+      before: {
+        observedAt: left.report.observedAt,
+        classifiedAt: left.report.classifiedAt,
+        classifierRevision: left.report.classifierRevision,
+      },
+      after: {
+        observedAt: right.report.observedAt,
+        classifiedAt: right.report.classifiedAt,
+        classifierRevision: right.report.classifierRevision,
+      },
+    },
   };
 }
 export async function reportHistory(db: CatalogDatabase, name: string, before?: string) {
@@ -43,9 +56,16 @@ export async function reportHistory(db: CatalogDatabase, name: string, before?: 
       observationRevision: number;
       previousScanId: string | null;
       createdAt: string;
+      observedAt: string | null;
+      classifiedAt: string;
+      classifierRevision: string;
+      replacedBy: string | null;
       current: boolean;
     }>(
-      sql`SELECT r.id,s.id AS "scanId",v.version,m.revision AS "matrixRevision",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",r.created_at AS "createdAt",(r.invalidated_at IS NULL AND r.replaced_by IS NULL AND (${selectionAllowed} AND ${assertionSelectionAllowed})) AS current FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id WHERE p.name=${name} ${cursor ? sql`AND (r.created_at,r.id)<(${new Date(cursor.at)},${cursor.id}::uuid)` : sql``} ORDER BY r.created_at DESC,r.id DESC LIMIT 51`,
+      sql`SELECT r.id,s.id AS "scanId",v.version,m.revision AS "matrixRevision",s.observation_revision AS "observationRevision",s.previous_scan_id AS "previousScanId",r.created_at AS "createdAt",
+      r.payload->>'observedAt' AS "observedAt",r.payload->>'classifiedAt' AS "classifiedAt",
+      r.classifier_revision AS "classifierRevision",r.replaced_by AS "replacedBy",
+      (r.invalidated_at IS NULL AND r.replaced_by IS NULL AND (${selectionAllowed} AND ${assertionSelectionAllowed})) AS current FROM reports r JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id JOIN package_versions v ON v.id=prep.artifact_id JOIN packages p ON p.id=v.package_id JOIN matrices m ON m.id=s.matrix_id WHERE p.name=${name} ${cursor ? sql`AND (r.created_at,r.id)<(${new Date(cursor.at)},${cursor.id}::uuid)` : sql``} ORDER BY r.created_at DESC,r.id DESC LIMIT 51`,
     )
   ).rows;
   const items = rows

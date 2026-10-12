@@ -27,10 +27,22 @@ function failure(value: ReportCell["failure"]) {
     : null;
 }
 function summary(cell: ReportCell) {
+  const coverage = cell.coverage;
   return {
     outcome: cell.outcome,
     evidence: cell.evidenceLevel,
-    coverage: cell.coverage,
+    coverage: {
+      planned: coverage.planned,
+      observed: coverage.observed,
+      passed: coverage.passed,
+      failed: coverage.failed,
+      prerequisiteLimited: coverage.prerequisiteLimited ?? 0,
+      isolationPassed: coverage.isolationPassed ?? 0,
+      isolationUnconfirmed: coverage.isolationUnconfirmed ?? 0,
+      interrupted: coverage.interrupted,
+      untested: coverage.untested,
+      complete: coverage.complete,
+    },
     failure: failure(cell.failure),
   };
 }
@@ -56,6 +68,7 @@ export function compareReports(before: HostedReport, after: HostedReport): Repor
     limitations: [
       "Changed inputs do not establish that a package change caused a result.",
       "Timing, timestamps, logs and free-text error messages do not trigger alerts.",
+      "Absent optional coverage counters and explicit zero values are equivalent.",
       "Comparisons do not establish general functional correctness or package safety.",
       "Only identical named assertion revisions are compared as behavior; changed revisions are disclosed as inputs.",
     ],

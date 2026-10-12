@@ -35,8 +35,9 @@ export default async function HistoryPage({
       <p className="eyebrow">Retained observations</p>
       <h1>{history.name} report history</h1>
       <p className="lede">
-        Each observation is retained independently. Reclassification and rescanning preserve their
-        previous evidence.
+        Execution is when the checks ran. Classification is when those observations were
+        interpreted. Reports with the same execution ID share the original evidence; a later
+        classification is not a new scan. Listed by classification time, newest first.
       </p>
       {history.reports.length > 0 && (
         <form action="/compare" className="comparison-form" aria-label="Compare report history">
@@ -69,7 +70,7 @@ export default async function HistoryPage({
               <option
                 key={report.id}
                 value={report.id}
-                label={`${report.version} · observation ${report.observationRevision} · ${report.createdAt.slice(0, 10)}`}
+                label={`${report.version} · executed ${report.observedAt?.slice(0, 10) ?? "unknown"} · ${report.classifierRevision}`}
               />
             ))}
           </datalist>
@@ -86,18 +87,27 @@ export default async function HistoryPage({
           <li key={report.id}>
             <div className="row">
               <a href={`/reports/${report.id}`}>
-                <strong>{report.version}</strong> · observation {report.observationRevision}
+                <strong>{report.version}</strong> · {report.classifierRevision}
               </a>
               <span className="fine">
                 {report.current ? "Current evidence" : "Historical evidence"}
               </span>
             </div>
             <p className="fine">
-              {report.matrixRevision} · {observedDate(report.createdAt)}
+              Executed {observedDate(report.observedAt)} · Classified{" "}
+              {observedDate(report.classifiedAt)}
+            </p>
+            <p className="fine">
+              Execution ID: <code>{report.scanId}</code> · {report.matrixRevision}
             </p>
             <p className="fine">
               Report ID: <code>{report.id}</code>
             </p>
+            {report.replacedBy && (
+              <a href={`/compare?before=${report.id}&after=${report.replacedBy}`}>
+                Compare with replacement classification
+              </a>
+            )}
           </li>
         ))}
       </ul>

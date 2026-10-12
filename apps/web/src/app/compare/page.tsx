@@ -1,6 +1,6 @@
 import { reportComparisonSchema, reportEnvelopeSchema } from "@compatlab/contracts";
 import { z } from "zod";
-import { readError } from "../../components/labels";
+import { observedDate, readError } from "../../components/labels";
 import { publicRead } from "../../server/runtime";
 
 export const metadata = { title: "Compare reports", robots: { index: false, follow: true } };
@@ -27,11 +27,21 @@ export default async function ComparisonPage({
         </a>
       </section>
     );
-  const { comparison, beforeStatus, afterStatus } = z
+  const observation = z.object({
+    observedAt: z.iso.datetime().nullable(),
+    classifiedAt: z.iso.datetime(),
+    classifierRevision: z.string().min(1).max(128),
+  });
+  const { comparison, beforeStatus, afterStatus, observations } = z
     .object({
       comparison: reportComparisonSchema,
       beforeStatus: reportEnvelopeSchema.shape.status,
       afterStatus: reportEnvelopeSchema.shape.status,
+      observations: z.object({
+        sameExecution: z.boolean(),
+        before: observation,
+        after: observation,
+      }),
     })
     .parse(await response.json());
   return (
@@ -48,6 +58,23 @@ export default async function ComparisonPage({
         <a href={`/reports/${comparison.beforeReportId}`}>{comparison.beforeVersion} report</a> →{" "}
         <a href={`/reports/${comparison.afterReportId}`}>{comparison.afterVersion} report</a>
       </p>
+      <aside className="notice">
+        <strong>{observations.sameExecution ? "Same execution" : "Separate executions"}</strong>
+        <p>
+          {observations.sameExecution
+            ? "Both reports interpret the same recorded execution. A later classification does not mean the package was tested again."
+            : "These reports describe separate executions. Differences in inputs or classification can affect the comparison."}
+        </p>
+        <p>
+          Earlier report: executed {observedDate(observations.before.observedAt)}; classified{" "}
+          {observedDate(observations.before.classifiedAt)} ({observations.before.classifierRevision}
+          ).
+        </p>
+        <p>
+          Later report: executed {observedDate(observations.after.observedAt)}; classified{" "}
+          {observedDate(observations.after.classifiedAt)} ({observations.after.classifierRevision}).
+        </p>
+      </aside>
       {(!beforeStatus.current || !afterStatus.current) && (
         <aside className="notice warning">
           This comparison includes historical or invalidated evidence. Inspect both reports before
@@ -59,10 +86,11 @@ export default async function ComparisonPage({
           ? `${comparison.totalChanges} meaningful evidence changes.`
           : "Service failure prevents a package regression conclusion."}
       </p>
-      <h2>Changed inputs</h2>
+      <h2>Changed inputs and interpretation</h2>
       <p>
         Dependency, runtime and policy changes can affect results. This comparison does not
-        establish what caused a change.
+        establish what caused a change. A classifier revision changes the interpretation of retained
+        evidence; it does not rerun the package.
       </p>
       {comparison.inputs.length ? (
         <dl className="provenance">
@@ -85,7 +113,11 @@ export default async function ComparisonPage({
             <li key={item.subject}>
               <strong>{item.subject}</strong>
               <p>
-                {item.regression ? "Regressed observation. " : ""}
+                {item.regression
+                  ? observations.sameExecution
+                    ? "Changed interpretation. "
+                    : "Regressed observation. "
+                  : ""}
                 <code>{item.before}</code> → <code>{item.after}</code>
               </p>
             </li>
