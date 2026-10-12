@@ -271,8 +271,9 @@ export function createReportApi(db: CatalogDatabase) {
           })
         : json({ error: "not_found" }, 404);
     }
+    const representation = part === "summary" ? "summary_v2" : (part ?? "report");
     const etag = `"${createHash("sha256")
-      .update(JSON.stringify({ part: part ?? "report", status }))
+      .update(JSON.stringify({ part: representation, status }))
       .digest("hex")}"`;
     const cached = conditional(request, etag);
     if (cached) return cached;

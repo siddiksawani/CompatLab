@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   CLASSIFIER_REVISION,
   type JobAssignment,
@@ -778,7 +778,8 @@ describe("public report reads", () => {
     const url = `http://localhost/api/v1/reports/${report.id}/summary`;
     const response = await api(new Request(url));
     expect(response.status).toBe(200);
-    const compact = reportSummaryEnvelopeSchema.parse(await response.json());
+    const raw = JSON.parse(await response.text());
+    const compact = reportSummaryEnvelopeSchema.parse(raw);
     expect(compact.status).toEqual(envelope.status);
     expect(compact.reportPath).toBe(`/reports/${report.id}`);
     expect(compact.summary).toMatchObject({
@@ -813,7 +814,16 @@ describe("public report reads", () => {
       /"(entries|sessions|staticObservations|assertions)":/,
     );
     expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(envelope).length);
+    const legacyEtag = `"${createHash("sha256")
+      .update(JSON.stringify({ part: "summary", status: raw.status }))
+      .digest("hex")}"`;
+    const refreshed = await api(new Request(url, { headers: { "if-none-match": legacyEtag } }));
+    expect(refreshed.status).toBe(200);
+    expect(reportSummaryEnvelopeSchema.parse(await refreshed.json()).summary.omissions).toEqual(
+      report.omissions,
+    );
     const etag = response.headers.get("etag") ?? "";
+    expect(etag).not.toBe(legacyEtag);
     expect((await api(new Request(url, { headers: { "if-none-match": etag } }))).status).toBe(304);
     await catalog.pool.query("TRUNCATE evidence_usage");
     const publicApi = createPublicApi(catalog.db, {

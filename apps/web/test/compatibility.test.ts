@@ -70,7 +70,9 @@ describe("evidence-based compatibility answers", () => {
         },
       ],
     });
-    report.cells[0]!.coverage.complete = false;
+    const firstCell = report.cells[0];
+    if (!firstCell) throw new Error("Expected a planned cell.");
+    firstCell.coverage.complete = false;
     expect(plannedCoverageSummary(report)).toContain("incomplete or unavailable");
     report.omissions.counts.pattern = 0;
     expect(omittedCoverage(report)).toBeNull();
