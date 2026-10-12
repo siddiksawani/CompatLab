@@ -16,6 +16,51 @@ test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
 });
 
+test("distinguishes missing evidence, another tested version and an active scan", async ({
+  page,
+  request,
+}) => {
+  const name = "@compatlab/browser-fixture";
+  await page.goto(`/packages?${new URLSearchParams({ name, version: "1.0.0" })}`);
+  await expect(
+    page.getByRole("heading", { name: "No published report for 1.0.0 yet." }),
+  ).toBeVisible();
+  await expect(page.getByText("not that it failed", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Other tested versions" })).toHaveCount(0);
+  expect(await (await fixture(request, "counts")).json()).toEqual({ scans: 0, jobs: 0 });
+  await page.getByRole("button", { name: "Request a scan", exact: true }).click();
+  await expect(page).toHaveURL(/\/scans\//);
+  await page.goto(`/packages?${new URLSearchParams({ name, version: "1.0.0" })}`);
+  await expect(
+    page.getByRole("heading", { name: "A scan is in progress for 1.0.0." }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request a scan", exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "View scan progress" }).click();
+  await finish(page, request);
+  const reportPath = new URL(page.url()).pathname;
+  const before = await (await fixture(request, "counts")).json();
+  await page.goto(`/packages?${new URLSearchParams({ name, version: "2.0.0" })}`);
+  await expect(
+    page.getByRole("heading", { name: "No published report for 2.0.0 yet." }),
+  ).toBeVisible();
+  const alternatives = page.getByRole("region", { name: "Other tested versions" });
+  await expect(alternatives).toContainText("These results do not describe 2.0.0.");
+  await expect(alternatives).toContainText("Node.js 24.21.0");
+  await expect(alternatives).toContainText("Bun 1.4.2");
+  await expect(alternatives.getByRole("link")).toHaveAttribute("href", reportPath);
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectResponsiveLayout(page);
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await alternatives.getByRole("link").click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("1.0.0");
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  await fixture(request, "invalidate");
+  await page.goto(`/packages?${new URLSearchParams({ name, version: "2.0.0" })}`);
+  await expect(page.getByRole("heading", { name: "Other tested versions" })).toHaveCount(0);
+});
+
 for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) {
   test(`serves indexable ${name} version evidence with immutable report links`, async ({
     page,
