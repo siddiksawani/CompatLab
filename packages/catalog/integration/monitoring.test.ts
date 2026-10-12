@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { COMPARISON_REVISION, PREPARATION_PROFILE_REVISION } from "@compatlab/contracts";
+import {
+  COMPARISON_REVISION,
+  PREPARATION_PROFILE_REVISION,
+  reportHistorySchema,
+} from "@compatlab/contracts";
 import { compareReports, RegistryClient } from "@compatlab/engine";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
@@ -356,6 +360,22 @@ it("suppresses unchanged noise and creates one immutable evidence-linked alert",
     });
   });
   expect(compareReports(after.report, noisy).changed).toBe(false);
+  for (const cell of noisy.cells) {
+    delete cell.coverage.prerequisiteLimited;
+    delete cell.coverage.isolationPassed;
+    delete cell.coverage.isolationUnconfirmed;
+    cell.coverage = Object.fromEntries(
+      Object.entries(cell.coverage).reverse(),
+    ) as typeof cell.coverage;
+  }
+  expect(compareReports(noisy, after.report)).toMatchObject({ changed: false, totalChanges: 0 });
+  const changed = structuredClone(after.report);
+  const cell = changed.cells[0];
+  if (!cell) throw new Error("Expected fixture cell.");
+  cell.coverage.planned = (cell.coverage.planned ?? 0) + 1;
+  cell.coverage.untested = 1;
+  cell.coverage.complete = false;
+  expect(compareReports(after.report, changed)).toMatchObject({ changed: true, totalChanges: 1 });
 });
 it("retries delivery independently, preserving the provider idempotency key and body", async () => {
   const delivery = await notified();
@@ -446,7 +466,15 @@ it("serves bounded history, evidence badges and comparisons without selecting sc
   );
   expect(comparison.status).toBe(200);
   const history = await api(new Request(`${origin}/api/v1/history?name=${name}`));
-  expect(((await history.json()) as { reports: unknown[] }).reports).toHaveLength(2);
+  const items = reportHistorySchema.parse(await history.json()).reports;
+  expect(items).toHaveLength(2);
+  const report = await readReport(catalog.db, alert.afterReportId);
+  expect(items.find((item) => item.id === alert.afterReportId)).toMatchObject({
+    observedAt: report?.report.observedAt,
+    classifiedAt: report?.report.classifiedAt,
+    classifierRevision: report?.report.classifierRevision,
+    replacedBy: null,
+  });
   const badge = await api(new Request(`${origin}/api/v1/badges/${alert.afterReportId}.svg`));
   expect(badge.headers.get("content-type")).toContain("image/svg");
   expect(await badge.text()).toContain("loading evidence");

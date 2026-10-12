@@ -1,8 +1,8 @@
 import { z } from "zod";
-export const COMPARISON_REVISION = "meaningful_changes_v2";
+export const COMPARISON_REVISION = "meaningful_changes_v3";
 export const reportComparisonSchema = z.strictObject({
   schemaVersion: z.literal(1),
-  revision: z.literal(COMPARISON_REVISION),
+  revision: z.enum(["meaningful_changes_v2", COMPARISON_REVISION]),
   beforeReportId: z.uuid(),
   afterReportId: z.uuid(),
   packageName: z.string().max(214),
@@ -48,6 +48,10 @@ export const reportHistorySchema = z.strictObject({
         observationRevision: z.number().int().nonnegative(),
         previousScanId: z.uuid().nullable(),
         createdAt: z.iso.datetime(),
+        observedAt: z.iso.datetime().nullable(),
+        classifiedAt: z.iso.datetime(),
+        classifierRevision: z.string().min(1).max(128),
+        replacedBy: z.uuid().nullable(),
         current: z.boolean(),
       }),
     )

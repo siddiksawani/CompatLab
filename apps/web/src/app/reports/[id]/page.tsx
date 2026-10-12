@@ -86,6 +86,9 @@ export default async function ReportPage({
             <span className="version">{report.artifact.version}</span>
           </h1>
           <p className="muted">Observed {observedDate(report.observedAt)} · Linux amd64 / glibc</p>
+          <p className="fine">
+            Classified {observedDate(report.classifiedAt)} · {report.classifierRevision}
+          </p>
         </div>
         <div className="actions">
           <a className="button secondary" href={`${base}/json`}>
@@ -104,7 +107,15 @@ export default async function ReportPage({
                 : "A newer classification has replaced this report.")}
           </p>
           {status.replacedBy && (
-            <a href={`/reports/${status.replacedBy}`}>Open the replacement report →</a>
+            <a
+              href={
+                selected
+                  ? entryPath(status.replacedBy, selected.cell, selected.entry.index)
+                  : `/reports/${status.replacedBy}`
+              }
+            >
+              Open the replacement report →
+            </a>
           )}
         </aside>
       )}

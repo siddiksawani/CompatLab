@@ -167,6 +167,31 @@ const fixtureServer = createServer(async (request, response) => {
       await reconcileCatalog(catalog.db);
       response.end(JSON.stringify({ scanId }));
       return;
+    } else if (request.url === "/historical-revision") {
+      const row = (await catalog.pool.query("SELECT id,scan_id,payload FROM reports LIMIT 1"))
+        .rows[0];
+      if (!row) throw new Error("Expected an authored browser report.");
+      const original = row.payload;
+      original.id = randomUUID();
+      original.classifiedAt = original.observedAt;
+      original.classifierRevision = "classifier_v1";
+      for (const cell of original.cells) {
+        delete cell.coverage.prerequisiteLimited;
+        delete cell.coverage.isolationPassed;
+        delete cell.coverage.isolationUnconfirmed;
+      }
+      await catalog.pool.query(
+        "INSERT INTO reports (id,scan_id,classifier_revision,payload,created_at,replaced_by) VALUES ($1,$2,'classifier_v1',$3,$4,$5)",
+        [original.id, row.scan_id, original, original.classifiedAt, row.id],
+      );
+      response.end(
+        JSON.stringify({
+          original: original.id,
+          replacement: row.id,
+          observedAt: original.observedAt,
+        }),
+      );
+      return;
     } else if (request.url === "/invalidate") {
       const rows = (await catalog.pool.query("SELECT id FROM reports")).rows;
       for (const row of rows)
