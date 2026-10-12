@@ -1,8 +1,9 @@
+import { findOtherPackageReports } from "@compatlab/catalog/web";
 import { packageResponseSchema } from "@compatlab/contracts";
 import { readError } from "../../components/labels";
 import { PackageEvidence } from "../../components/package-evidence";
 import { VersionPicker } from "../../components/version-picker";
-import { publicRead } from "../../server/runtime";
+import { publicRead, webRuntime } from "../../server/runtime";
 
 export const metadata = {
   title: "Select an exact npm package version",
@@ -30,6 +31,11 @@ export default async function PackagePage({
       </section>
     );
   const pkg = packageResponseSchema.parse(await response.json());
+  const { catalog, config } = webRuntime();
+  const otherReports =
+    pkg.availableReport || pkg.reportId
+      ? []
+      : await findOtherPackageReports(catalog.db, config.matrixId, pkg.name, pkg.version);
   return (
     <section className="page">
       <a href="/" className="back">
@@ -56,7 +62,7 @@ export default async function PackagePage({
       )}
       <div className="package-actions">
         <VersionPicker pkg={pkg} />
-        <PackageEvidence pkg={pkg} />
+        <PackageEvidence pkg={pkg} otherReports={otherReports} />
       </div>
       <p>
         <a href={`/history?${new URLSearchParams({ name: pkg.name })}`}>

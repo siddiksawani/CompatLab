@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 41 explains absent evidence for the selected version, preserves active-scan and earlier-environment
+states, and offers up to five other tested versions without scheduling work. Other-version selection
+uses the same current-classifier and service-policy restrictions as package discovery. Database and
+browser validation cover deduplication, selection limits, withdrawn evidence, explicit scan admission
+and accessible mobile layouts.
+
 PR 40 corrects the original compatibility article after optional-peer and batch-isolation
 reclassification. It links the current classifications of the original October 5 executions,
 separates missing prerequisites from unknown and unconfirmed failures, and publishes an explicit

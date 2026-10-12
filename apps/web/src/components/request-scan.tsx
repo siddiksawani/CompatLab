@@ -57,7 +57,7 @@ export function RequestScan({
         {message ||
           (!enabled
             ? "Scan requests are paused. Existing reports remain available."
-            : "One shared preparation, then independent runtime observations. Public limits apply.")}
+            : `Starts a new public loading check for ${name}@${version}, or opens matching work already available. Public limits apply.`)}
       </p>
     </div>
   );

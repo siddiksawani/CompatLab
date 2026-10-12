@@ -7,8 +7,10 @@ import { RegistryClient } from "@compatlab/engine";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import {
   ADMISSION_POLICY,
+  admitScan,
   createPublicApi,
   discoverPackageVersions,
+  findOtherPackageReports,
   findPackageReport,
   invalidateReport,
   migrateCatalog,
@@ -270,6 +272,50 @@ it("requires the exact version and registry integrity for package evidence", asy
   expect(await lookup()).toMatchObject({ reportId: null, availableReport: null });
 });
 
+it("offers other versions as read-only evidence and prefers the current environment", async () => {
+  const before = await counts();
+  expect(
+    await findOtherPackageReports(catalog.db, currentMatrixId, source.name, "2.0.0"),
+  ).toMatchObject([
+    { id: previousReportId, version: "1.0.0", observedAt, matchesCurrentMatrix: false },
+  ]);
+  expect(await findOtherPackageReports(catalog.db, currentMatrixId, source.name, "1.0.0")).toEqual(
+    [],
+  );
+  expect(await counts()).toEqual(before);
+  const currentReportId = await insertReport(await insertCurrentScan("completed"));
+  const reports = await findOtherPackageReports(catalog.db, currentMatrixId, source.name, "2.0.0");
+  expect(reports).toHaveLength(1);
+  expect(reports[0]).toMatchObject({ id: currentReportId, matchesCurrentMatrix: true });
+  expect(
+    await findOtherPackageReports(catalog.db, currentMatrixId, "unseen-package", "1.0.0"),
+  ).toEqual([]);
+  await expect(
+    findOtherPackageReports(catalog.db, currentMatrixId, source.name, "latest"),
+  ).rejects.toThrow();
+});
+
+it("bounds other tested versions to five distinct versions", async () => {
+  for (let major = 2; major <= 7; major++) {
+    const version = `${major}.0.0`;
+    const candidate = { ...source, version, manifest: { ...source.manifest, version } };
+    const scan = await admitScan(catalog.db, candidate, {
+      matrixId: previousMatrixId,
+      classifierRevision: CLASSIFIER_REVISION,
+      requesterKey: hash(`other-version-${major}`),
+    });
+    if (scan.kind !== "admitted") throw new Error("Fixture admission failed.");
+    await readyPreparation(catalog.db, scan.preparationId);
+    await catalog.pool.query("UPDATE scans SET state='completed',finished_at=now() WHERE id=$1", [
+      scan.scanId,
+    ]);
+    await insertReport(scan.scanId);
+  }
+  const reports = await findOtherPackageReports(catalog.db, currentMatrixId, source.name, "9.0.0");
+  expect(reports).toHaveLength(5);
+  expect(new Set(reports.map((report) => report.version)).size).toBe(5);
+});
+
 it.each([
   "invalidated",
   "replaced",
@@ -297,6 +343,9 @@ it.each([
   if (reason === "integrity_anomaly")
     await catalog.pool.query("UPDATE package_versions SET integrity_anomaly=true");
   expect(await lookup()).toMatchObject({ reportId: null, availableReport: null });
+  expect(await findOtherPackageReports(catalog.db, currentMatrixId, source.name, "2.0.0")).toEqual(
+    [],
+  );
   expect(
     await findPackageReport(catalog.db, currentMatrixId, source.name, source.version),
   ).toBeNull();
