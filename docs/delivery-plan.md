@@ -55,6 +55,12 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 50 makes the homepage identify CompatLab consistently in its page title, social previews,
+visible introduction and server-rendered WebSite structured data. The canonical homepage and
+historical-report indexing policy remain unchanged. Browser qualification checks the initial HTML,
+brand metadata and existing query-page exclusions. These signals help search engines identify the
+site; they do not guarantee indexing or a particular ranking.
+
 PR 48 explains omitted export coverage beside the runtime answers and includes the retained planner
 omissions in compact API/MCP evidence and Markdown. A completed plan is distinguished from complete export coverage;
 wildcard patterns are not described as failed imports. Server-rendered explanations and exact next-test
