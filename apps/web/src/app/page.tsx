@@ -1,10 +1,11 @@
 import { searchResponseSchema } from "@compatlab/contracts";
+import { headers } from "next/headers";
 import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
 import { compatibilityArticle, mcpArticle } from "../content/articles";
 import { exampleReports, recentReports } from "../server/discovery";
-import { pageMetadata } from "../server/metadata";
+import { pageMetadata, publicOrigin } from "../server/metadata";
 import { publicRead } from "../server/runtime";
 
 export async function generateMetadata({
@@ -13,12 +14,14 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, unknown>>;
 }) {
   const query = await searchParams;
-  return pageMetadata(
-    "Check npm packages across Node.js, Bun and Deno",
-    "See whether an npm package imports and requires in Node.js, Bun and Deno. Compare real loading results, check coverage and inspect exact tested versions.",
+  const title = "CompatLab — npm compatibility for Node.js, Bun and Deno";
+  const metadata = pageMetadata(
+    title,
+    "CompatLab is an open-source npm compatibility checker. Compare recorded import and require results across pinned Node.js, Bun and Deno runtimes.",
     "/",
     Object.keys(query).length === 0,
   );
+  return { ...metadata, title: { absolute: title }, openGraph: { ...metadata.openGraph, title } };
 }
 export default async function Home({
   searchParams,
@@ -26,6 +29,16 @@ export default async function Home({
   searchParams: Promise<{ q?: string | string[] }>;
 }) {
   const params = await searchParams;
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const website = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${publicOrigin()}/#website`,
+    name: "CompatLab",
+    alternateName: "compatlab.me",
+    url: `${publicOrigin()}/`,
+    sameAs: ["https://github.com/siddiksawani/CompatLab"],
+  };
   const query = typeof params.q === "string" ? params.q.slice(0, 200) : "";
   let packages: ReturnType<typeof searchResponseSchema.parse>["packages"] = [];
   let error = "";
@@ -38,12 +51,15 @@ export default async function Home({
   }
   return (
     <>
+      <script type="application/ld+json" nonce={nonce}>
+        {JSON.stringify(website).replaceAll("<", "\\u003c")}
+      </script>
       <section className="hero">
         <div className="hero-search">
           <h1>Check your package in Node.js, Bun and Deno.</h1>
           <p className="lede">
-            See whether it loads with import and require. Pick a version, compare the results and
-            open the details when a check fails.
+            CompatLab checks how npm packages load with import and require. Pick a version, compare
+            the results and open the details when a check fails.
           </p>
           <Search initialQuery={query} initialPackages={packages} initialError={error} />
           {examples.length > 0 && (

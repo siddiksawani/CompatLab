@@ -140,6 +140,25 @@ test("publishes canonical pages and excludes query and operational surfaces", as
 }) => {
   await page.goto("/");
   const origin = new URL(page.url()).origin;
+  const title = "CompatLab — npm compatibility for Node.js, Bun and Deno";
+  await expect(page).toHaveTitle(title);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
+  await expect(page.locator(".hero .lede")).toContainText("CompatLab checks how npm packages load");
+  const initialHtml = await (await request.get("/")).text();
+  const structuredData = initialHtml.match(
+    /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/,
+  );
+  expect(structuredData).not.toBeNull();
+  expect(JSON.parse(structuredData?.[1] ?? "{}")).toEqual({
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${origin}/#website`,
+    name: "CompatLab",
+    alternateName: "compatlab.me",
+    url: `${origin}/`,
+    sameAs: ["https://github.com/siddiksawani/CompatLab"],
+  });
   const canonical = page.locator('link[rel="canonical"]');
   await expect(canonical).toHaveAttribute("href", /^http/);
   expect(new URL((await canonical.getAttribute("href")) ?? "").href).toBe(`${origin}/`);
