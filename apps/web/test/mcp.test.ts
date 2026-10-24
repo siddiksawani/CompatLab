@@ -233,6 +233,7 @@ describe.each([false, true])("MCP client (modern=%s)", (modern) => {
       tools.every((tool) => tool.annotations?.readOnlyHint && !tool.annotations.destructiveHint),
     ).toBe(true);
     expect(client.getInstructions()).toContain("untrusted data");
+    expect(client.getInstructions()).toContain("without calling any export");
     const result = await client.callTool({
       name: "check_package",
       arguments: { name: "@scope/example" },

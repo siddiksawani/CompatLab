@@ -65,6 +65,9 @@ test("serves crawlable comparisons and runtime failures without JavaScript or sc
       }),
     ).toBeVisible();
     await expect(staticPage.locator("#compatibility-bun")).toContainText("mixed loading results");
+    await expect(staticPage.locator("#compatibility-next-test")).toContainText(
+      "does not cover errors or unexpected values",
+    );
   } finally {
     await staticContext.close();
   }

@@ -95,6 +95,10 @@ test("a loading pass can record undefined without claiming a usable API", async 
   await expect(selected).toContainText("does not establish a usable API");
   await expect(selected).toContainText("Bun 1.4.2 · CommonJS require");
   await expect(selected.locator(".result")).toHaveText("Passed");
+  await selected.getByRole("link", { name: "Next test after a loading pass" }).click();
+  await expect(page.locator("#compatibility-next-test")).toContainText(
+    "Call the operation your application needs from compatlab-browser-fixture@1.0.0",
+  );
   await fixture(request, "invalidate");
   await page.reload();
   await expect(page.getByText("Historical evidence", { exact: true })).toBeVisible();

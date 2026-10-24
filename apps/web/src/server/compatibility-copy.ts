@@ -97,8 +97,19 @@ export function compatibilityScope(report: CompatibilityEvidence) {
     report.preparation.outcome !== "pass"
       ? `Shared preparation: ${labels[report.preparation.outcome].toLowerCase()}. Runtime support cannot be inferred from a preparation problem.`
       : "The runtimes used the same installed dependency snapshot.",
-    "Test environment: Linux amd64 / glibc, with install scripts and execution networking disabled. Successful import or require does not prove that package functions, native features or your application work.",
+    "Test environment: Linux amd64 / glibc, with install scripts and execution networking disabled. A pass means import or require resolved the entry and ran its module code; the check did not call any export.",
   ].join(" ");
+}
+
+export function applicationNextTest(report: CompatibilityEvidence) {
+  const loaded = report.cells.some(
+    (cell) => cell.coverage.passed + (cell.coverage.isolationPassed ?? 0) > 0,
+  );
+  if (!loaded) return null;
+  return [
+    "A loading pass does not cover errors or unexpected values that appear later, when your application calls the package or the package calls Node.js APIs.",
+    `Call the operation your application needs from ${report.artifact.name}@${report.artifact.version} in the recorded runtime version and in a runtime where it works, then compare the returned values or errors. To report a difference upstream, include the public package version, import path, failing call, runtime versions, operating system and architecture, never credentials or private code.`,
+  ];
 }
 
 const coverageReasons = ["pattern", "invalid_subpath", "coverage_limit"] as const;
