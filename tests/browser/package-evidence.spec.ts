@@ -1,6 +1,12 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { expectResponsiveLayout, finish, fixture, requestScan } from "./helpers.js";
+import {
+  expectBelowSectionNavigation,
+  expectResponsiveLayout,
+  finish,
+  fixture,
+  requestScan,
+} from "./helpers.js";
 
 async function packageSitemaps(request: APIRequestContext) {
   const pages: string[] = [];
@@ -40,6 +46,9 @@ test("explains successful planned checks with omitted exports without JavaScript
     await expect(
       reader.getByRole("link", { name: "See all recorded planner omissions" }),
     ).toHaveAttribute("href", `${reportPath}#planner-omissions`);
+    await reader.getByRole("link", { name: "See all recorded planner omissions" }).click();
+    await expect(reader).toHaveURL(new RegExp(`${reportPath}#planner-omissions$`));
+    await expectBelowSectionNavigation(reader, reader.locator("#planner-omissions summary"));
     const markdown = await request.get(reportPath, { headers: { accept: "text/markdown" } });
     expect(markdown.headers()["content-type"]).toContain("text/markdown");
     const explanation = await markdown.text();

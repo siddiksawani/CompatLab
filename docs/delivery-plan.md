@@ -55,6 +55,13 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 54 applies the report anchor offset to every target nested in a report section, so the
+next-test guidance linked from a selected result and the planner omissions linked from package
+summaries no longer open under the sticky section navigation. Browser qualification checks that
+both targets land fully visible below the navigation on desktop and that the next-test guidance
+stays visible on phones, where the navigation is static. Copy, report data and evidence reads are
+unchanged.
+
 PR 52 explains the next test after a loading pass. Compatibility answers, report Markdown, the
 methodology and MCP instructions state that a pass resolved the entry and ran its module code
 without calling an export. When any entry loaded, report and package answers direct readers to

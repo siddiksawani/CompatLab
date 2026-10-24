@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator, type Page } from "@playwright/test";
 
 export const longPackageName = `@compatlab/${"browser-layout-".repeat(12)}fixture`;
 
@@ -76,4 +76,13 @@ export async function expectResponsiveLayout(page: Page) {
   expect(layout.footerBottom, page.url()).toBeGreaterThanOrEqual(layout.height - 1);
   expect(layout.clippedControls, page.url()).toEqual([]);
   expect(layout.overlaps, page.url()).toEqual([]);
+}
+
+export async function expectBelowSectionNavigation(page: Page, target: Locator) {
+  await expect(target).toBeInViewport({ ratio: 1 });
+  const navigation = await page.getByRole("navigation", { name: "On this page" }).boundingBox();
+  const bounds = await target.boundingBox();
+  expect(bounds?.y, `${page.viewportSize()?.width}px`).toBeGreaterThanOrEqual(
+    (navigation?.y ?? 0) + (navigation?.height ?? 0),
+  );
 }
