@@ -1,6 +1,12 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { expectResponsiveLayout, finish, fixture, requestScan } from "./helpers.js";
+import {
+  expectBelowSectionNavigation,
+  expectResponsiveLayout,
+  finish,
+  fixture,
+  requestScan,
+} from "./helpers.js";
 
 test.beforeEach(async ({ request }) => {
   await fixture(request, "reset");
@@ -88,8 +94,8 @@ test("a loading pass can record undefined without claiming a usable API", async 
 }) => {
   await requestScan(page, "compatlab-browser-fixture");
   await finish(page, request, "execute-value-types");
-  const reportUrl = page.url();
-  await page.goto(`${reportUrl}?cell=bun_1_4_2-root-commonjs&entry=0#selected-result`);
+  const selectedUrl = `${page.url()}?cell=bun_1_4_2-root-commonjs&entry=0#selected-result`;
+  await page.goto(selectedUrl);
   const selected = page.getByRole("region", { name: "Selected import result" });
   await expect(selected).toContainText("Recorded return type: undefined.");
   await expect(selected).toContainText("does not establish a usable API");
@@ -99,6 +105,17 @@ test("a loading pass can record undefined without claiming a usable API", async 
   await expect(page.locator("#compatibility-next-test")).toContainText(
     "Call the operation your application needs from compatlab-browser-fixture@1.0.0",
   );
+  const nextTest = page.getByRole("heading", { name: "Next test after a loading pass" });
+  for (const viewport of [
+    { width: 1920, height: 872 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(selectedUrl);
+    await selected.getByRole("link", { name: "Next test after a loading pass" }).click();
+    await expect(page).toHaveURL(/#compatibility-next-test$/);
+    await expectBelowSectionNavigation(page, nextTest);
+  }
   await fixture(request, "invalidate");
   await page.reload();
   await expect(page.getByText("Historical evidence", { exact: true })).toBeVisible();

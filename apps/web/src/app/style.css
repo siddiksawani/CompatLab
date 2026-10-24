@@ -519,7 +519,7 @@ nav a {
 }
 .docs-layout h2,
 .report-section,
-.cell-details {
+.report-section [id] {
   scroll-margin-top: 130px;
 }
 .manual-version {
