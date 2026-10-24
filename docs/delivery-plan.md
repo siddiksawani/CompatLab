@@ -55,6 +55,23 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 56 records the multi-turn MCP summary evaluation for issue #55; it changes documentation only.
+Claude Code 2.1.310 ran 12 eight-turn conversations against the live read-only endpoint with only
+the two CompatLab tools enabled: `claude-sonnet-5-5` and `claude-haiku-5-5`, three repeats each for
+`express@5.2.1` and `hono@4.13.13`. The record keeps every prompt, tool call, result and answer. All
+12 recommendations written at turn 5 kept the exact version, report UUID, observation date,
+loading-only scope and earlier environment. Ten named all four runtime pins; the other two named
+only the pin of the runtime they made claims about. One extended Deno 2.9.7 to "or newer", and none
+cited the observation clock time. No answer carried a pass to `hono@5.0.0-rc.1`, `express@5.3.0`, a
+newer Bun or a newer Deno, and none presented `status.current` or `matchesCurrentMatrix` as support
+for the latest release. Decision: no repeatable gap by the criteria fixed in advance, with the
+two-of-three Hono Haiku pin cell recorded as a reading chosen after the results. MCP tools, output
+schema, instructions, `MCP_VERSION`, registry metadata and execution scope are unchanged. Twelve
+conversations with one client do not show that the failure cannot occur. Revisit with a public
+conversation that drops a recorded limit in a later summary in two of three repeats, or on a new
+model or client generation; application behavior after loading remains issue #51. This is an
+internal evaluation, not evidence of user adoption.
+
 PR 54 applies the report anchor offset to every target nested in a report section, so the
 next-test guidance linked from a selected result and the planner omissions linked from package
 summaries no longer open under the sticky section navigation. Browser qualification checks that
