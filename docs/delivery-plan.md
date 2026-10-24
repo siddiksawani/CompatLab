@@ -55,6 +55,20 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 52 explains the next test after a loading pass. Compatibility answers, report Markdown, the
+methodology and MCP instructions state that a pass resolved the entry and ran its module code
+without calling an export. When any entry loaded, report and package answers direct readers to
+call the operation their application needs in the recorded runtime version and a working runtime;
+upstream reports name only the public package version, import path, failing call, runtime versions
+and OS/architecture. MCP tools, output schema, `MCP_VERSION` and registry metadata are unchanged.
+Issue #51 relays a reader's experience that Deno problems can appear after a successful import. It
+supplied no package, version, import path, failing call, runtime pin or reproduction, so whether
+loading evidence covers such a failure remains unknown. The reported experience is not evidence of
+a false pass, a runtime defect, demand or adoption. Decision: this explanation is sufficient for
+now. A maintainer-authorized named behavioral assertion is not justified without a reproducible
+public case; execution scope, planning, harness, classification and sandbox policy are unchanged.
+Reopen with a public minimal reproduction naming those details.
+
 PR 50 makes the homepage identify CompatLab consistently in its page title, social previews,
 visible introduction and server-rendered WebSite structured data. The canonical homepage and
 historical-report indexing policy remain unchanged. Browser qualification checks the initial HTML,

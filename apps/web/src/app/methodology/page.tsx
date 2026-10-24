@@ -90,10 +90,13 @@ export default function Methodology() {
       </p>
       <h2 id="limits">What success does not establish</h2>
       <p>
-        Loading does not exercise arbitrary functions, test an application, or establish safety.
-        Package-visible harness observations can be tampered with by malicious code in the same
-        process. Stdout and stderr are logs, never verdicts. Only a named behavioral assertion can
-        earn a separate probe-verified evidence label.
+        A pass means import or require resolved the entry and ran its module code. The harness
+        records the type of the loaded value and calls no export, so errors that appear only when an
+        application calls the package are outside this evidence. Loading does not test an
+        application or establish safety; public scans do not run application tests. Package-visible
+        harness observations can be tampered with by malicious code in the same process. Stdout and
+        stderr are logs, never verdicts. Only a named behavioral assertion can earn a separate
+        probe-verified evidence label.
       </p>
       <h2 id="local-cli">Run the local CLI</h2>
       <p>

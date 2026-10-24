@@ -1,5 +1,6 @@
 import { displayIdentifier } from "@compatlab/engine";
 import {
+  applicationNextTest,
   type CompatibilityEvidence,
   compatibilityScope,
   omittedCoverage,
@@ -8,6 +9,7 @@ import {
 
 export function CompatibilityAnswers({ report }: { report: CompatibilityEvidence }) {
   const omitted = omittedCoverage(report);
+  const nextTest = applicationNextTest(report);
   return (
     <section className="report-section compatibility-answers" id="compatibility">
       <h2>Does {report.artifact.name} work in Node.js, Bun and Deno?</h2>
@@ -56,6 +58,14 @@ export function CompatibilityAnswers({ report }: { report: CompatibilityEvidence
           ))}
         </section>
       ))}
+      {nextTest && (
+        <section id="compatibility-next-test">
+          <h3>Next test after a loading pass</h3>
+          {nextTest.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </section>
+      )}
       <p>
         <a href="/npm/compatibility">
           Compare npm package compatibility across Node.js, Bun and Deno

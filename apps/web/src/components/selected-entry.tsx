@@ -67,7 +67,8 @@ export async function SelectedEntry({
             ? "The load completed but returned undefined. Check the exports your application needs; this does not establish a usable API."
             : cell.mode === "esm"
               ? "For import, this describes the module namespace. It does not check its named exports or behavior."
-              : "This describes the value returned by require. It does not check its exports or behavior."}
+              : "This describes the value returned by require. It does not check its exports or behavior."}{" "}
+          <a href="#compatibility-next-test">Next test after a loading pass</a>.
         </p>
       )}
       {entry.failure?.optionalPeer && (

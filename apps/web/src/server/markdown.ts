@@ -3,6 +3,7 @@ import type { ReportEnvelope, SearchResponse } from "@compatlab/contracts";
 import { coverageSummary, isolationLimited, labels } from "../components/labels";
 import { articles } from "../content/articles";
 import {
+  applicationNextTest,
   compatibilityScope,
   omittedCoverage,
   plannedCoverageSummary,
@@ -71,6 +72,7 @@ export function homeMarkdown(origin: string, reports: ReportPreview[], search?: 
 export function reportMarkdown(origin: string, { report, status }: ReportEnvelope) {
   const api = `${origin}/api/v1/reports/${report.id}`;
   const omitted = omittedCoverage(report);
+  const nextTest = applicationNextTest(report);
   return [
     `# ${text(report.artifact.name)} ${text(report.artifact.version)}`,
     `Report: ${origin}/reports/${report.id}`,
@@ -97,6 +99,7 @@ export function reportMarkdown(origin: string, { report, status }: ReportEnvelop
         ...result.failures.map((failure) => `- [${text(failure.label)}](${origin}${failure.path})`),
       ]),
     ]),
+    ...(nextTest ? ["### Next test after a loading pass", ...nextTest.map(text)] : []),
     `[Compare npm package compatibility across Node.js, Bun and Deno](${origin}/npm/compatibility) · [Observed runtime loading failures](${origin}/npm/compatibility/failures)`,
     `## Preparation\n\n${labels[report.preparation.outcome]}. Lifecycle scripts disabled. ${report.preparation.installedCount} installed packages; ${report.preparation.omittedOptionalCount} optional dependencies omitted.`,
     ...(report.preparation.failure

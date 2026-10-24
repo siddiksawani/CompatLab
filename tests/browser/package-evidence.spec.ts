@@ -182,7 +182,9 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
       headers: { accept: "text/markdown" },
     });
     expect(reportMarkdown.headers()["content-type"]).toContain("text/markdown");
-    expect(await reportMarkdown.text()).toContain("work with Bun");
+    const reportText = await reportMarkdown.text();
+    expect(reportText).toContain("work with Bun");
+    expect(reportText).toContain("### Next test after a loading pass");
     expect(html.headers().link).toContain('rel="describedby"');
     expect((await request.post("/llms.txt")).status()).toBe(405);
     expect(

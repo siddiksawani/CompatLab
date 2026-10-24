@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applicationNextTest,
   type CompatibilityEvidence,
   compatibilityDescription,
   compatibilityScope,
@@ -94,8 +95,26 @@ describe("evidence-based compatibility answers", () => {
     );
     expect(compatibilityDescription(report)).not.toContain("Deno");
     expect(compatibilityScope(report)).toContain(
-      "does not prove that package functions, native features or your application work",
+      "resolved the entry and ran its module code; the check did not call any export",
     );
+  });
+
+  it("names the next application test only when an entry actually loaded", () => {
+    const report = evidence();
+    const [covered, next] = applicationNextTest(report) ?? [];
+    expect(covered).toContain("does not cover errors or unexpected values");
+    expect(next).toContain("@fixture/package@1.0.0 in the recorded runtime version");
+    expect(next).toContain("failing call, runtime versions, operating system and architecture");
+    expect(next).toContain("never credentials or private code");
+    for (const cell of report.cells) {
+      cell.outcome = "fail";
+      cell.coverage = { ...cell.coverage, passed: 0, failed: 1 };
+    }
+    expect(applicationNextTest(report)).toBeNull();
+    const confirmed = report.cells[0];
+    if (!confirmed) throw new Error("Missing fixture cell");
+    confirmed.coverage.isolationPassed = 1;
+    expect(applicationNextTest(report)).not.toBeNull();
   });
 
   it("keeps missing optional peers separate from failures and omitted coverage", () => {
