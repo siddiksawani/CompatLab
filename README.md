@@ -15,8 +15,13 @@ The local engine resolves and prepares public npm artifacts with scripts disable
 The public maintainer section is **coming soon**. Its optional [account implementation](docs/maintainers.md) uses GitHub App login, encrypted OAuth tokens, live repository authority checks, revocation and account quotas, but sign-in and release monitoring stay disabled in this deployment. Public reports remain anonymous.
 
 Use Node.js **24.21.0** from `.node-version` and pnpm **12.8.1** from `package.json`.
+The infrastructure tests included in `pnpm check` also require **Python 3.12 or newer**, available as
+`python3` on your `PATH`. On macOS, check `python3 --version`: Apple's bundled Python 3.9 lacks the
+hashing and archive-filter APIs used by those tests. Install a supported Python separately; keep
+the system Python unchanged.
 
 ```sh
+python3 --version
 corepack enable
 pnpm install --frozen-lockfile
 pnpm check
@@ -24,7 +29,7 @@ pnpm cli --help
 pnpm cli doctor --json
 ```
 
-`pnpm check` runs formatting/lint checks, a strict workspace build, test type checking, and unit/CLI tests. Build before running the CLI or tests directly. Development checks work on macOS and Linux; a Docker daemon is needed for `doctor`, sandbox tests and the local PostgreSQL test server. See [database qualification](docs/catalog.md#migrations-and-qualification) for the separate integration gate.
+`pnpm check` runs formatting/lint checks, a strict workspace build, test type checking, and unit/CLI and Python infrastructure tests. Build before running the CLI or tests directly. Development checks work on macOS and Linux; a Docker daemon is needed for `doctor`, sandbox tests and the local PostgreSQL test server. See [database qualification](docs/catalog.md#migrations-and-qualification) for the separate integration gate.
 
 `doctor` reports whether a Linux amd64 Docker server has a registered runsc runtime. It returns exit code 1 when prerequisites are missing and never executes package code. Passing it does not qualify a host for untrusted execution. There is no fallback to running packages on the developer's machine.
 
