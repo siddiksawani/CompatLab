@@ -8,6 +8,7 @@ import {
   approveRuntime,
   auditBackup,
   blockSubject,
+  browserActivity,
   cancelScan,
   coverageStatus,
   evidenceUsage,
@@ -38,7 +39,7 @@ import {
 import { z } from "zod";
 
 export const adminUsage = `Usage: compatlab admin status | migrate | retention
-       compatlab admin lookup-demand | evidence-usage | coverage-status
+       compatlab admin lookup-demand | evidence-usage | browser-activity | coverage-status
        compatlab admin coverage-add MATRIX_UUID targets.json
        compatlab admin coverage-pause | coverage-resume
        compatlab admin coverage-skip TARGET_UUID
@@ -63,6 +64,7 @@ Cancellation during preparation cancels all scans sharing that unfinished prepar
 const counts: Record<string, number> = {
   "lookup-demand": 0,
   "evidence-usage": 0,
+  "browser-activity": 0,
   "coverage-status": 0,
   "coverage-add": 2,
   "coverage-pause": 0,
@@ -131,6 +133,7 @@ export async function runAdmin(
       "host-status",
       "lookup-demand",
       "evidence-usage",
+      "browser-activity",
       "coverage-status",
     ].includes(command)
       ? "Read-only operator inspection."
@@ -164,6 +167,9 @@ export async function runAdmin(
         break;
       case "evidence-usage":
         result = await evidenceUsage(db);
+        break;
+      case "browser-activity":
+        result = await browserActivity(db);
         break;
       case "coverage-status":
         result = await coverageStatus(db);

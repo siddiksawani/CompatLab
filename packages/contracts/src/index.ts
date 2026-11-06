@@ -1,4 +1,5 @@
 export * from "./assertions.js";
+export * from "./browser-activity.js";
 export * from "./ci.js";
 export * from "./comparison.js";
 export * from "./harness.js";

@@ -1,6 +1,7 @@
 "use client";
 import { type SearchResponse, searchResponseSchema } from "@compatlab/contracts";
 import { useEffect, useState } from "react";
+import { recordBrowserAction } from "./browser-activity";
 import { packageUrl, readError } from "./labels";
 
 export function Search({
@@ -40,6 +41,7 @@ export function Search({
         });
         if (!response.ok) throw new Error(readError(response.status));
         setResults(searchResponseSchema.parse(await response.json()).packages);
+        if (!controller.signal.aborted) recordBrowserAction("search");
       } catch (error) {
         if (!controller.signal.aborted) {
           setResults([]);
@@ -56,7 +58,13 @@ export function Search({
   }, [query, initialQuery, initialPackages, initialError]);
   return (
     <search className="search-area">
-      <form action="/" className="search-form">
+      <form
+        action="/"
+        className="search-form"
+        onSubmit={() => {
+          if (query.trim()) recordBrowserAction("search");
+        }}
+      >
         <label className="sr-only" htmlFor="package-search">
           Search npm packages
         </label>

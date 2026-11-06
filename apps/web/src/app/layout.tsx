@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { BrowserActivity } from "../components/browser-activity";
 import { SiteNavigation } from "../components/site-navigation";
 import { publicOrigin } from "../server/metadata";
 import "./style.css";
@@ -15,6 +16,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <BrowserActivity />
         <a className="skip" href="#main">
           Skip to content
         </a>

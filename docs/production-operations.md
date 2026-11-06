@@ -129,6 +129,25 @@ Release directories and images are retained for diagnosis and rollback. Inspect 
 
 ## Lookup demand and curated coverage
 
+`sudo compatlab-admin browser-activity` reads first-party browser action categories separately
+from server evidence reads. The fixed page/action pairs are page views on home/package/report/other,
+search on home, version selection on package, and evidence opens/share copies on report pages.
+Rows retain only day, categories, coarse document-referrer source, voluntary research marker,
+automation flag and shared ten-minute windows, for 30 UTC days (at most 288 rows/day).
+Neither windows nor unflagged automation are people, sessions, clicks, conversions or adoption.
+No per-visitor funnel or repeat-user claim can be reconstructed. Keep volunteered task outcomes separate.
+
+For operator browser checks, add `research=1` to each visited URL. It does not persist through
+navigation. Automated browsers can declare `navigator.webdriver`; known bot/headless user-agent
+strings also set the automation flag. These are incomplete, forgeable hints. Do not discard the
+research/automation fields when comparing the totals. GPC and DNT suppress collection.
+
+The same-origin JSON receiver is limited to 2 concurrent requests, 120 requests/minute/instance
+and 20 requests/minute per rotating network group, held only in memory for that minute.
+Body reads use the existing 2 KiB/5 second bound; database writes have short statement/lock limits.
+Measurement errors never block navigation or copying. Normal evidence GETs never admit scans.
+The client has no remote script dependency; preserve the nonce CSP and Caddy `no-transform`.
+
 `sudo compatlab-admin evidence-usage` returns daily ten-minute activity windows by read surface,
 answer availability, immediate referrer group and research marker for 30 UTC days. Website package
 and report reads, direct HTTP API reads and the two MCP tools remain separate. MCP initialization

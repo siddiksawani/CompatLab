@@ -1,12 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
-export function Copy({ value, label }: { value: string; label: string }) {
+import { recordBrowserAction } from "./browser-activity";
+export function Copy({
+  value,
+  label,
+  share = false,
+}: {
+  value: string;
+  label: string;
+  share?: boolean;
+}) {
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
+      if (share) recordBrowserAction("share_copied");
       setMessage("Copied.");
     } catch {
       setMessage("Select and copy the text below.");
