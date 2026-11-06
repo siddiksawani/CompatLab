@@ -1,5 +1,11 @@
 # Delivery sequence
 
+Browser measurement follow-up: first-party fixed-category browser action windows, separate from
+server reads, with no visitor/session identifiers or raw query/URL collection. Validate origin/body
+and traffic bounds, privacy preferences, automation/research distinctions, retention, and the
+search/version/evidence/share journey without admitting work. This does not establish human
+adoption or replace the volunteer task study.
+
 The approved project is divided into fourteen implementation PRs. PRs 1–11 deliver and qualify the anonymous public MVP; PRs 12–14 add the approved maintainer workflow after its validation gates. Optional P2 work, including private packages, teams and billing, remains outside this sequence and requires its own design review.
 
 Each PR is independently reviewable, includes meaningful tests for its behavior, and merges before its dependent slice starts. The numbered slices are not a reason to combine unrelated fixes or skip a failed gate. Material scope changes require an updated plan.

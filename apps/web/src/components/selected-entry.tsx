@@ -83,6 +83,7 @@ export async function SelectedEntry({
       </p>
       <div className="actions">
         <Copy
+          share
           label="Copy this result link"
           value={`${origin}${entryPath(report.id, cell, entry.index)}`}
         />

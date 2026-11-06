@@ -5,7 +5,7 @@ export function VersionPicker({ pkg }: { pkg: PackageResponse }) {
   return (
     <div>
       <h2>Select a published version</h2>
-      <form action="/packages" className="version-form">
+      <form action="/packages" className="version-form" data-browser-activity="version_selected">
         <input type="hidden" name="name" value={pkg.name} />
         <label htmlFor="version">Exact version</label>
         <select id="version" name="version" defaultValue={pkg.version}>
@@ -26,7 +26,7 @@ export function VersionPicker({ pkg }: { pkg: PackageResponse }) {
       </p>
       <details className="manual-version">
         <summary>Enter another exact version</summary>
-        <form action="/packages" className="version-form">
+        <form action="/packages" className="version-form" data-browser-activity="version_selected">
           <input type="hidden" name="name" value={pkg.name} />
           <label htmlFor="manual-version">Other exact version</label>
           <input

@@ -1,5 +1,7 @@
 import "server-only";
 import {
+  browserActivityRecorder,
+  createBrowserActivityApi,
   createMaintainerService,
   createPublicApi,
   initializeTelemetry,
@@ -35,6 +37,7 @@ function initialize() {
     maintainer,
     api,
     recordUsage,
+    browserActivity: createBrowserActivityApi(config, browserActivityRecorder(catalog.db)),
     mcp: createEvidenceMcp({
       origin: config.origin,
       matrixId: config.matrixId,

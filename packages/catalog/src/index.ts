@@ -16,6 +16,7 @@ export { pollMonitor } from "./monitoring/poll.js";
 export * from "./operations.js";
 export { findCachedReport } from "./policy.js";
 export * from "./public/api.js";
+export { browserActivity } from "./public/browser-activity.js";
 export { lookupDemand } from "./public/measurement.js";
 export { type PublicConfig, publicConfigSchema } from "./public/security.js";
 export { evidenceUsage } from "./public/usage.js";

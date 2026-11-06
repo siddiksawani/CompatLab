@@ -5,6 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Breadcrumbs } from "../../../components/breadcrumbs";
+import { ActivitySignal } from "../../../components/browser-activity";
 import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { Copy } from "../../../components/copy";
 import { cellAnchor, entryPath, selectEntry } from "../../../components/entry-result";
@@ -97,7 +98,12 @@ export default async function ReportPage({
           <a className="button secondary" href={`${base}/json`}>
             Download JSON
           </a>
-          <Copy label="Copy report link" value={`${webRuntime().config.origin}${reportPath}`} />
+          <ActivitySignal action="evidence_opened" />
+          <Copy
+            share
+            label="Copy report link"
+            value={`${webRuntime().config.origin}${reportPath}`}
+          />
         </div>
       </div>
       {!status.current && (
@@ -159,6 +165,7 @@ export default async function ReportPage({
           />
         </a>
         <Copy
+          share
           label="Copy evidence badge Markdown"
           value={`[![CompatLab loading evidence](${webRuntime().config.origin}/api/v1/badges/${report.id}.svg)](${webRuntime().config.origin}/reports/${report.id})`}
         />
