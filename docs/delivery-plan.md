@@ -1,5 +1,10 @@
 # Delivery sequence
 
+Read-availability follow-up: share only unfinished server-rendered evidence reads, with bounded
+concurrency, queue size, callers and wait time. Retry a short explicit busy response at most once.
+Preserve fresh selection after invalidation and no work on reads. At production ingress, failed
+evidence-page HTML reads return an uncached retryable 503 while retaining the unavailable UI.
+
 Browser measurement follow-up: first-party fixed-category browser action windows, separate from
 server reads, with no visitor/session identifiers or raw query/URL collection. Validate origin/body
 and traffic bounds, privacy preferences, automation/research distinctions, retention, and the

@@ -40,6 +40,34 @@
     header_up X-CompatLab-Proxy-Token {$PROXY_SECRET}
     header_up X-CompatLab-Client-IP {client_ip}
     header_up -Forwarded
+    @failedPage {
+      status 500
+      header Content-Type text/html*
+    }
+    handle_response @failedPage {
+      @evidenceRead {
+        method GET HEAD
+        path /reports/* /npm/* /packages
+      }
+      handle @evidenceRead {
+        header {
+          Retry-After 2
+          Cache-Control "no-store, no-transform"
+          X-Robots-Tag "noindex, follow"
+          Content-Type "text/html; charset=utf-8"
+          X-Content-Type-Options nosniff
+        }
+        copy_response_headers {
+          include Content-Security-Policy Referrer-Policy Permissions-Policy Content-Signal Vary
+        }
+        respond <<HTML
+          <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Evidence temporarily unavailable · CompatLab</title></head><body><main><h1>We couldn’t load this page.</h1><p>Please retry shortly. No package work starts from viewing a page.</p><p><a href="">Try again</a> · <a href="/">CompatLab home</a></p></main></body></html>
+          HTML 503
+      }
+      handle {
+        copy_response
+      }
+    }
     transport http {
       dial_timeout 3s
       response_header_timeout 15s

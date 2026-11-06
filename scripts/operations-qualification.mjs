@@ -217,6 +217,41 @@ try {
   assert.equal(directAsset.status, 200);
   assert.match(asset.headers.get("cache-control") ?? "", /\bimmutable\b/);
   assert.equal(asset.headers.get("cache-control"), directAsset.headers.get("cache-control"));
+  await catalog.pool.query("REVOKE SELECT ON reports FROM compatlab_web");
+  try {
+    for (const path of [
+      "/reports/11111111-1111-4111-8111-111111111111",
+      "/npm/compatlab-fixture/1.0.0",
+    ]) {
+      for (const method of ["GET", "HEAD"]) {
+        for (const agent of ["CompatLab-qualification/1.0", "Googlebot"]) {
+          const response = await fetch(`${origin}${path}`, {
+            method,
+            headers: { "user-agent": agent },
+          });
+          assert.equal(response.status, 503);
+          assert.equal(response.headers.get("retry-after"), "2");
+          assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+          assert.match(response.headers.get("cache-control") ?? "", /no-transform/);
+          assert.match(response.headers.get("x-robots-tag") ?? "", /noindex/);
+          assert.match(response.headers.get("content-security-policy") ?? "", /nonce-/);
+          assert.equal(response.headers.get("content-encoding"), null);
+          if (method === "GET") {
+            const body = await response.text();
+            assert.match(body, /We couldn’t load this page/);
+            assert.doesNotMatch(body, /<script/i);
+          }
+        }
+      }
+    }
+    const api = await fetch(`${origin}/api/v1/reports/11111111-1111-4111-8111-111111111111`);
+    assert.equal(api.status, 503);
+    assert.equal(api.headers.get("retry-after"), "5");
+    assert.equal((await api.json()).error, "temporarily_unavailable");
+  } finally {
+    await catalog.pool.query("GRANT SELECT ON reports TO compatlab_web");
+  }
+  assert.equal((await fetch(`${origin}/npm/compatlab-fixture/1.0.0`)).status, 404);
   const oversized = await fetch(`${origin}/api/v1/scans`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://qualification.invalid" },
@@ -307,6 +342,7 @@ try {
       "readiness",
       "security headers",
       "HTML and Markdown variants through Caddy",
+      "retryable uncached evidence-page failures and recovery",
       "policy pages",
       "16 KiB ingress bound",
       "worker authentication",
