@@ -50,11 +50,11 @@
         path /reports/* /npm/* /packages
       }
       handle @evidenceRead {
-        header Retry-After 2
-        header Cache-Control "no-store, no-transform"
-        header X-Robots-Tag "noindex, follow"
-        copy_response_headers {
-          exclude Cache-Control Retry-After X-Robots-Tag
+        header {
+          Retry-After 2
+          Cache-Control "no-store, no-transform"
+          X-Robots-Tag "noindex, follow"
+          defer
         }
         copy_response 503
       }
