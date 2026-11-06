@@ -37,6 +37,9 @@ it("accepts only coarse categories and strips private referrers before transport
   expect(activitySource("https://github.com.evil.example", config.origin)).toBe("other");
   expect(activityPage("/npm/@scope/pkg/1.0.0")).toBe("package");
   expect(activityPage("/npm/compatibility")).toBe("other");
+  expect(activityPage("/npm/compatibility/failures")).toBe("other");
+  expect(activityPage("/npm/compatibility/1.0.0")).toBe("package");
+  expect(activityPage("/npm/compatibility-check/1.0.0")).toBe("package");
 });
 it("validates same-origin JSON, honors privacy signals and flags detectable automation", async () => {
   const record = vi.fn(async () => {});

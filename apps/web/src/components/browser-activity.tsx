@@ -2,7 +2,7 @@
 import { activityPage, activitySource, type BrowserAction } from "@compatlab/contracts";
 import { useEffect } from "react";
 
-const sent = new Set<string>();
+const sent = new Map<string, number>();
 const pending = new Set<BrowserAction>();
 let scheduled = false;
 export function recordBrowserAction(action: BrowserAction) {
@@ -13,8 +13,9 @@ export function recordBrowserAction(action: BrowserAction) {
     )
       return;
     const key = `${activityPage(location.pathname)}:${action}`;
-    if (sent.has(key)) return;
-    sent.add(key);
+    const bucket = Math.floor(Date.now() / 600_000);
+    if (sent.get(key) === bucket) return;
+    sent.set(key, bucket);
     pending.add(action);
     if (scheduled) return;
     scheduled = true;

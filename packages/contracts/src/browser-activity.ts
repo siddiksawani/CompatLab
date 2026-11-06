@@ -21,7 +21,10 @@ export const browserActionSchema = z.enum([
 export type BrowserAction = z.infer<typeof browserActionSchema>;
 export function activityPage(path: string) {
   if (path === "/") return "home" as const;
-  if (path === "/packages" || (path.startsWith("/npm/") && !path.startsWith("/npm/compatibility")))
+  if (
+    path === "/packages" ||
+    (path.startsWith("/npm/") && !/^\/npm\/compatibility(?:\/failures)?\/?$/.test(path))
+  )
     return "package" as const;
   if (/^\/reports\/[0-9a-f-]{36}$/i.test(path)) return "report" as const;
   return "other" as const;

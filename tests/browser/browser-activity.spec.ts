@@ -44,6 +44,15 @@ test("browser actions send only fixed categories and do not start work", async (
     .fill("compatlab-browser-fixture");
   await expect(page.locator(".search-results")).toContainText("compatlab-browser-fixture");
   await expect.poll(() => saw("search", "home")).toBe(true);
+  const searches = () => signals.filter((signal) => signal.actions.includes("search")).length;
+  await page.getByRole("searchbox", { name: "Search npm packages" }).fill("no-matching-fixture");
+  await expect(page.locator(".search-status")).toHaveText("0 packages found");
+  expect(searches()).toBe(1);
+  await page.clock.setFixedTime(new Date(Date.now() + 11 * 60_000));
+  await page
+    .getByRole("searchbox", { name: "Search npm packages" })
+    .fill("compatlab-browser-fixture");
+  await expect.poll(searches).toBe(2);
   await page.goto("/packages?name=compatlab-browser-fixture&version=1.0.0&research=1");
   await page.getByLabel("Exact version", { exact: true }).selectOption("2.0.0");
   await page.getByRole("button", { name: "Select version", exact: true }).click();
