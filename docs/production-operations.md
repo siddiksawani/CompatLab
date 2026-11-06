@@ -82,8 +82,9 @@ database concurrency/time limits are unchanged. Only a `busy` 503 with a numeric
 one or two seconds is retried once; missing evidence and database failures are not retried.
 
 If a GET/HEAD HTML read at `/reports/*`, `/npm/*` or `/packages` still fails with an upstream 500,
-Caddy preserves the unavailable-page body and security headers but returns 503, Retry-After: 2,
-no-store and noindex. This applies to all HTML 500s on these read routes, including unexpected
+Caddy returns a small unavailable page that works without JavaScript, preserves security headers
+and returns 503, Retry-After: 2, no-store and noindex. It does not copy the upstream body's
+compression headers. This applies to all HTML 500s on these read routes, including unexpected
 defects; inspect web errors rather than assuming every 503 is load. API statuses, 404s, successful
 evidence and other routes are preserved. This status normalization requires the production proxy;
 direct Next.js access still uses its error-boundary status. No read starts or retries package work.
