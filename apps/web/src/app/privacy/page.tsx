@@ -29,8 +29,8 @@ export default function Privacy() {
         The ingress uses your network address to limit abuse. Admission stores a keyed identifier
         that rotates daily, groups IPv6 addresses by /64, and is removed after seven days. Raw
         addresses are not stored in the catalog. The default deployment disables access logs and
-        filters request details from proxy errors. There is no advertising or browser analytics
-        integration.
+        filters request details from proxy errors. There is no advertising or third-party browser
+        analytics integration.
       </p>
       <p>
         For successful package-version lookups, we retain the public package name, exact version,
@@ -43,6 +43,23 @@ export default function Privacy() {
         missing evidence before adding packages to the separate coverage queue.
       </p>
       <h2 id="retention">Retention</h2>
+      <p>
+        With JavaScript enabled, the website sends first-party signals for visible page views,
+        searches, version selections, opened evidence and successful share-link copies. Only fixed
+        action and page categories, a coarse document-referrer group, a voluntary research flag and
+        an automation flag are sent. No search text, package name, report ID, full URL, clipboard
+        content, cookie or visitor/session identifier is sent with these signals. We honor browser
+        Global Privacy Control and Do Not Track signals.
+      </p>
+      <p>
+        These categories count at most once per shared ten-minute window across visitors and
+        replicas, expire after 30 UTC days and are limited to 288 possible rows per day. Collection
+        is best effort; blocked scripts, network errors and rate limits can lose signals. Research
+        and automation flags can be incomplete or forged. An unflagged signal is not proof of a
+        human, a conversion or a useful visit. The receiver briefly uses a rotating keyed network
+        identifier for an in-memory abuse limit; it is discarded when the minute changes and is
+        never stored with the activity.
+      </p>
       <p>
         We also keep aggregate ten-minute activity windows for package pages, report pages, public
         API reads and MCP evidence tools. We record the UTC day, the read surface, whether evidence

@@ -2,6 +2,7 @@ export { createMaintainerService } from "./auth/runtime.js";
 export { maintainerConfig } from "./auth/security.js";
 export { openCatalog } from "./database.js";
 export { createPublicApi } from "./public/api.js";
+export { browserActivityRecorder, createBrowserActivityApi } from "./public/browser-activity.js";
 export { publicConfigSchema } from "./public/security.js";
 export {
   type EvidenceUsage,
