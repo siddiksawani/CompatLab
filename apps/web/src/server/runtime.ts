@@ -11,6 +11,7 @@ import {
   usageRecorder,
 } from "@compatlab/catalog/web";
 import { createEvidenceMcp } from "./mcp";
+import { createServerRead } from "./server-read";
 
 function initialize() {
   initializeTelemetry();
@@ -34,6 +35,7 @@ function initialize() {
     config,
     maintainer,
     api,
+    read: createServerRead((path) => api(new Request(`${config.origin}${path}`))),
     recordUsage,
     mcp: createEvidenceMcp({
       origin: config.origin,
@@ -51,6 +53,5 @@ export function webRuntime() {
   return state.compatlabWeb;
 }
 export async function publicRead(path: string) {
-  const { api, config } = webRuntime();
-  return api(new Request(`${config.origin}${path}`));
+  return webRuntime().read(path);
 }

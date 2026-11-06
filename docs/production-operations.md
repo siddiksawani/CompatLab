@@ -74,6 +74,20 @@ Restore drills use `compatlab backup decrypt` to a private temporary file and `p
 
 Caddy adds `Cache-Control: no-transform` to HTML responses while preserving their existing cache directives. Cloudflare's email obfuscation otherwise treats package strings such as `is-number@7.0.0` as email addresses, changing the server-rendered HTML before React hydrates it. The header prevents that rewriting; static asset cache policies remain unchanged. Deployment qualification checks HTML, JSON and asset responses through the actual proxy. See [Cloudflare's no-transform guidance](https://developers.cloudflare.com/waf/tools/scrape-shield/email-address-obfuscation/).
 
+Server-rendered evidence reads share unfinished requests within each web process. Each read queue
+allows two active operations, eight queued keys and sixteen total callers, with a 250 ms queue wait.
+Exact-version selection uses the same bounds. There is no completed-result cache: replacement,
+invalidation and policy changes are selected again on the next request. Existing public API and
+database concurrency/time limits are unchanged. Only a `busy` 503 with a numeric Retry-After of
+one or two seconds is retried once; missing evidence and database failures are not retried.
+
+If a GET/HEAD HTML read at `/reports/*`, `/npm/*` or `/packages` still fails with an upstream 500,
+Caddy preserves the unavailable-page body and security headers but returns 503, Retry-After: 2,
+no-store and noindex. This applies to all HTML 500s on these read routes, including unexpected
+defects; inspect web errors rather than assuming every 503 is load. API statuses, 404s, successful
+evidence and other routes are preserved. This status normalization requires the production proxy;
+direct Next.js access still uses its error-boundary status. No read starts or retries package work.
+
 The canonical allowlist is `infra/cloudflare-ips.json`. The weekly `compatlab-cloudflare-check.timer` fetches Cloudflare's HTTPS API, validates the ranges, and writes a candidate and check result under `/var/lib/compatlab-deploy`. It **does not** change active rules. Fetch errors, stale checks and changed lists generate email alerts.
 
 For a change, inspect the candidate against [Cloudflare's published ranges](https://www.cloudflare.com/ips/), update the JSON in a feature-branch PR, and run `pnpm check`. Review unusually broad ranges or large removals explicitly. After merge, deployment validates Caddy before applying the policy; the firewall chain update is atomic and matches only the origin's published IPv4 TCP ports 80/443 through Docker's `DOCKER-USER` path. Other applications and SSH rules are preserved. Failed validation leaves the current policy intact; failed application health restores the previous policy and release.

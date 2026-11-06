@@ -69,7 +69,20 @@ const fixtureServer = createServer(async (request, response) => {
   }
   busy = true;
   try {
-    if (request.url === "/reset") {
+    if (request.url === "/hold-reads") {
+      const client = await catalog.pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("LOCK TABLE reports IN ACCESS EXCLUSIVE MODE");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        client.release();
+        throw error;
+      }
+      setTimeout(() => {
+        void client.query("ROLLBACK").finally(() => client.release());
+      }, 1500);
+    } else if (request.url === "/reset") {
       await catalog.pool.query(
         "TRUNCATE auth_users,probe_revisions,audit_events,blocks,reports,jobs,runs,scans,preparations,package_versions,packages CASCADE",
       );

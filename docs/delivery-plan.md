@@ -1,5 +1,10 @@
 # Delivery sequence
 
+Read-availability follow-up: share only unfinished server-rendered evidence reads, with bounded
+concurrency, queue size, callers and wait time. Retry a short explicit busy response at most once.
+Preserve fresh selection after invalidation and no work on reads. At production ingress, failed
+evidence-page HTML reads return an uncached retryable 503 while retaining the unavailable UI.
+
 The approved project is divided into fourteen implementation PRs. PRs 1–11 deliver and qualify the anonymous public MVP; PRs 12–14 add the approved maintainer workflow after its validation gates. Optional P2 work, including private packages, teams and billing, remains outside this sequence and requires its own design review.
 
 Each PR is independently reviewable, includes meaningful tests for its behavior, and merges before its dependent slice starts. The numbered slices are not a reason to combine unrelated fixes or skip a failed gate. Material scope changes require an updated plan.

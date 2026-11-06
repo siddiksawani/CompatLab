@@ -40,6 +40,28 @@
     header_up X-CompatLab-Proxy-Token {$PROXY_SECRET}
     header_up X-CompatLab-Client-IP {client_ip}
     header_up -Forwarded
+    @failedPage {
+      status 500
+      header Content-Type text/html*
+    }
+    handle_response @failedPage {
+      @evidenceRead {
+        method GET HEAD
+        path /reports/* /npm/* /packages
+      }
+      handle @evidenceRead {
+        header Retry-After 2
+        header Cache-Control "no-store, no-transform"
+        header X-Robots-Tag "noindex, follow"
+        copy_response_headers {
+          exclude Cache-Control Retry-After X-Robots-Tag
+        }
+        copy_response 503
+      }
+      handle {
+        copy_response
+      }
+    }
     transport http {
       dial_timeout 3s
       response_header_timeout 15s
