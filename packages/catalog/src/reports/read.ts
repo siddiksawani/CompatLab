@@ -221,7 +221,7 @@ export function createReportApi(db: CatalogDatabase) {
       const id = identifier(progress[1]);
       const result = await scanProgress(db, id);
       if (!result) return json({ error: "not_found" }, 404);
-      const etag = `"scan-${id}-${result.revision}"`;
+      const etag = `"scan-${id}-${result.revision}${result.aggregationFailedAt ? "-aggregation-failed" : ""}"`;
       return conditional(request, etag) ?? json(result, 200, { etag });
     }
     const match =

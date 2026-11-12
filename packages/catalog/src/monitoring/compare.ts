@@ -4,6 +4,7 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { authUsers } from "../auth/schema.js";
 import { type CatalogDatabase, catalogTransaction } from "../database.js";
 import { PublicRequestError } from "../public/security.js";
+import { aggregationFailureAt } from "../reports/aggregate.js";
 import { readReport, reportHeader } from "../reports/read.js";
 import { reports } from "../schema.js";
 import { assertLinkedAuthority } from "./authority.js";
@@ -16,7 +17,13 @@ export async function compareMonitorReports(
   emailFrom?: string,
 ) {
   await db.execute(
-    sql`UPDATE monitor_releases SET compared_at=clock_timestamp(),error='aggregation_unavailable' WHERE id IN (SELECT mr.id FROM monitor_releases mr JOIN scans s ON s.id=mr.scan_id WHERE mr.compared_at IS NULL AND s.aggregation_failed_at IS NOT NULL AND NOT EXISTS(SELECT 1 FROM reports r WHERE r.scan_id=s.id) LIMIT 100)`,
+    sql`UPDATE monitor_releases SET compared_at=clock_timestamp(),error='aggregation_unavailable'
+      WHERE id IN (
+        SELECT mr.id FROM monitor_releases mr
+        WHERE mr.compared_at IS NULL AND ${aggregationFailureAt(sql`mr.scan_id`)} IS NOT NULL
+          AND NOT EXISTS(SELECT 1 FROM reports r WHERE r.scan_id=mr.scan_id)
+        LIMIT 100
+      )`,
   );
   const pending = await db
     .select({ release: monitorReleases, monitor: monitors })

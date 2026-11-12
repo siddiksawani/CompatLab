@@ -1,12 +1,22 @@
 import { createHash } from "node:crypto";
 import { CLASSIFIER_REVISION } from "@compatlab/contracts";
-import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, type SQLWrapper, sql } from "drizzle-orm";
 import { z } from "zod";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { databaseNow } from "../scheduling/workers.js";
 import { auditEvents, jobs, reports, scans } from "../schema.js";
 import { type AdminAction, adminActionSchema } from "../validation.js";
 import { buildReport } from "./build.js";
+
+export function aggregationFailureAt(scanId: SQLWrapper) {
+  // Older exhausted jobs kept a retry time ten seconds after the failure.
+  return sql`(
+    SELECT coalesce((j.attempt_summary->>'failedAt')::timestamptz, j.available_at - interval '10 seconds')
+    FROM jobs j
+    WHERE j.scan_id=${scanId} AND j.kind='aggregation' AND j.state='finished'
+      AND j.attempt_summary->>'classification'='control_plane_error'
+  )`.mapWith(scans.aggregationFailedAt);
+}
 
 async function persistReport(tx: CatalogTransaction, scanId: string) {
   const [existing] = await tx
@@ -104,10 +114,15 @@ export async function aggregatePendingReports(db: CatalogDatabase, limit = 10) {
         return "completed";
       } catch {
         await tx.execute(sql`UPDATE jobs SET attempt=least(attempt+1,3),state=CASE WHEN attempt>=2 THEN 'finished' ELSE 'queued' END,
-          available_at=now()+interval '10 seconds',attempt_summary='{"classification":"control_plane_error"}'::jsonb
+          available_at=now()+interval '10 seconds',
+          attempt_summary=jsonb_build_object('classification','control_plane_error','failedAt',now())
           WHERE id=${job.id} AND state='queued'`);
-        await tx.execute(sql`UPDATE scans SET state='failed_infrastructure',finished_at=now(),aggregation_failed_at=now(),progress_revision=progress_revision+1
-          WHERE id=${job.scanId} AND state='aggregating' AND EXISTS (SELECT 1 FROM jobs WHERE id=${job.id} AND attempt=3)`);
+        await tx.execute(sql`UPDATE scans SET
+          state=CASE WHEN state='aggregating' THEN 'failed_infrastructure' ELSE state END,
+          finished_at=CASE WHEN state='aggregating' THEN now() ELSE finished_at END,
+          aggregation_failed_at=CASE WHEN state='aggregating' THEN now() ELSE aggregation_failed_at END,
+          progress_revision=progress_revision+1
+          WHERE id=${job.scanId} AND EXISTS (SELECT 1 FROM jobs WHERE id=${job.id} AND state='finished')`);
         return "failed";
       }
     });
