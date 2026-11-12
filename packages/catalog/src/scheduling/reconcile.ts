@@ -5,7 +5,7 @@ import { allowedAssertion } from "../assertions/policy.js";
 import { refreshWorkerAvailability } from "../availability.js";
 import { type CatalogDatabase, type CatalogTransaction, catalogTransaction } from "../database.js";
 import { allowedSelection } from "../policy.js";
-import { queueFinalReports } from "../reports/aggregate.js";
+import { aggregationFailureAt, queueFinalReports } from "../reports/aggregate.js";
 import {
   jobs,
   matrixMembers,
@@ -278,7 +278,7 @@ export async function scanProgress(db: CatalogDatabase, scanId: string) {
       startedAt: scans.startedAt,
       deadlineAt: scans.deadlineAt,
       finishedAt: scans.finishedAt,
-      aggregationFailedAt: scans.aggregationFailedAt,
+      aggregationFailedAt: aggregationFailureAt(sql`scans.id`),
       reportId: sql<
         string | null
       >`(SELECT r.id FROM reports r WHERE r.scan_id=scans.id ORDER BY r.created_at DESC,r.id LIMIT 1)`,

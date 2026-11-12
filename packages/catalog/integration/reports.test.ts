@@ -549,6 +549,59 @@ describe("immutable report classification", () => {
     expect((await scanProgress(catalog.db, broken.scan.scanId))?.state).toBe("completed");
     expect(await catalog.db.select().from(schema.runs)).toEqual(raw);
   });
+  it.each([
+    ["cancelled", "inconclusive"],
+    ["inconclusive", "inconclusive"],
+    ["failed_infrastructure", "infrastructure_error"],
+  ] as const)(
+    "reports exhausted publication for a %s scan and preserves its outcome",
+    async (state, outcome) => {
+      const { scan } = await execution();
+      const finishedAt = new Date();
+      await catalog.db
+        .update(schema.scans)
+        .set({ state, finishedAt })
+        .where(eq(schema.scans.id, scan.scanId));
+      const initial = await scanProgress(catalog.db, scan.scanId);
+      expect(initial?.aggregationFailedAt).toBeNull();
+
+      await catalog.pool.query(
+        "ALTER TABLE reports ADD CONSTRAINT fixture_aggregation_failure CHECK(false)",
+      );
+      try {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          await catalog.pool.query(
+            "UPDATE jobs SET available_at=now() WHERE scan_id=$1 AND kind='aggregation'",
+            [scan.scanId],
+          );
+          expect(await aggregatePendingReports(catalog.db)).toEqual({ completed: 0, failed: 1 });
+          if (attempt < 3)
+            expect((await scanProgress(catalog.db, scan.scanId))?.aggregationFailedAt).toBeNull();
+        }
+      } finally {
+        await catalog.pool.query("ALTER TABLE reports DROP CONSTRAINT fixture_aggregation_failure");
+      }
+
+      const failed = await scanProgress(catalog.db, scan.scanId);
+      expect(failed).toMatchObject({
+        state,
+        finishedAt,
+        aggregationFailedAt: expect.any(Date),
+        reportId: null,
+      });
+      expect(failed?.revision).toBe((initial?.revision ?? 0) + 1);
+      expect(await aggregatePendingReports(catalog.db)).toEqual({ completed: 0, failed: 0 });
+
+      const reportId = await reclassifyScan(catalog.db, scan.scanId, actor);
+      expect((await readReport(catalog.db, reportId))?.report.outcome).toBe(outcome);
+      expect(await scanProgress(catalog.db, scan.scanId)).toMatchObject({
+        state,
+        finishedAt,
+        reportId,
+        aggregationFailedAt: null,
+      });
+    },
+  );
   it("retains execution completion time independently of publication and reclassification", async () => {
     const { scan } = await execution();
     const [row] = await catalog.db
