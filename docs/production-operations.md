@@ -30,6 +30,8 @@ To retry a failed deploy after fixing its cause, rerun the **Deploy production**
 
 A failed process or host restart can leave a deployment pause in place deliberately. Inspect logs, reconcile the intended release, verify worker health, then clear only the recorded release with `sudo compatlab-admin deployment-end <commit> --reason 'Recovery verified'`. Use `pause` and `resume` for independent operator maintenance.
 
+If the worker stop was requested when deployment failed, rollback attempts to restore the previous worker even if the stop response was lost. Rollback clears the deployment hold after confirming the previous worker release is active, the catalog has a reconciled heartbeat, and the previous application passes its health check.
+
 ## Installation and credentials
 
 Provision the fresh execution VM with `infra/provision-worker.sh`, never on a shared host. The VM, WireGuard and host firewall prerequisites are in [deployment.md](deployment.md). Pin Node to `.node-version` on the VPS and VM. Changes to the OS, Docker or runsc provisioning recipe require an operator upgrade and renewed Linux qualification; application deployment does not silently upgrade host packages.

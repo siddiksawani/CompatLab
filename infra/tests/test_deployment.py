@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import io
@@ -139,6 +140,79 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual((config / "proxy.env").read_text(), "CLOUDFLARE_CIDRS=original\n")
             self.assertIn(("deployment-end", new.name), actions)
             self.assertTrue((state / "last-failure.json").exists())
+
+    def test_lost_worker_stop_response_requires_verified_rollback_before_reopening_admission(self):
+        previous_worker_release = "3" * 40
+        for case, remote_release, active, recovery_required in (
+            ("verified", previous_worker_release, True, False),
+            ("wrong release", "2" * 40, True, False),
+            ("stopped service", previous_worker_release, False, False),
+            ("unreconciled", previous_worker_release, True, True),
+        ):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                old, new, config, state = [root / name for name in ("1" * 40, "2" * 40, "config", "state")]
+                for path in (old, new, config, state):
+                    path.mkdir()
+                current = root / "current"
+                current.symlink_to(old, target_is_directory=True)
+                (old / "manifest.json").write_text(json.dumps(manifest(old.name)))
+                (old / "worker-inventory.json").write_text("{}")
+                (old / "worker-release").write_text(previous_worker_release)
+                (config / "proxy.env").write_text("CLOUDFLARE_CIDRS=original\n")
+                (config / "web.env").write_text("PUBLIC_MATRIX_ID=original\n")
+                candidate = {**manifest(new.name), "workerRevision": "f" * 64}
+                actions = []
+                worker_calls = []
+
+                def remote(command, **kwargs):
+                    worker_calls.append(command)
+                    if command == f"stage {new.name}":
+                        return "{}"
+                    if command == f"stop {new.name}" and worker_calls.count(command) == 1:
+                        raise RuntimeError("Lost SSH response after stopping worker")
+                    if command == "status":
+                        return json.dumps({"release": remote_release, "serviceActive": active})
+                    return ""
+
+                def admin(directory, *args, **kwargs):
+                    actions.append(args)
+                    return {"queue": [], "workers": [{
+                        "id": "fixture-worker",
+                        "state": "healthy",
+                        "recoveryRequired": recovery_required,
+                        "lastSeenAt": datetime.now(timezone.utc).isoformat(),
+                    }]}
+
+                def wait(description, predicate, seconds):
+                    if not predicate():
+                        raise RuntimeError(f"Timed out: {description}")
+
+                with (
+                    patch.multiple(deploy, CURRENT=current, CONFIG=config, STATE=state),
+                    patch.object(deploy, "current_main"),
+                    patch.object(deploy, "stage", return_value=(new, candidate)),
+                    patch.object(deploy, "compose"),
+                    patch.object(deploy, "run"),
+                    patch.object(deploy, "activate"),
+                    patch.object(deploy, "healthy_web", return_value=True),
+                    patch.object(deploy, "inventory_registration", return_value="fixture-worker"),
+                    patch.object(deploy, "wait_for", side_effect=wait),
+                    patch.object(deploy, "admin", side_effect=admin),
+                    patch.object(deploy, "worker", side_effect=remote),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "Lost SSH response"):
+                        deploy.deploy(new.name)
+
+                self.assertEqual(worker_calls, [
+                    f"stage {new.name}",
+                    f"stop {new.name}",
+                    f"stop {new.name}",
+                    f"activate {previous_worker_release}",
+                    "status",
+                ])
+                self.assertIn(("deployment-begin", new.name), actions)
+                self.assertEqual(("deployment-end", new.name) in actions, case == "verified")
 
 
 class FirewallTests(unittest.TestCase):
