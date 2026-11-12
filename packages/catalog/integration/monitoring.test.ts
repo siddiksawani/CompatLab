@@ -509,6 +509,44 @@ it("defers an out-of-order comparison without keeping it at the front of the que
   expect(await compareMonitorReports(catalog.db, origin, authorize, email.from)).toBe(1);
   expect(await catalog.db.select().from(notifications)).toHaveLength(1);
 });
+it("exposes a legacy exhausted publication and resolves the waiting monitor release", async () => {
+  await create();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  const [release] = await catalog.db.select().from(monitorReleases);
+  if (!release?.scanId) throw new Error("Expected a selected release.");
+  await catalog.pool.query("UPDATE scans SET state='cancelled',finished_at=now() WHERE id=$1", [
+    release.scanId,
+  ]);
+  await catalog.pool.query("INSERT INTO jobs(kind,scan_id) VALUES('aggregation',$1)", [
+    release.scanId,
+  ]);
+  const api = createReportApi(catalog.db);
+  const url = `${origin}/api/v1/scans/${release.scanId}`;
+  const waiting = await api(new Request(url));
+  const etag = waiting.headers.get("etag");
+  if (!etag) throw new Error("Expected a progress ETag.");
+
+  const failureTime = new Date("2026-10-01T00:00:00Z");
+  await catalog.pool.query(
+    `UPDATE jobs SET state='finished',attempt=3,available_at=$2::timestamptz+interval '10 seconds',
+      attempt_summary='{"classification":"control_plane_error"}' WHERE scan_id=$1 AND kind='aggregation'`,
+    [release.scanId, failureTime],
+  );
+  const failed = await api(new Request(url, { headers: { "if-none-match": etag } }));
+  expect(failed.status).toBe(200);
+  expect(await failed.json()).toMatchObject({
+    state: "cancelled",
+    aggregationFailedAt: failureTime.toISOString(),
+    reportId: null,
+  });
+
+  await compareMonitorReports(catalog.db, origin, authorize, email.from);
+  const [resolved] = await catalog.db.select().from(monitorReleases);
+  expect(resolved).toMatchObject({
+    comparedAt: expect.any(Date),
+    error: "aggregation_unavailable",
+  });
+});
 it("bounds discovery batches and fences a stale polling lease before scan admission", async () => {
   await create();
   versions = Array.from({ length: 32 }, (_, i) => `1.0.${i}`);
