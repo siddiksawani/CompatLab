@@ -73,7 +73,7 @@ def wait_for(description, predicate, seconds):
         try:
             if predicate():
                 return
-        except (OSError, RuntimeError, ValueError, urllib.error.URLError):
+        except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired, urllib.error.URLError):
             pass
         time.sleep(5)
     raise RuntimeError(f"Timed out: {description}")
@@ -84,8 +84,11 @@ def healthy_web():
         return response.status == 200
 
 
-def healthy_worker(directory, worker_id):
+def healthy_worker(directory, worker_id, release):
     from datetime import datetime, timezone
+    remote = json.loads(worker("status", timeout=20))
+    if not isinstance(remote, dict) or remote.get("release") != release or remote.get("serviceActive") is not True:
+        return False
     status = admin(directory, "status")
     for entry in status["workers"]:
         if entry["id"] != worker_id or entry["state"] != "healthy" or entry["recoveryRequired"] or not entry["lastSeenAt"]:
@@ -142,12 +145,12 @@ def deploy(sha, rollback=False):
     compose(directory, "pull", "postgres", "web", "control", "proxy", timeout=900)
     compose(directory, "up", "-d", "--wait", "postgres")
     migration_changed = old_manifest is None or manifest["migrationsDigest"] != old_manifest["migrationsDigest"]
-    if previous:
-        admin(previous, "deployment-begin", sha)
-    switched_worker = False
-    paused = previous is not None
     old_proxy = (CONFIG / "proxy.env").read_bytes()
     old_web = (CONFIG / "web.env").read_bytes()
+    if previous:
+        admin(previous, "deployment-begin", sha)
+    worker_stop_requested = False
+    paused = previous is not None
     try:
         if previous and worker_changed:
             wait_for("existing scans to finish", lambda: not admin(previous, "status")["queue"], 900)
@@ -161,8 +164,9 @@ def deploy(sha, rollback=False):
             paused = True
             admin(directory, "worker-guard-enable")
         if worker_changed:
+            # A lost SSH response can follow a successful remote stop.
+            worker_stop_requested = True
             worker(f"stop {sha}")
-            switched_worker = True
             worker_id = inventory_registration(directory, inventory)
             worker(f"activate {sha}")
             atomic_write(directory / "worker-release", sha)
@@ -177,7 +181,7 @@ def deploy(sha, rollback=False):
         activate(directory)
         wait_for("website health", healthy_web, 120)
         if worker_changed:
-            wait_for("reconciled worker heartbeat", lambda: healthy_worker(directory, worker_id), 150)
+            wait_for("reconciled worker heartbeat", lambda: healthy_worker(directory, worker_id, sha), 150)
         if (CONFIG / "public-enabled").exists():
             run(["curl", "--fail", "--silent", "--show-error", "--max-time", "20", "https://compatlab.me/healthz"])
         subprocess.run(["python3", directory / "infra/origin.py", "check", directory / "infra/cloudflare-ips.json"], timeout=45, check=False)
@@ -194,13 +198,14 @@ def deploy(sha, rollback=False):
             if previous:
                 atomic_write(CONFIG / "proxy.env", old_proxy)
                 atomic_write(CONFIG / "web.env", old_web)
-                worker_restored = not switched_worker
-                if switched_worker:
+                worker_restored = not worker_stop_requested
+                if worker_stop_requested:
                     try:
                         worker(f"stop {sha}")
                         worker_id = inventory_registration(previous, json.loads((previous / "worker-inventory.json").read_text()))
-                        worker(f"activate {(previous / 'worker-release').read_text().strip()}")
-                        wait_for("previous worker heartbeat", lambda: healthy_worker(previous, worker_id), 150)
+                        previous_worker_release = (previous / "worker-release").read_text().strip()
+                        worker(f"activate {previous_worker_release}")
+                        wait_for("previous worker heartbeat", lambda: healthy_worker(previous, worker_id, previous_worker_release), 150)
                         worker_restored = True
                     except Exception:
                         print("Worker rollback failed. Keeping admission paused.", file=sys.stderr)
@@ -210,7 +215,7 @@ def deploy(sha, rollback=False):
                 wait_for("previous website health", healthy_web, 120)
                 if paused and worker_restored:
                     admin(directory, "deployment-end", sha)
-                print("Previous release restored.", file=sys.stderr)
+                print("Previous application release restored.", file=sys.stderr)
         except BaseException:
             print("Rollback needs operator attention. Admission remains paused.", file=sys.stderr)
         raise
