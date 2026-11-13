@@ -98,7 +98,9 @@ export function publicDiscovery(
         packages: summaries.map((summary) => ({
           name: summary.name,
           version: summary.version,
-          ...(summary.repositoryUrl ? { repositoryUrl: summary.repositoryUrl } : {}),
+          ...(summary.repositoryUrl && summary.repositoryUrl.length <= 2048
+            ? { repositoryUrl: summary.repositoryUrl }
+            : {}),
           ...(summary.description ? { description: sanitizeText(summary.description, false) } : {}),
           reportId: availability.get(`${summary.name}@${summary.version}`)?.reportId ?? null,
           availableReport:
