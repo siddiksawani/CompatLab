@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
-import { compatibilityArticle, mcpArticle } from "../content/articles";
+import { compatibilityArticle, mcpArticle, migrationArticle } from "../content/articles";
 import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata, publicOrigin } from "../server/metadata";
 import { publicRead } from "../server/runtime";
@@ -118,6 +118,15 @@ export default async function Home({
         <p>
           Express loads, Preact needs a peer for two subpaths, and Zod’s wildcard exports leave a
           coverage gap. Read the results and what they mean for your application.
+        </p>
+      </section>
+      <section className="page article-callout" aria-labelledby="migration-article-title">
+        <h2 id="migration-article-title">
+          <a href={migrationArticle.path}>{migrationArticle.title}</a>
+        </h2>
+        <p>
+          Match the versions in your lockfile to the imports in your code. Use the Axios, Zod, Sharp
+          and gRPC examples to pick the next test for your application.
         </p>
       </section>
       <section className="page article-callout" aria-labelledby="mcp-article-title">

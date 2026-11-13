@@ -18,7 +18,16 @@ export const mcpArticle = {
   author: "CompatLab",
 } as const;
 
-export const articles = [mcpArticle, compatibilityArticle];
+export const migrationArticle = {
+  path: "/articles/node-to-bun-deno-dependency-checklist",
+  title: "Node.js to Bun or Deno: an npm dependency checklist",
+  description:
+    "Use recorded results for Axios, Zod, Sharp and gRPC to choose which imports, package calls and deployment prerequisites to test before moving off Node.js.",
+  publishedAt: "2026-11-13",
+  author: "CompatLab",
+} as const;
+
+export const articles = [migrationArticle, mcpArticle, compatibilityArticle];
 
 export function articleDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
