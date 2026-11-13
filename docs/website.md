@@ -48,6 +48,8 @@ Polling revalidates persisted revisions, backs off on failures, pauses in hidden
 
 Reports separate shared preparation, runtime/mode/group observations, omissions, coverage, provenance and evidence limitations. Desktop tables become labeled cards on narrow screens. Entry details and sanitized raw logs load on demand. Log expiry and invalidation remain visible. The machine-readable report, exact lock, reproduction descriptor and copyable CLI command retain the evidence's pinned inputs. A successful loading observation does not claim functional correctness or package safety.
 
+Exact-version pages offer opt-in README badges for observed root import and require modes. The Shields endpoint at `/api/v1/badges/{reportId}/shields?mode=import` reads the pinned report without scheduling work. Its image links to that report. Matrices with more than four profiles provide additional badges selected by the one-based `group` query parameter. Withdrawn or superseded reports display a neutral status. The endpoint requests no caching, while Shields and README image proxies can retain images under their own policies.
+
 ## Browser qualification
 
 With a disposable PostgreSQL test server from the catalog guide:
