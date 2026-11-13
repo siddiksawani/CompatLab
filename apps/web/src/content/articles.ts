@@ -27,7 +27,16 @@ export const migrationArticle = {
   author: "CompatLab",
 } as const;
 
-export const articles = [migrationArticle, mcpArticle, compatibilityArticle];
+export const novemberStudyArticle = {
+  path: "/articles/npm-loading-study-2026-11",
+  title: "How 100 npm packages load on Node.js, Bun, and Deno",
+  description:
+    "A frozen 100-version npm study with root import and require results, subpath coverage, and reproducible observations on four pinned runtimes.",
+  publishedAt: "2026-11-13",
+  author: "CompatLab",
+} as const;
+
+export const articles = [novemberStudyArticle, migrationArticle, mcpArticle, compatibilityArticle];
 
 export function articleDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
