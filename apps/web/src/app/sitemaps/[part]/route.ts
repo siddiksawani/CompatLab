@@ -1,5 +1,6 @@
 import { reportControlError } from "@compatlab/catalog/web";
 import { packageEvidencePath } from "../../../components/labels";
+import { articles } from "../../../content/articles";
 import {
   compatibilityDirectory,
   discoveryPackages,
@@ -29,7 +30,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ par
     }
     const entries =
       part === "pages.xml"
-        ? pages.map((path) => ({ url: publicOrigin() + path, updatedAt: null }))
+        ? pages.map((path) => {
+            const article = articles.find((article) => article.path === path);
+            const updatedAt =
+              article && "modifiedAt" in article ? article.modifiedAt : article?.publishedAt;
+            return {
+              url: publicOrigin() + path,
+              updatedAt: updatedAt ?? null,
+            };
+          })
         : part.startsWith("npm-")
           ? (await discoveryPackages(part[4] ?? "")).map((pkg) => ({
               url: publicOrigin() + packageEvidencePath(pkg.name, pkg.version),

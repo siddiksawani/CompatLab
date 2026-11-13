@@ -141,7 +141,7 @@ test("discovers the original article and exposes its evidence without admitting 
   expect(data.mainEntityOfPage).toBe(url);
   expect(data.headline).toBe(await page.getByRole("heading", { level: 1 }).textContent());
   expect(data.datePublished).toBe("2026-10-05");
-  expect(data.dateModified).toBe("2026-10-13");
+  expect(data.dateModified).toBe("2026-11-13");
   await expect(page.getByRole("complementary", { name: "Article correction" })).toContainText(
     "this was not a rescan",
   );
@@ -165,7 +165,10 @@ test("discovers the original article and exposes its evidence without admitting 
     ).toBeVisible();
   }
   const origin = new URL(url).origin;
-  expect(await (await request.get("/sitemaps/pages.xml")).text()).toContain(url);
+  const sitemap = await (await request.get("/sitemaps/pages.xml")).text();
+  expect(sitemap).toContain(`<loc>${url}</loc><lastmod>${data.dateModified}</lastmod>`);
+  expect(sitemap).toContain(`<loc>${origin}${migrationPath}</loc><lastmod>2026-11-13</lastmod>`);
+  expect(sitemap).toContain(`<loc>${origin}/methodology</loc></url>`);
   expect(await (await request.get("/index.md")).text()).toContain(url);
   await page.getByRole("article").getByRole("link", { name: "Articles", exact: true }).click();
   await expect(page).toHaveURL(`${origin}/articles`);
@@ -184,6 +187,9 @@ test("article content and evidence links are present without JavaScript", async 
     const response = await page.goto(articlePath);
     expect(response?.ok()).toBe(true);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "npm dependency checklist for Bun and Deno", exact: true }),
+    ).toHaveAttribute("href", migrationPath);
     await expect(page.getByRole("table")).toHaveCount(2);
     await expect(page.getByRole("link", { name: "Zod 4.6.7", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "zod/v4/core", exact: true })).toHaveAttribute(
@@ -191,6 +197,9 @@ test("article content and evidence links are present without JavaScript", async 
       "/reports/98dbec06-fdb3-4718-b60f-43f42171ad6c?cell=bun_1_4_2-subpaths-esm&entry=7#selected-result",
     );
     await page.goto(mcpArticlePath);
+    await expect(
+      page.getByRole("link", { name: "npm dependency checklist for Bun and Deno", exact: true }),
+    ).toHaveAttribute("href", migrationPath);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Check npm compatibility with MCP: a guide for AI agents",
     );
