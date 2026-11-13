@@ -153,6 +153,25 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     expect(breadcrumbs.itemListElement.at(-1).item).toBe(page.url());
     await expect(page.getByRole("heading", { name: "Missing optional peers" })).toBeVisible();
     await expect(page.locator(".notice")).toContainText("@fixture/renderer");
+    const badgeEndpoint = `/api/v1/badges/${reportId}?mode=import`;
+    await page.getByText("Root import badge", { exact: true }).click();
+    const snippet = await page.locator("details[open] pre").textContent();
+    const shieldUrl = snippet?.match(/\]\((https:\/\/img\.shields\.io\/[^)]+)\)/)?.[1];
+    expect(shieldUrl).toBeDefined();
+    expect(new URL(shieldUrl ?? "").searchParams.get("url")).toBe(
+      new URL(badgeEndpoint, reportUrl).href,
+    );
+    expect(snippet).toContain(`](${reportUrl})`);
+    const badge = await request.get(badgeEndpoint);
+    expect(badge.status()).toBe(200);
+    expect(badge.headers()["cache-control"]).toBe("no-store");
+    expect(await badge.json()).toMatchObject({ schemaVersion: 1, label: "root import" });
+    expect((await request.get(`/api/v1/badges/${reportId}?mode=latest`)).status()).toBe(400);
+    expect((await request.get("/api/v1/badges/no-report")).status()).toBe(400);
+    expect(
+      await (await request.get("/api/v1/badges/00000000-0000-4000-8000-000000000001")).json(),
+    ).toMatchObject({ message: "report unavailable", color: "lightgrey" });
+    await page.getByText("Root import badge", { exact: true }).click();
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expectResponsiveLayout(page);
@@ -215,6 +234,10 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
         .operationId,
     ).toBe("getReportSummary");
     await fixture(request, "invalidate");
+    expect(await (await request.get(badgeEndpoint)).json()).toMatchObject({
+      message: "report withdrawn",
+      color: "lightgrey",
+    });
     const missing = await page.goto(path);
     expect(missing?.status()).toBe(404);
     await expect(

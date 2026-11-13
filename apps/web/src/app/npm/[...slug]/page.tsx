@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "../../../components/breadcrumbs";
 import { CompatibilityAnswers } from "../../../components/compatibility-answers";
+import { Copy } from "../../../components/copy";
 import { FailureDetails } from "../../../components/failure-details";
 import { observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { plannedCoverageSummary, versionPageAnswer } from "../../../server/compatibility-copy";
-import { pageMetadata } from "../../../server/metadata";
+import { badgeAvailable, badgeMarkdown } from "../../../server/loading-badge";
+import { pageMetadata, publicOrigin } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
 import { recordPageUsage } from "../../../server/usage";
@@ -34,6 +36,9 @@ export default async function PackageEvidencePage(props: Props) {
   await recordPageUsage("package_page", available.matchesCurrentMatrix ? "current" : "earlier");
   const { name, version } = summary.artifact;
   const reportPath = `/reports/${summary.id}`;
+  const badgeModes = (["import", "require"] as const).filter((mode) =>
+    badgeAvailable(summary, mode),
+  );
   return (
     <section className="page report">
       <Breadcrumbs
@@ -125,6 +130,27 @@ export default async function PackageEvidencePage(props: Props) {
         </ul>
         <a href="/methodology">How the tests work</a>
       </section>
+      {badgeModes.length > 0 && (
+        <section className="report-section">
+          <h2>README badge</h2>
+          <p>
+            Share the recorded root loading result for this exact version. The badge links to the
+            observation and its runtime versions. It covers the selected loading mode.
+          </p>
+          {badgeModes.map((mode) => {
+            const snippet = badgeMarkdown(publicOrigin(), summary.id, mode);
+            return (
+              <details key={mode}>
+                <summary>Root {mode} badge</summary>
+                <Copy value={snippet} label={`Copy root ${mode} badge Markdown`} />
+                <pre>
+                  <code>{snippet}</code>
+                </pre>
+              </details>
+            );
+          })}
+        </section>
+      )}
     </section>
   );
 }
