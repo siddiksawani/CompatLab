@@ -36,9 +36,11 @@ const loadReport = cache(async (id: string) => {
 });
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { report, status } = await loadReport((await params).id);
+  const { name, version } = report.artifact;
+  const observed = report.observedAt ? observedDate(report.observedAt) : null;
   return pageMetadata(
-    `${report.artifact.name}@${report.artifact.version}: Node.js, Bun & Deno test report`,
-    `${status.current ? "" : "Historical report. "}${compatibilityDescription(report)}`,
+    `${name}@${version} loading report${observed ? ` · ${observed}` : ""}`,
+    `${status.current ? "" : "Historical report. "}${observed ? `Observed ${observed}. ` : ""}${compatibilityDescription(report)}`,
     `/reports/${report.id}`,
     status.current && (await reportIsDiscoverable(webRuntime().catalog.db, report.id)),
   );
@@ -86,8 +88,7 @@ export default async function ReportPage({
         <div>
           <p className="eyebrow">Runtime evidence / {report.evidenceLevel.replaceAll("_", " ")}</p>
           <h1 className="package-title">
-            {report.artifact.name}
-            <span className="version">{report.artifact.version}</span>
+            {report.artifact.name} <span className="version">{report.artifact.version}</span>
           </h1>
           <p className="muted">Observed {observedDate(report.observedAt)} · Linux amd64 / glibc</p>
           <p className="fine">
