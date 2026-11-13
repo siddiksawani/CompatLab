@@ -13,7 +13,11 @@ test("serves crawlable comparisons and runtime failures without JavaScript or sc
   const reportUrl = page.url();
   const counts = await (await fixture(request, "counts")).json();
   await expect(page).toHaveTitle(
-    "compatlab-browser-fixture@1.0.0: Node.js, Bun & Deno test report | CompatLab",
+    /^compatlab-browser-fixture@1\.0\.0 loading report · \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC \| CompatLab$/,
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /^Observed \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\. compatlab-browser-fixture@1\.0\.0 loading tests/,
   );
   await expect(
     page.getByRole("heading", {

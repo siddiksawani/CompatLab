@@ -6,7 +6,7 @@ Search/version queries, progress, comparisons, history and the deferred account 
 
 Submit `/sitemap.xml`, an index of the editorial sitemap, sixteen report partitions and sixteen package/version partitions. Each report partition uses the first hexadecimal digit of its UUID and its existing primary-key range, without offset pagination or loading report payloads. A separate partial index supports the six recent homepage links. Reads are bounded to 50,000 URLs per partition, with at most two discovery queries in flight per web process. If a partition fills, it returns an error rather than silently dropping URLs; increase prefix depth before that threshold. A busy or unavailable database returns HTTP 503 with a retry hint. Sitemap responses are not cached, so invalidation, policy blocks and runtime quarantine take effect on the next read.
 
-Report indexing is limited to completed reports. It does not depend on a passing outcome and does not imply package safety, functional correctness or publisher endorsement. Canonical report URLs identify exact observations; rescans retain separate provenance.
+Report indexing is limited to completed reports. It does not depend on a passing outcome and does not imply package safety, functional correctness or publisher endorsement. Canonical report URLs identify exact observations. Report titles and descriptions use the retained observation time when available, which helps distinguish separate executions of the same package version.
 
 ## Exact-version pages and compact evidence
 
