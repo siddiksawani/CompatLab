@@ -37,7 +37,7 @@ const shard = Number(process.argv[2]);
 assert.ok(Number.isInteger(shard) && shard >= 0 && shard < 10, "Select corpus shard 0–9.");
 const corpus = JSON.parse(await readFile("test-results/study-input.json", "utf8"));
 assert.equal(corpus.length, 97);
-assert.equal(new Set(corpus.map((row) => `${row.name}@${row.version}`)).size, 100);
+assert.equal(new Set(corpus.map((row) => row.name)).size, corpus.length);
 const selected = corpus.filter((_, index) => index % 10 === shard);
 const url = new URL(process.env.COMPATLAB_TEST_DATABASE_URL ?? "");
 assert.match(url.pathname, /^\/compatlab_test(?:_[a-z0-9_]+)?$/);
@@ -173,7 +173,10 @@ try {
       const lockPath = join(base, `${report.id}-lock.json`);
       const descriptorPath = join(base, `${report.id}-reproduction.json`);
       await writeFile(lockPath, lockBytes);
-      await writeFile(descriptorPath, await descriptor.text());
+      const descriptorText = await descriptor.text();
+      await writeFile(descriptorPath, descriptorText);
+      await writeFile(join(output, `lock-${report.id}.json`), lockBytes);
+      await writeFile(join(output, `inputs-${report.id}.json`), descriptorText);
       if (replayCandidates.length) {
         const replayState = join(base, "replays");
         let replay;
@@ -198,7 +201,6 @@ try {
         } catch (error) {
           replay = { error: error instanceof Error ? error.message : "Replay failed." };
         } finally {
-          await recoverResources(replayState);
           await collectSnapshots(replayState, new Set(), 0);
         }
         await writeFile(join(output, `replay-${report.id}.json`), JSON.stringify(replay));
