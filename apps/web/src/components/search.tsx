@@ -73,7 +73,7 @@ export function Search({
           name="q"
           type="search"
           maxLength={200}
-          placeholder="e.g. zod or @scope/name"
+          placeholder="e.g. zod or zod@4.6.7"
           autoComplete="off"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

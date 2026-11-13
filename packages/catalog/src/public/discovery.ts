@@ -4,11 +4,48 @@ import {
   type PackageResponse,
   type SearchResponse,
 } from "@compatlab/contracts";
-import { assertPackageName, isExactVersion, RegistryClient, sanitizeText } from "@compatlab/engine";
+import {
+  assertPackageName,
+  isExactVersion,
+  RegistryClient,
+  RegistryError,
+  sanitizeText,
+} from "@compatlab/engine";
 import { sql } from "drizzle-orm";
 import type { CatalogDatabase, CatalogReader } from "../database.js";
 import { selectionAllowed } from "../policy.js";
 import { MetadataCache } from "./cache.js";
+
+function exactSearch(query: string) {
+  if (
+    query.length > 200 ||
+    [...query].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+  )
+    return null;
+  const match = /^(@?[^\s@]+)(?:@| +)([^\s@]+)$/.exec(query.trim());
+  const [, name, version] = match ?? [];
+  if (!name || !isExactVersion(version)) return null;
+  try {
+    assertPackageName(name);
+    return { name, version };
+  } catch {
+    return null;
+  }
+}
+
+function repositoryUrl(manifest: Record<string, unknown>) {
+  const repository = manifest.repository;
+  const rawUrl =
+    typeof repository === "string"
+      ? repository
+      : repository && typeof repository === "object" && "url" in repository
+        ? repository.url
+        : null;
+  const url = typeof rawUrl === "string" ? URL.parse(rawUrl.replace(/^git\+/, "")) : null;
+  return url && ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
+    ? url.href
+    : null;
+}
 
 export function publicDiscovery(
   db: CatalogDatabase,
@@ -19,10 +56,37 @@ export function publicDiscovery(
   const cache = new MetadataCache();
   const resolve = (name: string, version: string) =>
     cache.get(`artifact:${name}@${version}`, () => registry.resolve(name, version));
+  async function exactSummary(name: string, version: string) {
+    try {
+      const artifact = await resolve(name, version);
+      const url = repositoryUrl(artifact.manifest);
+      return [
+        {
+          name,
+          version: artifact.version,
+          integrity: artifact.integrity,
+          ...(typeof artifact.manifest.description === "string"
+            ? { description: artifact.manifest.description.slice(0, 4096) }
+            : {}),
+          ...(url ? { repositoryUrl: url } : {}),
+        },
+      ];
+    } catch (error) {
+      if (
+        error instanceof RegistryError &&
+        ["package_not_found", "package_version_not_found"].includes(error.classification)
+      )
+        return [];
+      throw error;
+    }
+  }
   return {
     resolve,
     async search(query: string): Promise<SearchResponse> {
-      const summaries = await cache.get(`search:${query}`, () => registry.search(query, 10));
+      const exact = exactSearch(query);
+      const summaries = exact
+        ? await exactSummary(exact.name, exact.version)
+        : await cache.get(`search:${query}`, () => registry.search(query, 10));
       const availability = new Map(
         (await selectPackageEvidence(db, matrixId, summaries)).map((row) => [
           `${row.name}@${row.version}`,
@@ -32,7 +96,9 @@ export function publicDiscovery(
       return {
         schemaVersion: 1,
         packages: summaries.map((summary) => ({
-          ...summary,
+          name: summary.name,
+          version: summary.version,
+          ...(summary.repositoryUrl ? { repositoryUrl: summary.repositoryUrl } : {}),
           ...(summary.description ? { description: sanitizeText(summary.description, false) } : {}),
           reportId: availability.get(`${summary.name}@${summary.version}`)?.reportId ?? null,
           availableReport:
@@ -56,14 +122,6 @@ export function publicDiscovery(
         name,
         version ?? published.tags.latest ?? published.versions[0] ?? "latest",
       );
-      const repository = artifact.manifest.repository;
-      const rawUrl =
-        typeof repository === "string"
-          ? repository
-          : repository && typeof repository === "object" && "url" in repository
-            ? repository.url
-            : null;
-      const url = typeof rawUrl === "string" ? URL.parse(rawUrl.replace(/^git\+/, "")) : null;
       const [available] = await selectPackageEvidence(db, matrixId, [
         { name, version: artifact.version, integrity: artifact.integrity },
       ]);
@@ -81,10 +139,7 @@ export function publicDiscovery(
           typeof artifact.manifest.deprecated === "string"
             ? sanitizeText(artifact.manifest.deprecated.slice(0, 4096), false)
             : null,
-        repositoryUrl:
-          url && ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
-            ? url.href
-            : null,
+        repositoryUrl: repositoryUrl(artifact.manifest),
         ...published,
         reportId: available?.reportId ?? null,
         availableReport: available?.availableReport ?? null,
