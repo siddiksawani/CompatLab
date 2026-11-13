@@ -54,6 +54,7 @@ const actor = {
   actor: "qualification",
   reason: "November npm loading study on a disposable qualified execution host.",
 };
+const replays = [];
 let server,
   child,
   exited,
@@ -170,41 +171,10 @@ try {
         createHash("sha256").update(lockBytes).digest("hex"),
         report.preparation.snapshot.lockDigest,
       );
-      const lockPath = join(base, `${report.id}-lock.json`);
-      const descriptorPath = join(base, `${report.id}-reproduction.json`);
-      await writeFile(lockPath, lockBytes);
       const descriptorText = await descriptor.text();
-      await writeFile(descriptorPath, descriptorText);
       await writeFile(join(output, `lock-${report.id}.json`), lockBytes);
       await writeFile(join(output, `inputs-${report.id}.json`), descriptorText);
-      if (replayCandidates.length) {
-        const replayState = join(base, "replays");
-        let replay;
-        try {
-          const result = await reproduceReport(descriptorPath, {
-            rebuild: true,
-            lockFile: lockPath,
-            stateDirectory: replayState,
-          });
-          const { groups, ...inputs } = result;
-          replay = {
-            ...inputs,
-            groups: groups.map(({ sessions, confirmations, ...group }) => ({
-              ...group,
-              sessions: sessions.map(({ logs, ...session }) => session),
-              confirmations: confirmations?.map(({ session: { logs, ...session }, ...entry }) => ({
-                ...entry,
-                session,
-              })),
-            })),
-          };
-        } catch (error) {
-          replay = { error: error instanceof Error ? error.message : "Replay failed." };
-        } finally {
-          await collectSnapshots(replayState, new Set(), 0);
-        }
-        await writeFile(join(output, `replay-${report.id}.json`), JSON.stringify(replay));
-      }
+      if (replayCandidates.length) replays.push({ reportId: report.id });
     }
     const summary = {
       name: pinned.name,
@@ -263,3 +233,38 @@ try {
 }
 if (shutdownFailure) throw shutdownFailure;
 assert.equal(results.length, selected.length);
+
+const replayState = await mkdtemp(join(tmpdir(), "compatlab-study-replay-"));
+try {
+  for (const { reportId } of replays) {
+    const lockFile = join(output, `lock-${reportId}.json`);
+    const descriptor = join(output, `inputs-${reportId}.json`);
+    let replay;
+    try {
+      const result = await reproduceReport(descriptor, {
+        rebuild: true,
+        lockFile,
+        stateDirectory: replayState,
+      });
+      const { groups, ...inputs } = result;
+      replay = {
+        ...inputs,
+        groups: groups.map(({ sessions, confirmations, ...group }) => ({
+          ...group,
+          sessions: sessions.map(({ logs, ...session }) => session),
+          confirmations: confirmations?.map(({ session: { logs, ...session }, ...entry }) => ({
+            ...entry,
+            session,
+          })),
+        })),
+      };
+    } catch (error) {
+      replay = { error: error instanceof Error ? error.message : "Replay failed." };
+    }
+    await writeFile(join(output, `replay-${reportId}.json`), JSON.stringify(replay));
+  }
+} finally {
+  await recoverResources(replayState);
+  await collectSnapshots(replayState, new Set(), 0);
+  await rm(replayState, { recursive: true, force: true });
+}
