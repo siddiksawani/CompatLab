@@ -1,4 +1,5 @@
 import { combineOutcomes } from "@compatlab/engine";
+import { migrationArticle } from "../content/articles";
 import { loadingCounts, runtimeNames } from "../server/compatibility-copy";
 import {
   directoryPath,
@@ -54,6 +55,9 @@ export function CompatibilityDirectory({
             : "Which npm packages had loading failures?"}
         </a>
         <a href="/methodology">Test methodology and limits</a>
+        {!failures && !page.after && (
+          <a href={migrationArticle.path}>Dependency checklist for moving to Bun or Deno</a>
+        )}
         <a href="/api">API and MCP access</a>
       </div>
       {failures && (

@@ -66,7 +66,14 @@ export function publicOpenApi(origin: string) {
         get: {
           operationId: "searchPackages",
           summary: "Search npm package metadata (up to 10 results)",
-          parameters: [query("q", "Package name or search text.", true, 200)],
+          parameters: [
+            query(
+              "q",
+              "Package name, search text, or an exact name@version or name version.",
+              true,
+              200,
+            ),
+          ],
           responses: responses("SearchResponse"),
         },
       },

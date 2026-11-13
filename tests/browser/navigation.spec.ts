@@ -62,7 +62,7 @@ test("homepage previews link to stored evidence without creating scan work", asy
     await expect(page.locator(".report-preview")).toContainText("Planned checks completed");
     await expect(page.getByRole("searchbox")).toHaveAttribute(
       "placeholder",
-      "e.g. zod or @scope/name",
+      "e.g. zod or zod@4.6.7",
     );
     await expect(page.locator(".recent-report-list .result")).toHaveText("Mixed results");
     const versionSize = await page

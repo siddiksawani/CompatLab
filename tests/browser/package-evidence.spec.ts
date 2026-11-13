@@ -38,6 +38,13 @@ test("explains successful planned checks with omitted exports without JavaScript
     await expect(reader.locator(".lede")).toContainText(
       "All applicable planned checks completed, but some public exports were not included",
     );
+    await expect(reader.locator(".lede")).toContainText(
+      "compatlab-browser-fixture@1.0.0 passed the recorded loading checks",
+    );
+    await expect(reader.locator('meta[name="description"]')).toHaveAttribute(
+      "content",
+      /passed the recorded loading checks.*Coverage is limited/,
+    );
     await expect(
       reader.getByRole("heading", { name: "Exports outside these checks" }),
     ).toBeVisible();
@@ -128,7 +135,14 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
       new URL(reportUrl).pathname,
     );
     await expect(page.locator(".lede")).toContainText("inconclusive");
-    await expect(page).toHaveTitle(`${name}@1.0.0: Node.js, Bun & Deno compatibility | CompatLab`);
+    await expect(page).toHaveTitle(
+      `${name}@1.0.0 loading tests on Node.js, Bun and Deno | CompatLab`,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${name} 1.0.0`);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+      "content",
+      /Loading results.*inconclusive/,
+    );
     await expect(
       page.getByRole("heading", { name: `Does ${name} work with Bun?`, exact: true }),
     ).toBeVisible();

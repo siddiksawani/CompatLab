@@ -89,6 +89,26 @@ export function compatibilityDescription(report: CompatibilityEvidence) {
   return `${report.artifact.name}@${report.artifact.version} loading tests: ${results.map((result) => `${result.runtime}: ${labels[result.outcome].toLowerCase()}`).join("; ")}. ${report.coverageComplete ? "Loading only, not functional correctness." : "Coverage is limited; not a full compatibility verdict."}`;
 }
 
+export function versionPageAnswer(
+  report: Pick<CompatibilityEvidence, "artifact" | "matrix" | "preparation"> &
+    Pick<ReportSummary, "runtimes">,
+) {
+  const { name, version } = report.artifact;
+  if (report.preparation.outcome !== "pass") {
+    return `No runtime loading result was established for ${name}@${version}. The preparation result was “${labels[report.preparation.outcome].toLowerCase()}.”`;
+  }
+  const results = report.matrix.images.map((image) => ({
+    runtime: `${runtimeNames[image.kind]} ${image.version}`,
+    outcome: report.runtimes.find((runtime) => runtime.profileId === image.profileId)?.outcome,
+  }));
+  if (results.length && results.every(({ outcome }) => outcome === "pass")) {
+    const runtimes = new Intl.ListFormat("en").format(results.map(({ runtime }) => runtime));
+    return `${name}@${version} passed the recorded loading checks on ${runtimes}.`;
+  }
+  if (!results.length) return `No runtime loading results were recorded for ${name}@${version}.`;
+  return `Loading results for ${name}@${version} include ${results.map(({ runtime, outcome }) => `${runtime} (${labels[outcome ?? "inconclusive"].toLowerCase()})`).join(", ")}.`;
+}
+
 export function compatibilityScope(report: CompatibilityEvidence) {
   return [
     report.coverageComplete

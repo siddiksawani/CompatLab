@@ -4,7 +4,7 @@ export const compatibilityArticle = {
   description:
     "Real npm package compatibility results for Express, Preact, Zod and the Convex agent across Node.js, Bun and Deno, with failures, coverage and linked evidence.",
   publishedAt: "2026-10-05",
-  modifiedAt: "2026-10-13",
+  modifiedAt: "2026-11-13",
   author: "CompatLab",
 } as const;
 
@@ -14,11 +14,20 @@ export const mcpArticle = {
   description:
     "Connect Claude Code, Cursor or Codex to CompatLab's MCP server. Check npm packages across Node.js, Bun and Deno, interpret real reports and cite evidence.",
   publishedAt: "2026-10-09",
-  modifiedAt: "2026-10-13",
+  modifiedAt: "2026-11-13",
   author: "CompatLab",
 } as const;
 
-export const articles = [mcpArticle, compatibilityArticle];
+export const migrationArticle = {
+  path: "/articles/node-to-bun-deno-dependency-checklist",
+  title: "Node.js to Bun or Deno: an npm dependency checklist",
+  description:
+    "Use recorded results for Axios, Zod, Sharp and gRPC to choose which imports, package calls and deployment prerequisites to test before moving off Node.js.",
+  publishedAt: "2026-11-13",
+  author: "CompatLab",
+} as const;
+
+export const articles = [migrationArticle, mcpArticle, compatibilityArticle];
 
 export function articleDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
