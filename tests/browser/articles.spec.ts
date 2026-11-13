@@ -4,6 +4,63 @@ import { expectResponsiveLayout, fixture } from "./helpers.js";
 
 const articlePath = "/articles/npm-package-compatibility-node-bun-deno";
 const mcpArticlePath = "/articles/mcp-npm-compatibility-ai-agents";
+const migrationPath = "/articles/node-to-bun-deno-dependency-checklist";
+
+test("links the migration checklist and its exact-version evidence without JavaScript", async ({
+  browser,
+  baseURL,
+  page: interactive,
+  request,
+}) => {
+  if (!baseURL) throw new Error("Browser test base URL is required.");
+  const before: unknown = await (await fixture(request, "counts")).json();
+  const context = await browser.newContext({ baseURL, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto("/npm/compatibility");
+    await page
+      .getByRole("link", { name: "Dependency checklist for moving to Bun or Deno" })
+      .click();
+    const url = page.url();
+    expect(new URL(url).pathname).toBe(migrationPath);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", url);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Node.js to Bun or Deno: an npm dependency checklist",
+    );
+    const data = JSON.parse(
+      (await page.locator('script[type="application/ld+json"]').first().textContent()) ?? "{}",
+    );
+    expect(data).toMatchObject({ "@type": "Article", mainEntityOfPage: url });
+    expect(data.citation).toHaveLength(4);
+    for (const citation of data.citation) {
+      await expect(page.locator(`article a[href="${new URL(citation).pathname}"]`)).toBeVisible();
+    }
+    for (const path of [
+      "/npm/axios/1.20.0",
+      "/npm/zod/4.6.7",
+      "/npm/sharp/0.35.5",
+      "/npm/@grpc/grpc-js/1.14.6",
+    ]) {
+      await expect(page.locator(`article a[href="${path}"]`)).toBeVisible();
+    }
+    await expect(page.getByRole("article")).toContainText("without calling exports");
+    for (const width of [375, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectResponsiveLayout(page);
+    }
+    for (const path of ["/sitemaps/pages.xml", "/index.md", "/llms.txt"]) {
+      expect(await (await request.get(path)).text()).toContain(url);
+    }
+    await page.goto("/");
+    await expect(page.locator(`.article-callout a[href="${migrationPath}"]`)).toBeVisible();
+    await interactive.goto(migrationPath);
+    expect((await new AxeBuilder({ page: interactive }).analyze()).violations).toEqual([]);
+    expect(await (await fixture(request, "counts")).json()).toEqual(before);
+  } finally {
+    await context.close();
+  }
+});
 
 test("MCP guide is discoverable and explains evidence without starting scans", async ({
   page,

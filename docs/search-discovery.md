@@ -44,6 +44,8 @@ References: [Google title guidance](https://developers.google.com/search/docs/ap
 
 Editorial tables summarize fixed historical observations, not automatically refreshed compatibility claims. Check source report invalidation and evidence before publishing or revising an article. A report link can outlive its cached snapshot and raw logs; removal or invalidation may require an editorial correction. Cross-posts must point their canonical URL at the original article. Maintainer accounts and public badges remain deferred.
 
+The Node.js to Bun or Deno dependency checklist links to exact-version pages and original reports for Axios, Zod, Sharp and gRPC. It explains which application tests would extend each loading result. The homepage, compatibility directory, article index, sitemap and reading guides link to the article.
+
 The MCP usage guide at `/articles/mcp-npm-compatibility-ai-agents` documents remote client configuration, the two read-only tools, evidence eligibility, missing/earlier reports, citations and HTTP/Markdown alternatives. Its Express, Zod and Hono examples were checked through the public MCP endpoint on October 9, 2026. They describe exact observations and disclose loading, coverage and batch limits. The article has self-canonical metadata, publication/author information, Article and BreadcrumbList JSON-LD, and links from the homepage, article index, API guide, homepage Markdown and `llms.txt`. The article registry also adds it to the editorial sitemap and supplies each index entry's actual publication date. Connection examples reference official client documentation; successful SDK checks do not claim a user pilot in every editor.
 
 ## Agent discovery

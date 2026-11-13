@@ -1,4 +1,4 @@
-import { mcpArticle } from "../../content/articles";
+import { mcpArticle, migrationArticle } from "../../content/articles";
 import { contentSignal, discoveryLinks } from "../../server/content-discovery";
 import { publicOrigin } from "../../server/metadata";
 
@@ -21,6 +21,7 @@ export function GET() {
       `- [Search and recent evidence](${origin}/index.md): Markdown entry point with existing report links.`,
       `- [API and MCP guide](${origin}/api): Exact-version lookup, status semantics, connection URL and limits.`,
       `- [MCP setup and agent usage guide](${origin}${mcpArticle.path}): Claude Code, Cursor and Codex setup, tool calls, real package examples and citation instructions.`,
+      `- [Node.js to Bun or Deno dependency checklist](${origin}${migrationArticle.path}): Exact-version loading evidence and follow-up application tests for Axios, Zod, Sharp and gRPC.`,
       `- [OpenAPI](${origin}/openapi.json): Anonymous read API contracts.`,
       `- [Sitemap](${origin}/sitemap.xml): Eligible package pages and report observations.`,
       "## Optional",
