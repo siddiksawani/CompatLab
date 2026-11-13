@@ -3,6 +3,7 @@ import type { CompatibilityOutcome, ReportSummary } from "@compatlab/contracts";
 export type BadgeMode = "import" | "require";
 
 const runtimeNames = { node: "Node", bun: "Bun", deno: "Deno" } as const;
+const profilesPerBadge = 4;
 const outcomeLabels: Record<CompatibilityOutcome, string> = {
   pass: "pass",
   partial: "mixed",
@@ -17,7 +18,16 @@ export function badgePayload(mode: BadgeMode, message: string, color = "lightgre
   return { schemaVersion: 1, label: `root ${mode}`, message, color } as const;
 }
 
-export function loadingBadge(summary: ReportSummary, mode: BadgeMode) {
+export function badgeGroupCount({ matrix }: Pick<ReportSummary, "matrix">) {
+  return Math.ceil(matrix.images.length / profilesPerBadge);
+}
+
+type BadgeEvidence = Pick<ReportSummary, "observedAt" | "matrix"> & {
+  preparation: Pick<ReportSummary["preparation"], "outcome">;
+  cells: Pick<ReportSummary["cells"][number], "profileId" | "group" | "mode" | "outcome">[];
+};
+
+export function loadingBadge(summary: BadgeEvidence, mode: BadgeMode, group = 1) {
   if (!summary.observedAt || summary.preparation.outcome !== "pass")
     return badgePayload(mode, "no loading evidence");
 
@@ -27,22 +37,20 @@ export function loadingBadge(summary: ReportSummary, mode: BadgeMode) {
       .filter((cell) => cell.group === "root" && cell.mode === selectedMode)
       .map((cell) => [cell.profileId, cell.outcome]),
   );
-  const outcomes = summary.matrix.images.map((image) => ({
+  const start = (group - 1) * profilesPerBadge;
+  const outcomes = summary.matrix.images.slice(start, start + profilesPerBadge).map((image) => ({
     name: `${runtimeNames[image.kind]} ${image.version}`,
     outcome: roots.get(image.profileId) ?? "inconclusive",
   }));
-  const applicable = outcomes.filter(({ outcome }) => outcome !== "not_applicable");
-  const passed = applicable.filter(({ outcome }) => outcome === "pass").length;
-  const color =
-    passed === outcomes.length
-      ? "green"
-      : applicable.some(({ outcome }) => outcome === "fail" || outcome === "partial")
-        ? "yellow"
-        : "lightgrey";
-  const message =
-    outcomes.length <= 4
-      ? outcomes.map(({ name, outcome }) => `${name} ${outcomeLabels[outcome]}`).join(" · ")
-      : `${passed}/${applicable.length} applicable profiles passed · ${outcomes.length - applicable.length} N/A`;
+  if (!outcomes.length) return badgePayload(mode, "no runtime profiles");
+  const color = outcomes.every(({ outcome }) => outcome === "pass")
+    ? "green"
+    : outcomes.some(({ outcome }) => outcome === "fail" || outcome === "partial")
+      ? "yellow"
+      : "lightgrey";
+  const message = outcomes
+    .map(({ name, outcome }) => `${name} ${outcomeLabels[outcome]}`)
+    .join(" · ");
   return badgePayload(mode, message, color);
 }
 
@@ -57,9 +65,10 @@ export function badgeAvailable(summary: ReportSummary, mode: BadgeMode) {
   );
 }
 
-export function badgeMarkdown(origin: string, reportId: string, mode: BadgeMode) {
-  const endpoint = new URL(`/api/v1/badges/${reportId}`, origin);
+export function badgeMarkdown(origin: string, reportId: string, mode: BadgeMode, group = 1) {
+  const endpoint = new URL(`/api/v1/badges/${reportId}/shields`, origin);
   endpoint.searchParams.set("mode", mode);
+  if (group > 1) endpoint.searchParams.set("group", String(group));
   const shield = new URL("https://img.shields.io/endpoint");
   shield.searchParams.set("url", endpoint.href);
   const report = new URL(`/reports/${reportId}`, origin);

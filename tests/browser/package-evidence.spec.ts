@@ -153,7 +153,8 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     expect(breadcrumbs.itemListElement.at(-1).item).toBe(page.url());
     await expect(page.getByRole("heading", { name: "Missing optional peers" })).toBeVisible();
     await expect(page.locator(".notice")).toContainText("@fixture/renderer");
-    const badgeEndpoint = `/api/v1/badges/${reportId}?mode=import`;
+    const badgePath = `/api/v1/badges/${reportId}/shields`;
+    const badgeEndpoint = `${badgePath}?mode=import`;
     await page.getByText("Root import badge", { exact: true }).click();
     const snippet = await page.locator("details[open] pre").textContent();
     const shieldUrl = snippet?.match(/\]\((https:\/\/img\.shields\.io\/[^)]+)\)/)?.[1];
@@ -166,10 +167,14 @@ for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) 
     expect(badge.status()).toBe(200);
     expect(badge.headers()["cache-control"]).toBe("no-store");
     expect(await badge.json()).toMatchObject({ schemaVersion: 1, label: "root import" });
-    expect((await request.get(`/api/v1/badges/${reportId}?mode=latest`)).status()).toBe(400);
-    expect((await request.get("/api/v1/badges/no-report")).status()).toBe(400);
+    expect((await request.get(`${badgePath}?mode=latest`)).status()).toBe(400);
+    expect((await request.get(`${badgePath}?group=0`)).status()).toBe(400);
+    expect((await request.get(`${badgePath}?group=2`)).status()).toBe(404);
+    expect((await request.get("/api/v1/badges/no-report/shields")).status()).toBe(400);
     expect(
-      await (await request.get("/api/v1/badges/00000000-0000-4000-8000-000000000001")).json(),
+      await (
+        await request.get("/api/v1/badges/00000000-0000-4000-8000-000000000001/shields")
+      ).json(),
     ).toMatchObject({ message: "report unavailable", color: "lightgrey" });
     await page.getByText("Root import badge", { exact: true }).click();
     for (const width of [375, 1440]) {

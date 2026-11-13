@@ -6,7 +6,7 @@ import { FailureDetails } from "../../../components/failure-details";
 import { observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { plannedCoverageSummary, versionPageAnswer } from "../../../server/compatibility-copy";
-import { badgeAvailable, badgeMarkdown } from "../../../server/loading-badge";
+import { badgeAvailable, badgeGroupCount, badgeMarkdown } from "../../../server/loading-badge";
 import { pageMetadata, publicOrigin } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
@@ -39,6 +39,7 @@ export default async function PackageEvidencePage(props: Props) {
   const badgeModes = (["import", "require"] as const).filter((mode) =>
     badgeAvailable(summary, mode),
   );
+  const badgeGroups = badgeGroupCount(summary);
   return (
     <section className="page report">
       <Breadcrumbs
@@ -138,14 +139,25 @@ export default async function PackageEvidencePage(props: Props) {
             observation and its runtime versions. It covers the selected loading mode.
           </p>
           {badgeModes.map((mode) => {
-            const snippet = badgeMarkdown(publicOrigin(), summary.id, mode);
             return (
               <details key={mode}>
                 <summary>Root {mode} badge</summary>
-                <Copy value={snippet} label={`Copy root ${mode} badge Markdown`} />
-                <pre>
-                  <code>{snippet}</code>
-                </pre>
+                {Array.from({ length: badgeGroups }, (_, index) => {
+                  const group = index + 1;
+                  const snippet = badgeMarkdown(publicOrigin(), summary.id, mode, group);
+                  const label = `Copy root ${mode} badge Markdown`;
+                  return (
+                    <div key={group}>
+                      <Copy
+                        value={snippet}
+                        label={badgeGroups === 1 ? label : `${label} (${group} of ${badgeGroups})`}
+                      />
+                      <pre>
+                        <code>{snippet}</code>
+                      </pre>
+                    </div>
+                  );
+                })}
               </details>
             );
           })}

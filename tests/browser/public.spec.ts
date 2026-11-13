@@ -266,6 +266,8 @@ test("history, comparisons and badges read immutable evidence without scheduling
     page.getByText("No meaningful evidence changes. Timing and log differences are ignored."),
   ).toBeVisible();
   const badge = await request.get(`/api/v1/badges/${id}.svg`);
+  expect(badge.status()).toBe(200);
+  expect(badge.headers()["content-type"]).toContain("image/svg+xml");
   expect(await badge.text()).toContain("loading evidence");
   expect(await (await fixture(request, "counts")).json()).toEqual(before);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
