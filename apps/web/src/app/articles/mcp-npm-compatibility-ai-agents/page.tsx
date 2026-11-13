@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { DocumentLayout } from "../../../components/section-navigation";
-import { mcpArticle as article, articleDate } from "../../../content/articles";
+import { mcpArticle as article, articleDate, migrationArticle } from "../../../content/articles";
 import { pageMetadata, publicOrigin } from "../../../server/metadata";
 
 const baseMetadata = pageMetadata(article.title, article.description, article.path);
@@ -510,8 +510,8 @@ curl 'https://compatlab.me/api/v1/reports/b11c22bc-4e1d-4b64-a553-f617275c52fd/s
       </p>
       <p>
         Start with one dependency from your lockfile, keep the report’s limits in the answer, and
-        use your application tests to resolve the remaining questions. For more interpretation
-        examples, read{" "}
+        use the <a href={migrationArticle.path}>npm dependency checklist for Bun and Deno</a> to
+        choose what to test next. For more interpretation examples, read{" "}
         <a href="/articles/npm-package-compatibility-node-bun-deno">
           our first npm compatibility article
         </a>

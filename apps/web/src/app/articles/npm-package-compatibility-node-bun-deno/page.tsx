@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { DocumentLayout } from "../../../components/section-navigation";
-import { compatibilityArticle as article } from "../../../content/articles";
+import {
+  compatibilityArticle as article,
+  articleDate,
+  migrationArticle,
+} from "../../../content/articles";
 import { pageMetadata, publicOrigin } from "../../../server/metadata";
 
 const baseMetadata = pageMetadata(article.title, article.description, article.path);
@@ -65,9 +69,10 @@ export default async function CompatibilityArticle() {
         <a href="/articles">Articles</a>
         <h1>{article.title}</h1>
         <p className="muted">
-          By {article.author} · <time dateTime={article.publishedAt}>October 5, 2026</time>
+          By {article.author} ·{" "}
+          <time dateTime={article.publishedAt}>{articleDate(article.publishedAt)}</time>
           {" · Updated "}
-          <time dateTime={article.modifiedAt}>October 12, 2026</time>
+          <time dateTime={article.modifiedAt}>{articleDate(article.modifiedAt)}</time>
         </p>
         <p className="lede">
           Express loaded in all four runtime profiles. Preact’s root did too, while its server
@@ -81,6 +86,11 @@ export default async function CompatibilityArticle() {
         command, you need to know whether your dependencies will load. A package’s README may name
         Node versions, but it rarely covers the exact package release, import style and alternative
         runtime you intend to use.
+      </p>
+      <p>
+        If you’re planning a migration, use the{" "}
+        <a href={migrationArticle.path}>npm dependency checklist for Bun and Deno</a> to choose the
+        first application tests for HTTP requests, schema parsing, image processing and gRPC.
       </p>
       <p>
         We built <a href="/">CompatLab</a> to collect that evidence. You select an exact published
