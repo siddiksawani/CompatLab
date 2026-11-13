@@ -2,12 +2,9 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "../../../components/breadcrumbs";
 import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { FailureDetails } from "../../../components/failure-details";
-import { labels, observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
+import { observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
-import {
-  compatibilityDescription,
-  plannedCoverageSummary,
-} from "../../../server/compatibility-copy";
+import { plannedCoverageSummary, versionPageAnswer } from "../../../server/compatibility-copy";
 import { pageMetadata } from "../../../server/metadata";
 import { packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
@@ -22,22 +19,13 @@ async function load({ params }: Props) {
   return evidence;
 }
 
-function runtimeSummary(summary: Awaited<ReturnType<typeof load>>["summary"]) {
-  return summary.matrix.images
-    .map((image) => {
-      const runtime = summary.runtimes.find((runtime) => runtime.profileId === image.profileId);
-      const name = image.kind === "node" ? "Node.js" : image.kind === "bun" ? "Bun" : "Deno";
-      return `${name} ${image.version}: ${labels[runtime?.outcome ?? "inconclusive"].toLowerCase()}`;
-    })
-    .join("; ");
-}
-
 export async function generateMetadata(props: Props) {
   const { summary } = await load(props);
+  const { name, version } = summary.artifact;
   return pageMetadata(
-    `${summary.artifact.name}@${summary.artifact.version}: Node.js, Bun & Deno compatibility`,
-    compatibilityDescription(summary),
-    packageEvidencePath(summary.artifact.name, summary.artifact.version),
+    `${name}@${version} loading tests on Node.js, Bun and Deno`,
+    `${versionPageAnswer(summary)} ${summary.coverageComplete ? "Import and require evidence." : "Coverage is limited."}`,
+    packageEvidencePath(name, version),
   );
 }
 
@@ -59,14 +47,11 @@ export default async function PackageEvidencePage(props: Props) {
         Choose a version or request a scan
       </a>
       <h1 className="package-title">
-        {name}
-        <span className="version">{version}</span>
+        {name} <span className="version">{version}</span>
       </h1>
-      <h2>Node.js, Bun and Deno compatibility results</h2>
       <p className="lede">
-        Does {name} {version} load in Node.js, Bun and Deno? In the recorded environment, the
-        results were {runtimeSummary(summary)}. {plannedCoverageSummary(summary)} Loading success
-        does not establish functional correctness or package safety.
+        {versionPageAnswer(summary)} {plannedCoverageSummary(summary)} The checks measure module
+        loading. Test the calls your application makes separately.
       </p>
       <p className="muted">Observed {observedDate(summary.observedAt)} · Linux amd64 / glibc</p>
       {!available.matchesCurrentMatrix && (
