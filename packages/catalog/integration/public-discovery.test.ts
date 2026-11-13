@@ -264,6 +264,46 @@ it("exposes older-matrix evidence without treating it as a reusable current-matr
   expect(await admittedResponse.json()).toMatchObject({ kind: "admitted" });
 });
 
+it("searches the requested exact version and matches evidence by registry integrity", async () => {
+  const before = await counts();
+  async function search(q: string) {
+    const response = await api(
+      new Request(`${origin}/api/v1/search?${new URLSearchParams({ q })}`),
+    );
+    expect(response.status).toBe(200);
+    return searchResponseSchema.parse(await response.json()).packages;
+  }
+  expect(await search(`${source.name}@1.0.0`)).toEqual([
+    expect.objectContaining({
+      name: source.name,
+      version: "1.0.0",
+      availableReport: expect.objectContaining({ id: previousReportId }),
+    }),
+  ]);
+  expect(await search(`${source.name} 2.0.0`)).toEqual([
+    expect.objectContaining({ name: source.name, version: "2.0.0", availableReport: null }),
+  ]);
+  expect(await search(`${source.name}@3.0.0`)).toEqual([]);
+  source = { ...source, integrity: artifact("different-bytes").integrity };
+  api = publicApi();
+  expect(await search(`${source.name} 1.0.0`)).toEqual([
+    expect.objectContaining({ name: source.name, version: "1.0.0", availableReport: null }),
+  ]);
+  expect(await counts()).toEqual(before);
+});
+
+it("keeps exact search results when the normalized repository URL exceeds the contract", async () => {
+  source.manifest.repository = { url: `git+https://example.test/${"é".repeat(400)}` };
+  const response = await api(
+    new Request(`${origin}/api/v1/search?${new URLSearchParams({ q: `${source.name}@1.0.0` })}`),
+  );
+  expect(response.status).toBe(200);
+  const result = searchResponseSchema.parse(await response.json());
+  expect(result.packages).toHaveLength(1);
+  expect(result.packages[0]).toMatchObject({ name: source.name, version: "1.0.0" });
+  expect(result.packages[0]?.repositoryUrl).toBeUndefined();
+});
+
 it("prefers the current matrix and keeps its report visible during a newer scan", async () => {
   const currentScanId = await insertCurrentScan("completed");
   const currentReportId = await insertReport(currentScanId);

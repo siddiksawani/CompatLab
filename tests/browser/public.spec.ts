@@ -68,6 +68,21 @@ test("explains temporary scan pauses without navigating away", async ({ page }) 
   );
   await expect(page).toHaveURL(/\/packages\?/);
 });
+
+test("opens an exact older version from a scoped package search", async ({ page, request }) => {
+  const before: unknown = await (await fixture(request, "counts")).json();
+  const name = "@compatlab/browser-fixture";
+  const search = new URLSearchParams({ q: `${name}@2.0.0` });
+  await page.goto(`/?${search}`);
+  const results = page.getByRole("list", { name: "Package results" });
+  await expect(results.locator("li")).toHaveCount(1);
+  await expect(results).toContainText("2.0.0");
+  await results.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page.getByLabel("Exact version", { exact: true })).toHaveValue("2.0.0");
+  expect(await (await fixture(request, "counts")).json()).toEqual(before);
+});
+
 for (const name of ["compatlab-browser-fixture", "@compatlab/browser-fixture"]) {
   test(`anonymous discovery and refresh recovery: ${name}`, async ({ page, request }) => {
     await page.goto("/");

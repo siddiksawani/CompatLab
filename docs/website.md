@@ -25,7 +25,7 @@ The development server listens on `127.0.0.1:3000`. Search uses public npm metad
 
 ## Public boundaries
 
-The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request; search resolves all returned package/version pairs in one query. Search returns at most ten packages; the version picker lists recent published versions and accepts another exact published version through its separate form.
+The web service owns a bounded PostgreSQL pool. It has no package execution path. Registry requests use the engine's bounded client and a 60-second, 4 MiB metadata cache with 64 entries and four concurrent cache fills. Identical fills coalesce. Policy, invalidation and report availability are read from PostgreSQL on each request. Text search returns at most ten packages and checks report availability in one query. A valid `name@version` or `name version` search checks that exact published artifact and its integrity. An unavailable exact version returns no results. The version picker lists recent versions and accepts another exact version through its separate form.
 
 | Route | Purpose |
 |---|---|
