@@ -7,6 +7,7 @@ import {
   omittedCoverage,
   plannedCoverageSummary,
   runtimeAnswers,
+  versionPageAnswer,
 } from "../src/server/compatibility-copy.js";
 
 function evidence(): CompatibilityEvidence {
@@ -42,6 +43,29 @@ function evidence(): CompatibilityEvidence {
 }
 
 describe("evidence-based compatibility answers", () => {
+  it("uses recorded outcomes in the exact-version lead and separates preparation failures", () => {
+    const report: Parameters<typeof versionPageAnswer>[0] = {
+      ...evidence(),
+      runtimes: [
+        { profileId: "node-one", outcome: "pass" },
+        { profileId: "node-two", outcome: "pass" },
+        { profileId: "bun", outcome: "pass" },
+      ],
+    };
+    expect(versionPageAnswer(report)).toBe(
+      "@fixture/package@1.0.0 passed the recorded loading checks on Node.js 24.0.0, Node.js 26.0.0, and Bun 1.0.0.",
+    );
+    report.runtimes = [
+      { profileId: "node-one", outcome: "pass" },
+      { profileId: "node-two", outcome: "pass" },
+    ];
+    expect(versionPageAnswer(report)).toContain("Bun 1.0.0 (inconclusive)");
+    report.preparation.outcome = "infrastructure_error";
+    expect(versionPageAnswer(report)).toBe(
+      "No runtime loading result was established for @fixture/package@1.0.0. The preparation result was “service error.”",
+    );
+  });
+
   it("explains omitted exports without inventing missing planned observations", () => {
     const report = evidence();
     report.coverageComplete = false;
