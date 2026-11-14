@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { CLASSIFIER_REVISION } from "@compatlab/contracts";
-import { matchingVersions, RegistryClient } from "@compatlab/engine";
+import {
+  matchingVersions,
+  RegistryClient,
+  RegistryError,
+  type ResolvedArtifact,
+} from "@compatlab/engine";
 import { and, eq, sql } from "drizzle-orm";
 import { admitScanInTransaction } from "../admission.js";
 import { accountRequesterKey } from "../auth/security.js";
@@ -82,7 +87,29 @@ export async function pollMonitor(
       }
       const release = pending.find((row) => row.version === version);
       if (!release) continue;
-      const artifact = await registry.resolve(monitor.packageName, version);
+      let artifact: ResolvedArtifact;
+      try {
+        artifact = await registry.resolve(monitor.packageName, version);
+      } catch (cause) {
+        if (!(cause instanceof RegistryError)) throw cause;
+        const classification = cause.classification;
+        // Registry-wide errors do not establish that this version is unavailable.
+        const retry = cause.retryable || classification === "registry_unavailable";
+        await catalogTransaction(db, async (tx) => {
+          await currentLease(tx, monitor.id, token);
+          await assertLinkedAuthority(tx, authority);
+          await tx
+            .update(monitorReleases)
+            .set({ state: retry ? "pending" : "blocked", error: classification })
+            .where(and(eq(monitorReleases.id, release.id), eq(monitorReleases.state, "pending")));
+        });
+        if (retry) {
+          error = classification;
+          backlog ||= cause.retryable;
+          break;
+        }
+        continue;
+      }
       try {
         assertRepository(artifact.manifest, authority.proof.fullName);
       } catch {
