@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
-import { decryptBackup } from "../apps/cli/dist/backup.js";
+import { decryptBackup, encryptBackup } from "../apps/cli/dist/backup.js";
 import {
   migrateCatalog,
   openCatalog,
@@ -248,13 +248,20 @@ try {
     ).rows[0].n,
     1,
   );
+  await verifySpoolRetry(catalog, operator);
   await migrateCatalog(restored.pool);
   await mkdir("test-results", { recursive: true });
   const evidence = {
     qualified: true,
     encryptedBytes: uploaded.bytes,
     checksum: uploaded.digest,
-    verified: ["reports", "exact locks", "audit events", "migration checksums"],
+    verified: [
+      "reports",
+      "exact locks",
+      "audit events",
+      "migration checksums",
+      "independent spool retries",
+    ],
     restoredIntoFreshInstance: true,
     restoreMs: Math.round(performance.now() - restoreStarted),
     elapsedMs: Math.round(performance.now() - started),
@@ -274,4 +281,96 @@ try {
     );
   }
   await rm(directory, { recursive: true, force: true });
+}
+
+async function verifySpoolRetry(catalog, operator) {
+  const spool = join(directory, "retry-spool");
+  const commands = join(directory, "retry-bin");
+  await mkdir(spool, { mode: 0o700 });
+  await mkdir(commands, { mode: 0o700 });
+  const key = join(config, "backup-key");
+  const input = join(directory, "retry-input");
+  await writeFile(input, "backup spool qualification fixture", { mode: 0o600 });
+  const captures = [new Date(Date.now() - 120_000), new Date(Date.now() - 60_000)];
+  const files = captures.map(
+    (captured) => `compatlab-${captured.toISOString().replaceAll(":", "-")}-${randomUUID()}.clb`,
+  );
+  const [older, newer] = files;
+  for (const file of files) await encryptBackup(input, join(spool, file), key);
+  const records = await Promise.all(
+    files.map(async (file) => {
+      const archive = await readFile(join(spool, file));
+      return {
+        file,
+        digest: createHash("sha256").update(archive).digest("hex"),
+        bytes: archive.length,
+      };
+    }),
+  );
+
+  // Stand in for the restricted receiver while running the real sender and audit command.
+  await writeFile(
+    join(commands, "ssh"),
+    `#!/bin/sh
+for argument do request="$argument"; done
+read -r verb file digest bytes <<EOF
+$request
+EOF
+[ "$verb" = receive ] || exit 2
+cat >/dev/null
+[ "$file" != "$QUALIFICATION_REJECTED_BACKUP" ] || exit 1
+printf '{"file":"%s","digest":"%s","bytes":%s}\\n' "$file" "$digest" "$bytes"
+`,
+    { mode: 0o700 },
+  );
+  const retry = (rejected) =>
+    execute(process.execPath, ["infra/backup.mjs"], {
+      env: {
+        ...process.env,
+        PATH: `${commands}:${process.env.PATH}`,
+        BACKUP_DIRECTORY: spool,
+        BACKUP_KEY_FILE: key,
+        BACKUP_POSTGRES_CONTAINER: container,
+        BACKUP_SSH_TARGET: "fixture:/private/backups",
+        BACKUP_RETRY_ONLY: "true",
+        BACKUP_TRANSPORT: "restricted",
+        ADMIN_DATABASE_URL_FILE: operator,
+        QUALIFICATION_REJECTED_BACKUP: rejected,
+      },
+      timeout: 30_000,
+    });
+
+  await assert.rejects(retry(older), (error) => {
+    assert.equal(error.code, 1);
+    assert.deepEqual(JSON.parse(error.stderr), {
+      file: older,
+      uploaded: false,
+      error: "Off-host backup transfer failed.",
+    });
+    assert.deepEqual(JSON.parse(error.stdout), { ...records[1], uploaded: true });
+    return true;
+  });
+  assert.deepEqual((await readdir(spool)).sort(), [...files, `${newer}.uploaded`].sort());
+  const audits = () =>
+    catalog.pool.query(
+      "SELECT details->>'capturedAt' AS capture,details->>'digest' AS digest FROM audit_events WHERE action='backup_uploaded' AND details->>'digest'=ANY($1::text[]) ORDER BY capture",
+      [records.map(({ digest }) => digest)],
+    );
+  assert.deepEqual((await audits()).rows, [
+    { capture: captures[1].toISOString(), digest: records[1].digest },
+  ]);
+
+  const retried = await retry("");
+  assert.deepEqual(JSON.parse(retried.stdout), { ...records[0], uploaded: true });
+  assert.deepEqual(
+    (await readdir(spool)).sort(),
+    files.flatMap((file) => [file, `${file}.uploaded`]).sort(),
+  );
+  assert.deepEqual(
+    (await audits()).rows,
+    captures.map((captured, index) => ({
+      capture: captured.toISOString(),
+      digest: records[index].digest,
+    })),
+  );
 }

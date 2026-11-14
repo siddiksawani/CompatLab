@@ -64,6 +64,8 @@ BACKUP_TRANSPORT=restricted
 
 The daily timer runs at 02:00 UTC with up to ten minutes of jitter. The hourly retry timer uploads completed archives after a connection failure without taking another dump. Local and off-host retention is seven days. The receiver accepts only a bounded encrypted stream with a verified size/hash, caps its archive storage at 20 GiB and leaves 40 GiB headroom on the shared devbox. The backup key must also be kept in a separate operator recovery location. Never put it in GitHub, the worker VM or a public issue.
 
+An upload failure is reported by archive name and leaves that archive pending while the spool continues. The service exits unsuccessfully if any archive failed. Each successful upload is still audited using its original capture time and skipped on the next retry.
+
 ```sh
 sudo systemctl start compatlab-backup.service
 sudo systemctl status compatlab-backup.timer compatlab-backup-retry.timer
