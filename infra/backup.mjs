@@ -113,18 +113,24 @@ try {
   for (const name of (await readdir(directory)).sort()) {
     if (!/^compatlab-[0-9TZ:.-]+-[a-f0-9-]+\.clb$/.test(name)) continue;
     const archive = join(directory, name);
-    if (!(await lstat(archive)).isFile()) continue;
-    if (
-      await lstat(`${archive}.uploaded`).then(
-        () => true,
-        (error) => {
-          if (error.code === "ENOENT") return false;
-          throw error;
-        },
+    try {
+      if (!(await lstat(archive)).isFile()) continue;
+      if (
+        await lstat(`${archive}.uploaded`).then(
+          () => true,
+          (error) => {
+            if (error.code === "ENOENT") return false;
+            throw error;
+          },
+        )
       )
-    )
-      continue;
-    await upload(archive, name);
+        continue;
+      await upload(archive, name);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message.split("\n")[0] : "Upload failed.";
+      process.stderr.write(`${JSON.stringify({ file: name, uploaded: false, error: reason })}\n`);
+      process.exitCode = 1;
+    }
   }
 } finally {
   if (!encrypted) await rm(destination, { force: true });
