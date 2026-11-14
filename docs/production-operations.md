@@ -123,7 +123,7 @@ See Cloudflare's [Browser Integrity Check](https://developers.cloudflare.com/waf
 
 `compatlab-health.timer` checks local website/database health, the selected matrix's worker guard, queue age, infrastructure failures, backup capture age, VPS/VM disk space, deployment failures and the Cloudflare range check. It emails on state changes and daily while a problem persists; recovery sends one email. An email accepted by Resend is not proof of inbox delivery. Confirm the launch test in the recipient inbox.
 
-Run `sudo python3 /opt/compatlab/current/infra/health.py test` for an alert test. Inspect `sudo journalctl -u compatlab-health --since today` for delivery errors. The VPS cannot email during a complete VPS or outbound-network outage. Add an independent external HTTPS monitor for `https://compatlab.me/healthz` and test its alert separately.
+Run `sudo python3 /opt/compatlab/current/infra/health.py test` for an alert test. The test stores its own receipt and leaves scheduled incident, recovery and reminder tracking intact. Inspect `sudo journalctl -u compatlab-health --since today` for delivery errors. The VPS cannot email during a complete VPS or outbound-network outage. Add an independent external HTTPS monitor for `https://compatlab.me/healthz` and test its alert separately.
 
 Docker restart policies, `compatlab-stack.service`, WireGuard units, VM/network autostart, the worker unit and timers restore services after restart. Test the VM and project services without rebooting the shared hosts. Shared-host reboots require an agreed maintenance window. Log rotation applies only to project containers; no global journald settings are changed.
 

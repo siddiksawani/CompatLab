@@ -75,10 +75,10 @@ def send(subject, body, identity):
 
 
 def main():
-    state_file = STATE / "health.json"
-    previous = read_state("health.json", {"issues": [], "sentAt": 0})
-    current = problems()
     test = sys.argv[1:] == ["test"]
+    state_name = "health-test.json" if test else "health.json"
+    previous = read_state(state_name, {"issues": [], "sentAt": 0})
+    current = problems()
     changed = current != previous["issues"]
     reminder = bool(current) and time.time() - previous["sentAt"] > 86400
     if test or changed or reminder:
@@ -87,7 +87,7 @@ def main():
         body += "\n\nOperator access: ssh vps\nStatus: sudo compatlab-admin status\nLogs: sudo journalctl -u compatlab-health -u compatlab-backup --since today\nWebsite: https://compatlab.me\n"
         identity = "compatlab-" + hashlib.sha256(json.dumps([subject, current, previous["sentAt"]]).encode()).hexdigest()
         receipt = send(subject, body, identity)
-        atomic_write(state_file, json.dumps({"issues": current, "sentAt": time.time(), "receipt": receipt}))
+        atomic_write(STATE / state_name, json.dumps({"issues": current, "sentAt": time.time(), "receipt": receipt}))
         print(json.dumps({"emailAccepted": True, "issues": current, "receipt": receipt}))
     else:
         print(json.dumps({"issues": current, "emailSent": False}))
