@@ -68,6 +68,10 @@ export default async function NovemberStudy() {
           runtime profiles. {totals.allRequirePass} passed the same comparison with{" "}
           <code>require</code>.
         </p>
+        <p>
+          Use the <a href="/">CompatLab npm compatibility checker</a> to look up the exact version
+          in your lockfile and see its import and require results.
+        </p>
       </header>
 
       <h2 id="results">Loading results</h2>
