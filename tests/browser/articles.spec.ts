@@ -5,6 +5,16 @@ import { expectResponsiveLayout, fixture } from "./helpers.js";
 const articlePath = "/articles/npm-package-compatibility-node-bun-deno";
 const mcpArticlePath = "/articles/mcp-npm-compatibility-ai-agents";
 const migrationPath = "/articles/node-to-bun-deno-dependency-checklist";
+const studyPath = "/articles/npm-loading-study-2026-11";
+
+test("links the loading study and package checker in the initial HTML", async ({ request }) => {
+  const home = await (await request.get("/")).text();
+  expect(home).toContain(`href="${studyPath}">How 100 npm packages load`);
+  const original = await (await request.get(articlePath)).text();
+  expect(original).toContain(`href="${studyPath}">November study of 100 npm packages`);
+  const study = await (await request.get(studyPath)).text();
+  expect(study).toContain('href="/">CompatLab npm compatibility checker</a>');
+});
 
 test("links the migration checklist and its exact-version evidence without JavaScript", async ({
   browser,

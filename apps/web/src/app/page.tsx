@@ -3,7 +3,12 @@ import { headers } from "next/headers";
 import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
-import { compatibilityArticle, mcpArticle, migrationArticle } from "../content/articles";
+import {
+  compatibilityArticle,
+  mcpArticle,
+  migrationArticle,
+  novemberStudyArticle,
+} from "../content/articles";
 import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata, publicOrigin } from "../server/metadata";
 import { publicRead } from "../server/runtime";
@@ -56,7 +61,7 @@ export default async function Home({
       </script>
       <section className="hero">
         <div className="hero-search">
-          <h1>Check your package in Node.js, Bun and Deno.</h1>
+          <h1>Check your npm package in Node.js, Bun and Deno.</h1>
           <p className="lede">
             CompatLab checks how npm packages load with import and require. Pick a version, compare
             the results and open the details when a check fails.
@@ -111,6 +116,12 @@ export default async function Home({
           </ul>
         </section>
       )}
+      <section className="page article-callout" aria-labelledby="study-title">
+        <h2 id="study-title">
+          <a href={novemberStudyArticle.path}>{novemberStudyArticle.title}</a>
+        </h2>
+        <p>{novemberStudyArticle.description}</p>
+      </section>
       <section className="page article-callout" aria-labelledby="article-title">
         <h2 id="article-title">
           <a href={compatibilityArticle.path}>{compatibilityArticle.title}</a>

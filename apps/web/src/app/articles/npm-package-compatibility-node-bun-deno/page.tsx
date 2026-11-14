@@ -5,6 +5,7 @@ import {
   compatibilityArticle as article,
   articleDate,
   migrationArticle,
+  novemberStudyArticle,
 } from "../../../content/articles";
 import { pageMetadata, publicOrigin } from "../../../server/metadata";
 
@@ -97,6 +98,10 @@ export default async function CompatibilityArticle() {
         npm version, and we check its entry points across pinned Node.js, Bun and Deno runtimes. You
         can inspect the loading failures, coverage and environment in a public report. The engine is{" "}
         <a href="https://github.com/siddiksawani/CompatLab">open source</a>.
+      </p>
+      <p>
+        The <a href={novemberStudyArticle.path}>November study of 100 npm packages</a> gives a
+        broader view, with results per runtime and downloadable data.
       </p>
       <h2 id="results">Four packages, with the reports attached</h2>
       <aside className="notice" aria-label="Article correction">
