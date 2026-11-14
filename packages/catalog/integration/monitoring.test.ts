@@ -4,8 +4,8 @@ import {
   PREPARATION_PROFILE_REVISION,
   reportHistorySchema,
 } from "@compatlab/contracts";
-import { compareReports, RegistryClient } from "@compatlab/engine";
-import { eq } from "drizzle-orm";
+import { compareReports, RegistryClient, RegistryError } from "@compatlab/engine";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { admitScan } from "../src/admission.js";
 import { authorityRevision, type Principal, revokeAccount } from "../src/auth/github.js";
@@ -247,6 +247,67 @@ it("reconciles missed releases and backports once across competing schedulers", 
   expect(selections.filter((r) => r.state === "selected")).toHaveLength(3);
   expect(new Set(selections.map((r) => r.scanId).filter(Boolean)).size).toBe(3);
 });
+it("compares a later release after blocking a version with missing metadata", async () => {
+  const id = await create();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  await execute();
+  await compareMonitorReports(catalog.db, origin, authorize, email.from);
+
+  const resolve = vi.mocked(registry.resolve);
+  const resolveFixture = resolve.getMockImplementation();
+  if (!resolveFixture) throw new Error("Expected a registry fixture.");
+  resolve.mockImplementation(async (packageName, version, signal) => {
+    if (version === "2.0.0")
+      throw new RegistryError("package_version_not_found", "Version unavailable.");
+    return resolveFixture(packageName, version, signal);
+  });
+  versions.push("2.0.0", "3.0.0");
+  await due();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  expect(
+    await catalog.db.select().from(monitorReleases).where(eq(monitorReleases.monitorId, id)),
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        version: "2.0.0",
+        state: "blocked",
+        error: "package_version_not_found",
+        scanId: null,
+      }),
+      expect.objectContaining({ version: "3.0.0", state: "selected", scanId: expect.any(String) }),
+    ]),
+  );
+  await execute(true);
+  expect(await compareMonitorReports(catalog.db, origin, authorize, email.from)).toBe(1);
+  const [alert] = await catalog.db.select().from(notifications);
+  expect(alert?.comparison).toMatchObject({ beforeVersion: "1.0.0", afterVersion: "3.0.0" });
+});
+
+it("reschedules a temporary registry error and selects the release after recovery", async () => {
+  const id = await create();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  await execute();
+  versions.push("2.0.0");
+  vi.mocked(registry.resolve).mockRejectedValueOnce(
+    new RegistryError("registry_unavailable", "Temporary registry outage.", true),
+  );
+  await due();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  const release = and(eq(monitorReleases.monitorId, id), eq(monitorReleases.version, "2.0.0"));
+  const [pending] = await catalog.db.select().from(monitorReleases).where(release);
+  expect(pending).toMatchObject({ state: "pending", scanId: null, error: "registry_unavailable" });
+  const [monitor] = await catalog.db.select().from(monitors).where(eq(monitors.id, id));
+  if (!monitor?.lastCheckedAt) throw new Error("Expected a completed poll.");
+  expect(monitor).toMatchObject({ lastError: "registry_unavailable", leaseToken: null });
+  expect(monitor.nextPollAt.getTime()).toBeGreaterThan(monitor.lastCheckedAt.getTime());
+  expect(await pollMonitor(catalog.db, config(), authorize, registry)).toBe(false);
+
+  await due();
+  await pollMonitor(catalog.db, config(), authorize, registry);
+  const [selected] = await catalog.db.select().from(monitorReleases).where(release);
+  expect(selected).toMatchObject({ state: "selected", scanId: expect.any(String), error: null });
+});
+
 it("bounds monitors and rejects wrong repositories and revoked authority at commit", async () => {
   expect(() =>
     assertRepository({ repository: "https://github.com.evil/owner/package" }, "owner/package"),
@@ -547,25 +608,37 @@ it("exposes a legacy exhausted publication and resolves the waiting monitor rele
     error: "aggregation_unavailable",
   });
 });
-it("bounds discovery batches and fences a stale polling lease before scan admission", async () => {
-  await create();
-  versions = Array.from({ length: 32 }, (_, i) => `1.0.${i}`);
-  let changed = false;
-  vi.spyOn(registry, "resolve").mockImplementation(async (packageName, version = "1.0.0") => {
-    if (!changed) {
-      changed = true;
-      await catalog.pool.query("UPDATE monitors SET lease_token=NULL,lease_expires_at=NULL");
-    }
-    return {
-      ...artifact(packageName),
-      version,
-      manifest: { name: packageName, version, repository: "github:owner/package" },
-    };
-  });
-  await pollMonitor(catalog.db, config(), authorize, registry);
-  expect(await catalog.db.select().from(monitorReleases)).toHaveLength(26);
-  expect((await catalog.pool.query("SELECT id FROM scans")).rowCount).toBe(0);
-});
+it.each(["scan admission", "metadata failure"])(
+  "fences a stale polling lease before recording %s",
+  async (outcome) => {
+    const id = await create();
+    versions = Array.from({ length: 32 }, (_, i) => `1.0.${i}`);
+    let changed = false;
+    vi.spyOn(registry, "resolve").mockImplementation(async (packageName, version = "1.0.0") => {
+      if (!changed) {
+        changed = true;
+        await catalog.pool.query("UPDATE monitors SET lease_token=NULL,lease_expires_at=NULL");
+      }
+      if (outcome === "metadata failure")
+        throw new RegistryError("package_version_not_found", "Version unavailable.");
+      return {
+        ...artifact(packageName),
+        version,
+        manifest: { name: packageName, version, repository: "github:owner/package" },
+      };
+    });
+    await pollMonitor(catalog.db, config(), authorize, registry);
+    const releases = await catalog.db
+      .select()
+      .from(monitorReleases)
+      .where(eq(monitorReleases.monitorId, id));
+    expect(releases).toHaveLength(26);
+    expect(releases.every((release) => release.state === "pending" && release.error === null)).toBe(
+      true,
+    );
+    expect((await catalog.pool.query("SELECT id FROM scans")).rowCount).toBe(0);
+  },
+);
 
 it("allows pausing when email delivery has been disabled by the operator", async () => {
   const id = await create();
