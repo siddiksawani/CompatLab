@@ -201,6 +201,17 @@ test("indexes completed evidence and withdraws invalidated reports from discover
   await finish(page, request);
   const url = page.url();
   const id = new URL(url).pathname.split("/").at(-1) ?? "";
+  for (const path of [url, `${url}?cell=node_24_21_0-root-esm&entry=0`]) {
+    const response = await request.get(path, {
+      headers: { "User-Agent": "Screaming Frog SEO Spider/25.1", Accept: "text/html" },
+    });
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+    const [head] = html.split("</head>", 1);
+    const canonical = `<link rel="canonical" href="${url}"/>`;
+    expect(head).toContain(canonical);
+    expect(html.match(/<link rel="canonical" /g)).toHaveLength(1);
+  }
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", url);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   expect(await (await request.get(`/sitemaps/${id[0]}.xml`)).text()).toContain(url);
