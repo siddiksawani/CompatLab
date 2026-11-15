@@ -11,6 +11,7 @@ import {
   createPublicApi,
   discoverPackageVersions,
   findOtherPackageReports,
+  findOtherReportObservations,
   findPackageReport,
   invalidateReport,
   migrateCatalog,
@@ -372,6 +373,39 @@ it("offers other versions as read-only evidence and prefers the current environm
   await expect(
     findOtherPackageReports(catalog.db, currentMatrixId, source.name, "latest"),
   ).rejects.toThrow();
+});
+
+it("links eligible reports from separate executions of the selected artifact", async () => {
+  expect(await findOtherReportObservations(catalog.db, previousReportId)).toEqual([]);
+  const currentScanId = await insertCurrentScan("completed");
+  const currentReportId = await insertReport(currentScanId);
+  await insertReport(currentScanId, "classifier_parallel");
+
+  const candidate = {
+    ...source,
+    version: "2.0.0",
+    manifest: { ...source.manifest, version: "2.0.0" },
+  };
+  const scan = await admitScan(catalog.db, candidate, {
+    matrixId: currentMatrixId,
+    classifierRevision: CLASSIFIER_REVISION,
+    requesterKey: hash("another-version"),
+  });
+  if (scan.kind !== "admitted") throw new Error("Fixture admission failed.");
+  await catalog.pool.query("UPDATE scans SET state='completed',finished_at=now() WHERE id=$1", [
+    scan.scanId,
+  ]);
+  await insertReport(scan.scanId);
+
+  const before = await counts();
+  expect(await findOtherReportObservations(catalog.db, currentReportId)).toEqual([
+    { id: previousReportId, observedAt, matrixRevision: "initial_v1", outcome: "inconclusive" },
+  ]);
+  expect(await findOtherReportObservations(catalog.db, previousReportId)).toHaveLength(1);
+  expect(await counts()).toEqual(before);
+
+  await invalidateReport(catalog.db, previousReportId, actor);
+  expect(await findOtherReportObservations(catalog.db, currentReportId)).toEqual([]);
 });
 
 it("bounds other tested versions to five distinct versions", async () => {
