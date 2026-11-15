@@ -25,12 +25,21 @@ export const packageEvidence = cache((name: string, version: string) =>
 
 const readObservations = createReadQueue<Awaited<ReturnType<typeof findOtherReportObservations>>>();
 export async function otherReportObservations(reportId: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await readObservations(reportId, () =>
-      findOtherReportObservations(webRuntime().catalog.db, reportId),
-    );
+    // The response deadline leaves the active read in the queue until its query settles.
+    return await Promise.race([
+      readObservations(reportId, () =>
+        findOtherReportObservations(webRuntime().catalog.db, reportId),
+      ),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Observation lookup timed out.")), 500);
+      }),
+    ]);
   } catch {
     reportControlError("report_read_failed");
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
