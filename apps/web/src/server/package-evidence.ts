@@ -1,4 +1,8 @@
-import { findPackageReport } from "@compatlab/catalog/web";
+import {
+  findOtherReportObservations,
+  findPackageReport,
+  reportControlError,
+} from "@compatlab/catalog/web";
 import { reportSummaryEnvelopeSchema } from "@compatlab/contracts";
 import { cache } from "react";
 import { createReadQueue } from "./read-queue";
@@ -18,3 +22,24 @@ const read = createReadQueue<Awaited<ReturnType<typeof loadPackageEvidence>>>();
 export const packageEvidence = cache((name: string, version: string) =>
   read(JSON.stringify([name, version]), () => loadPackageEvidence(name, version)),
 );
+
+const readObservations = createReadQueue<Awaited<ReturnType<typeof findOtherReportObservations>>>();
+export async function otherReportObservations(reportId: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    // The response deadline leaves the active read in the queue until its query settles.
+    return await Promise.race([
+      readObservations(reportId, () =>
+        findOtherReportObservations(webRuntime().catalog.db, reportId),
+      ),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Observation lookup timed out.")), 500);
+      }),
+    ]);
+  } catch {
+    reportControlError("report_read_failed");
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}

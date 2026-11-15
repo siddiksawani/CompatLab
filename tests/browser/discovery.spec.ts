@@ -132,6 +132,16 @@ test("keeps earlier evidence visible while a scan uses the current environment",
     currentReport,
   );
   await expect(page.getByRole("link", { name: "View earlier report", exact: true })).toHaveCount(0);
+  await page.goto("/npm/compatlab-browser-fixture/1.0.0");
+  await expect(page.getByRole("link", { name: "Full report and provenance" })).toHaveAttribute(
+    "href",
+    currentReport,
+  );
+  const observations = page.getByRole("region", { name: "Other observations for this version" });
+  const earlierLink = observations.getByRole("link", { name: /Observed .* UTC · Matrix/ });
+  await expect(earlierLink).toHaveAttribute("href", previousReport);
+  await earlierLink.click();
+  await expect(page).toHaveURL(new RegExp(`${previousReport}$`));
 });
 
 test("publishes canonical pages and excludes query and operational surfaces", async ({

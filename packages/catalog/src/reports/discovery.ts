@@ -71,6 +71,29 @@ export async function reportIsDiscoverable(db: CatalogReader, id: string) {
   return result.rows.length === 1;
 }
 
+const otherObservationSchema = hostedReportSchema
+  .pick({ id: true, observedAt: true, outcome: true })
+  .extend({ matrixRevision: hostedReportSchema.shape.matrix.shape.revision });
+
+export async function findOtherReportObservations(db: CatalogReader, reportId: string) {
+  z.uuid().parse(reportId);
+  const result = await db.execute(sql`
+    WITH selected AS (
+      SELECT r.scan_id, prep.artifact_id FROM reports r
+      JOIN scans s ON s.id=r.scan_id JOIN preparations prep ON prep.id=s.preparation_id
+      WHERE r.id=${reportId}
+    )
+    SELECT id,"observedAt",outcome,"matrixRevision" FROM (
+      SELECT DISTINCT ON (s.id) r.id,r.payload->>'observedAt' AS "observedAt",
+        r.payload->>'outcome' AS outcome,m.revision AS "matrixRevision",r.created_at
+      ${source} JOIN selected ON selected.artifact_id=v.id
+      WHERE s.id<>selected.scan_id AND s.assertion_revision_id IS NULL AND ${eligible}
+      ORDER BY s.id,r.created_at DESC,r.id
+    ) observations
+    ORDER BY "observedAt" DESC NULLS LAST,created_at DESC,id LIMIT 3`);
+  return result.rows.map((row) => otherObservationSchema.parse(row));
+}
+
 export async function discoverRecentReports(db: CatalogReader) {
   const result = await db.execute<{
     id: string;

@@ -3,12 +3,12 @@ import { Breadcrumbs } from "../../../components/breadcrumbs";
 import { CompatibilityAnswers } from "../../../components/compatibility-answers";
 import { Copy } from "../../../components/copy";
 import { FailureDetails } from "../../../components/failure-details";
-import { observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
+import { labels, observedDate, packageEvidencePath, packageUrl } from "../../../components/labels";
 import { RuntimeMatrix } from "../../../components/runtime-matrix";
 import { plannedCoverageSummary, versionPageAnswer } from "../../../server/compatibility-copy";
 import { badgeAvailable, badgeGroupCount, badgeMarkdown } from "../../../server/loading-badge";
 import { pageMetadata, publicOrigin } from "../../../server/metadata";
-import { packageEvidence } from "../../../server/package-evidence";
+import { otherReportObservations, packageEvidence } from "../../../server/package-evidence";
 import { parsePackagePath } from "../../../server/package-path";
 import { recordPageUsage } from "../../../server/usage";
 
@@ -33,7 +33,10 @@ export async function generateMetadata(props: Props) {
 
 export default async function PackageEvidencePage(props: Props) {
   const { summary, available } = await load(props);
-  await recordPageUsage("package_page", available.matchesCurrentMatrix ? "current" : "earlier");
+  const [otherObservations] = await Promise.all([
+    otherReportObservations(summary.id),
+    recordPageUsage("package_page", available.matchesCurrentMatrix ? "current" : "earlier"),
+  ]);
   const { name, version } = summary.artifact;
   const reportPath = `/reports/${summary.id}`;
   const badgeModes = (["import", "require"] as const).filter((mode) =>
@@ -131,6 +134,25 @@ export default async function PackageEvidencePage(props: Props) {
         </ul>
         <a href="/methodology">How the tests work</a>
       </section>
+      {otherObservations.length > 0 && (
+        <section className="report-section" aria-labelledby="other-observations">
+          <h2 id="other-observations">Other observations for this version</h2>
+          <ul>
+            {otherObservations.map((observation) => (
+              <li key={observation.id}>
+                <a href={`/reports/${observation.id}`}>
+                  {observation.observedAt
+                    ? `Observed ${observedDate(observation.observedAt)}`
+                    : "Observation with no retained date"}
+                  {" · "}Matrix {observation.matrixRevision}
+                </a>
+                {" · "}
+                {labels[observation.outcome]}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {badgeModes.length > 0 && (
         <section className="report-section">
           <h2>README badge</h2>
