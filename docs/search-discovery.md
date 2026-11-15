@@ -8,6 +8,8 @@ Submit `/sitemap.xml`, an index of the editorial sitemap, sixteen report partiti
 
 Report indexing is limited to completed reports. It does not depend on a passing outcome and does not imply package safety, functional correctness or publisher endorsement. Canonical report URLs identify exact observations. Report titles and descriptions use the retained observation time when available, which helps distinguish separate executions of the same package version.
 
+The web app resolves metadata before streaming HTML so crawlers can read report canonicals in the initial head. Entry selections point to the base report. Smoke-test the raw HTML of both forms after deployment.
+
 ## Exact-version pages and compact evidence
 
 `/npm/express/5.2.1` and `/npm/@scope/name/1.0.0` are server-rendered, self-canonical version summaries. They select eligible baseline evidence using the same current-matrix preference and earlier-matrix fallback as public discovery, without a registry request. Only exact versions are accepted. No eligible evidence means a 404, not a compatibility verdict; registry selection and explicit scan requests remain at `/packages`. Reads never create work.

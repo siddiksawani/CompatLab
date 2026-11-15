@@ -4,6 +4,8 @@ export default {
   output: "standalone",
   outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
   poweredByHeader: false,
+  // Slow report metadata reads must still put the canonical in the initial HTML head.
+  htmlLimitedBots: /.*/,
   // Negotiation must see React navigation headers before choosing a representation.
   skipProxyUrlNormalize: true,
   async headers() {
