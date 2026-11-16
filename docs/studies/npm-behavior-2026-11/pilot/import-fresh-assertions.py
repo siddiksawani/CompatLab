@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import platform
+import runpy
 import shlex
 from pathlib import Path
 from uuid import uuid4
@@ -10,6 +11,8 @@ from uuid import uuid4
 import run as pilot
 
 OUTPUT = Path('test-results/import-fresh-assertions.json')
+DIAGNOSTIC = runpy.run_path(str(pilot.ROOT / 'import-fresh-diagnostic.py'))
+CHECKS = runpy.run_path(str(pilot.ROOT.parent / 'followup/assertions-verify.py'))
 SETUP = ('cp -R /workspace/. /study/; cd /study; '
          'cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; '
          'cp -R node_modules/import-fresh import-fresh-suite; ')
@@ -36,15 +39,33 @@ def main():
             'npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org',
             writable_seed=True, connected=True, deadline=120)
         assert pilot.successful(receipt['preparation'])
+        inventory = json.loads((pilot.ROOT / 'import-fresh-tests.json').read_text())
         for runtime in ('node', 'deno', 'deno298'):
             runner = [runtime] if runtime == 'node' else [runtime, 'run', '-A', '--no-config', '--no-lock', '--node-modules-dir=manual', '--cached-only']
-            for script, args in [('builtin-sync-repro.mjs', [])] + [('import-attributes-repro.mjs', [mode]) for mode in ('direct', 'hook', 'package')]:
-                label = f'{runtime} {script} {" ".join(args)}'.strip()
-                row = pilot.measure(image, volume, label, SETUP + shlex.join([*runner, '/pilot/' + script, *args]), deadline=30)
+            cases = [('builtin-sync-repro.mjs', []), ('loader-error-repro.mjs', []), ('registration-count-repro.mjs', [])]
+            cases += [('import-attributes-repro.mjs', [mode]) for mode in ('direct', 'hook', 'package')]
+            for attempt in (1, 2):
+                for script, args in cases:
+                    label = f'{runtime} {script} {" ".join(args)}'.strip() + f' / attempt {attempt}'
+                    row = pilot.measure(image, volume, label, SETUP + shlex.join([*runner, '/pilot/' + script, *args]), deadline=30)
+                    receipt['results'].append(row)
+                    CHECKS['check_reduction'](row, runtime, script, args)
+                    print(label, json.dumps(row['suiteResult']), flush=True)
+            for fail in (False, True):
+                label = f'{runtime} sync control fail={fail}'
+                row = pilot.measure(image, volume, label, SETUP + f'SKIP_PATCH=1 FAIL_CONTROL={int(fail)} ' + shlex.join([*runner, '/pilot/builtin-sync-repro.mjs']), deadline=15)
                 receipt['results'].append(row)
-                assert not any(row[key] for key in ('timedOut', 'outOfMemory', 'containerError', 'logTruncated', 'suiteResultError'))
-                assert row['suiteResult'] is not None
-                print(label, json.dumps(row['suiteResult']), flush=True)
+                CHECKS['check_control'](row, fail)
+            test_runner = ['node', '--test', '--test-reporter=tap'] if runtime == 'node' else [runtime, *DIAGNOSTIC['DENO_TEST'][1:]]
+            for filename, names in inventory.items():
+                row = pilot.measure(image, volume, f'{runtime} context-bound suite / {filename}',
+                    SETUP + 'node /pilot/import-fresh-repro.mjs bind-tests; ' + shlex.join([*test_runner, './import-fresh-suite/tests/' + filename]), deadline=60)
+                receipt['results'].append(row)
+                row['tap'] = DIAGNOSTIC['tap_report'](row, names)
+                assert row['tap']['complete']
+                expected = [inventory['test.js'][index - 1] for index in (27, 52, 53, 54)] if runtime != 'node' and filename == 'test.js' else []
+                assert row['tap']['failures'] == expected
+        CHECKS['verify_observations'](receipt)
     except Exception as error:
         receipt['infrastructureError'] = str(error)
         raise
