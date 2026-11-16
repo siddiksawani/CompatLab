@@ -133,3 +133,16 @@ It is labeled an upstream subset. The runner records tests and skips and
 flags unequal passing coverage. Lint, type tests, coverage instrumentation,
 and source rebuilding are outside all suite observations. Published package
 implementation files are retained; only tests and fixtures are added.
+
+### Resolution and cleanup audit
+
+The first expanded run exposed a measurement limitation: Bun resolves the
+bare `undici` specifier to its built-in shim. The primary named Undici case
+therefore loads the pinned npm entry file explicitly; a separate
+`bare_specifier` case retains the ordinary consumer resolution. Both cases
+record resolution and preserve request and cleanup failures independently.
+Root imports retain ordinary consumer resolution and log its target.
+Workerpool logs the dispatch, result assertion and teardown boundaries to
+locate a timeout. Additional named cases run on Bun 1.4.4 as a supplement
+to the original 1.4.2 comparison. Neither supplementary runtime nor shim
+results are silently folded into the primary matrix.

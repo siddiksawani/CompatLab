@@ -5,7 +5,8 @@ on:
     branches: [feat/npm-behavior-study-pilot]
     paths:
       - .github/workflows/npm-behavior-pilot.yml
-      - docs/studies/npm-behavior-2026-11/**
+      - docs/studies/npm-behavior-2026-11/pilot/**
+      - docs/studies/npm-behavior-2026-11/cohort.json
       - scripts/install-ci-runsc.sh
 
 permissions:

@@ -64,6 +64,8 @@ REMAINING = (
 )
 CASES += tuple((name, "named_behavior", [["/pilot/remaining.cjs", name]], None) for name in REMAINING)
 CASES += (
+    ("workerpool", "reduced_worker_channel", [["/pilot/worker-channel.cjs"]], None),
+    ("undici", "bare_specifier", [["/pilot/remaining.cjs", "undici-bare"]], None),
     ("workerpool", "upstream_suite", [["/pilot/upstream-cli.cjs", "mocha-v11", "--reporter", "json", "--exit", "./node_modules/workerpool/test/*.js"]], r'"tests":\s*(\d+)'),
     ("import-fresh", "upstream_suite", [["./node_modules/import-fresh/tests/test.js"], ["./node_modules/import-fresh/tests/skip-node-modules.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
     ("cls-hooked", "upstream_subset", [["/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
@@ -271,9 +273,11 @@ def run():
         assert lines[1] == PROFILES["bun"][0]
         assert lines[2].startswith("deno " + PROFILES["deno"][0] + " ")
         assert lines[-2:] == ["v24.21.0", "1.4.4"]
-        early_exit = measure(image, volume, "zero exit without completion", "node -e 'process.exit(0)'")
-        receipt["missingCompletionControl"] = early_exit
-        assert successful(early_exit) and early_exit["completion"] is None
+        receipt["missingCompletionControls"] = []
+        for runtime, (_, runner) in PROFILES.items():
+            early_exit = measure(image, volume, f"{runtime} zero exit with fake stdout and no completion", shlex.join(runner + ["/pilot/probe-entry.cjs", "/pilot/early-exit.cjs"]))
+            receipt["missingCompletionControls"].append(early_exit)
+            assert successful(early_exit) and early_exit["completion"] is None
         install = measure(
             image, volume, "locked npm install",
             "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
@@ -320,7 +324,7 @@ def run():
             profiles = PROFILES
             if name == "spdy":
                 profiles = {**PROFILES, "node24": ("24.21.0", ["node24"])}
-            if name == "better-sqlite3":
+            if name == "better-sqlite3" or (name in REMAINING and not tier.startswith("upstream_") and tier != "root_import"):
                 profiles = {**PROFILES, "bun144": ("1.4.4", ["bun144", "run", "--no-install"])}
             for runtime, (_, runner) in profiles.items():
                 named = not tier.startswith("upstream_")
@@ -367,6 +371,8 @@ def run():
                     row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command, deadline=deadline)
                     if named:
                         row["replay"]["completionValid"] = row["replay"]["completion"] == expected and row["replay"]["completionError"] is None
+                OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+                OUTPUT.write_text(json.dumps(receipt, indent=2) + "\n")
         for order in ("fresh", "after-helper"):
             argv = PROFILES["deno"][1] + ["./yargs-diagnostic.mjs", order]
             command = "cp -R /workspace/. /study/; cp /pilot/yargs-diagnostic.mjs /study/; cd /study; " + shlex.join(argv)

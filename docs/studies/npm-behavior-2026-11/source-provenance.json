@@ -1,0 +1,125 @@
+[
+  {
+    "package": "workerpool",
+    "version": "10.0.3",
+    "sourceCommit": "601124cf86602c1ac88c273a8f99e9c40bea0f16",
+    "files": [
+      {
+        "path": "src/debug-port-allocator.js",
+        "publishedSha256": "0945efd41ba53add079b138b77d475bd02dcd42ed1505abc2641b56963ac02dc",
+        "sourceSha256": "0945efd41ba53add079b138b77d475bd02dcd42ed1505abc2641b56963ac02dc",
+        "equal": true
+      },
+      {
+        "path": "src/environment.js",
+        "publishedSha256": "4a23d168fb70ad2c80f30086e2c6e84d6867e98871b8211085aa3a41a4c40c82",
+        "sourceSha256": "4a23d168fb70ad2c80f30086e2c6e84d6867e98871b8211085aa3a41a4c40c82",
+        "equal": true
+      },
+      {
+        "path": "src/header.js",
+        "publishedSha256": "26032a8a9fbfaba81a3b6262156c7dc17b04636f6ae1ec533f5658f472489962",
+        "sourceSha256": "26032a8a9fbfaba81a3b6262156c7dc17b04636f6ae1ec533f5658f472489962",
+        "equal": true
+      },
+      {
+        "path": "src/index.js",
+        "publishedSha256": "804c8467068ccc801541702cc0777a8a40493a8d620ccb2548290f5090a491f2",
+        "sourceSha256": "804c8467068ccc801541702cc0777a8a40493a8d620ccb2548290f5090a491f2",
+        "equal": true
+      },
+      {
+        "path": "src/Pool.js",
+        "publishedSha256": "8bf7bea6f69af3aa775e93026a6edb420b0f28dcad9f387500993a655ef456be",
+        "sourceSha256": "8bf7bea6f69af3aa775e93026a6edb420b0f28dcad9f387500993a655ef456be",
+        "equal": true
+      },
+      {
+        "path": "src/Promise.js",
+        "publishedSha256": "c1eb1ef982cf9174028b691c95366c4ccf608d52e15c60da1e42280b039e6241",
+        "sourceSha256": "c1eb1ef982cf9174028b691c95366c4ccf608d52e15c60da1e42280b039e6241",
+        "equal": true
+      },
+      {
+        "path": "src/queues.js",
+        "publishedSha256": "18565d9039e960faaf8a1597557755425bd3603f7925f5d18356e7c82a07a3e8",
+        "sourceSha256": "18565d9039e960faaf8a1597557755425bd3603f7925f5d18356e7c82a07a3e8",
+        "equal": true
+      },
+      {
+        "path": "src/requireFoolWebpack.js",
+        "publishedSha256": "59842de511acfe1676a101f70bbfe395cb842fdac39a8139ac4a24994c9ad886",
+        "sourceSha256": "59842de511acfe1676a101f70bbfe395cb842fdac39a8139ac4a24994c9ad886",
+        "equal": true
+      },
+      {
+        "path": "src/transfer.js",
+        "publishedSha256": "96df962565196abaefb72dd5db3e02f101df84783caf6d9086ada55185dec856",
+        "sourceSha256": "96df962565196abaefb72dd5db3e02f101df84783caf6d9086ada55185dec856",
+        "equal": true
+      },
+      {
+        "path": "src/types.js",
+        "publishedSha256": "76cb9f311885b6885cc0e690d1b794c3b5a94cbb5365eb6251172f604f6772da",
+        "sourceSha256": "76cb9f311885b6885cc0e690d1b794c3b5a94cbb5365eb6251172f604f6772da",
+        "equal": true
+      },
+      {
+        "path": "src/validateOptions.js",
+        "publishedSha256": "9ed9c371a862b55228b3f6ee029bc71dc591c40d5c8b92e558803592308d5bd0",
+        "sourceSha256": "9ed9c371a862b55228b3f6ee029bc71dc591c40d5c8b92e558803592308d5bd0",
+        "equal": true
+      },
+      {
+        "path": "src/worker.js",
+        "publishedSha256": "075d7001da7b7f8a4f9af33ce3b9f9fc14c096a39123c470091c22489ae64a99",
+        "sourceSha256": "075d7001da7b7f8a4f9af33ce3b9f9fc14c096a39123c470091c22489ae64a99",
+        "equal": true
+      },
+      {
+        "path": "src/WorkerHandler.js",
+        "publishedSha256": "8a28932dfee0b161d5e8be44cdaeb08fd65ad54eff26da2541d60d596f5920fc",
+        "sourceSha256": "8a28932dfee0b161d5e8be44cdaeb08fd65ad54eff26da2541d60d596f5920fc",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "package": "import-fresh",
+    "version": "4.0.1",
+    "sourceCommit": "c916096f3448daa381556374f827f7f8bac3aba6",
+    "files": [
+      {
+        "path": "index.js",
+        "publishedSha256": "d00da7ab7c7ef25422c8f191786273b8f96bb0b0b4b88b95ce6e41e4b00bfe8b",
+        "sourceSha256": "d00da7ab7c7ef25422c8f191786273b8f96bb0b0b4b88b95ce6e41e4b00bfe8b",
+        "equal": true
+      }
+    ]
+  },
+  {
+    "package": "cls-hooked",
+    "version": "4.2.2",
+    "sourceCommit": "d2b89a1a77260ff5ede511d883d0088aa4511fb5",
+    "files": [
+      {
+        "path": "index.js",
+        "publishedSha256": "60be512b9f107181ff9cbddb85cdc5c83dc2f8b5146801dfc585a486c18b0105",
+        "sourceSha256": "60be512b9f107181ff9cbddb85cdc5c83dc2f8b5146801dfc585a486c18b0105",
+        "equal": true
+      },
+      {
+        "path": "context.js",
+        "publishedSha256": "8c63bd2f7e0400bdcf7bab500bce15765f2bb50eb13a3c78cc1f280ae918dbc6",
+        "sourceSha256": "8c63bd2f7e0400bdcf7bab500bce15765f2bb50eb13a3c78cc1f280ae918dbc6",
+        "equal": true
+      },
+      {
+        "path": "context-legacy.js",
+        "publishedSha256": "d13e5ee696dfee1e7128e44c1a50bb457a24a652445512f63c7b80ada4609440",
+        "sourceSha256": "d13e5ee696dfee1e7128e44c1a50bb457a24a652445512f63c7b80ada4609440",
+        "equal": true
+      }
+    ]
+  }
+]

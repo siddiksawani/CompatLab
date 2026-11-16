@@ -31,6 +31,7 @@ const checks = {
   async workerpool() {
     const pool = load("workerpool").pool({ workerType: "thread", maxWorkers: 1 });
     try {
+      console.log("workerpool: dispatching thread task");
       const result = await pool.exec(
         function add(a, b) {
           return {
@@ -41,30 +42,56 @@ const checks = {
         [20, 22],
       );
       assert.deepEqual(result, { value: 42, runtime });
+      console.log("workerpool: task and runtime assertion passed");
     } finally {
+      console.log("workerpool: terminating pool");
       await pool.terminate();
+      console.log("workerpool: pool terminated");
     }
   },
-  async undici() {
+  async undici(specifier = "/study/node_modules/undici/index.js") {
     const { createServer } = require("node:http");
-    const { request, Agent } = load("undici");
+    const { request, Agent } = load(specifier);
+    console.log(
+      "undici resolution",
+      load.resolve(specifier),
+      "Agent.close",
+      typeof Agent.prototype.close,
+    );
     const server = createServer((req, res) => {
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ path: req.url, value: 42 }));
     });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
+    const sockets = new Set();
+    server.on("connection", (socket) => {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
+    });
     const agent = new Agent();
+    let failure;
     try {
       const result = await request(`http://127.0.0.1:${server.address().port}/probe`, {
         dispatcher: agent,
       });
       assert.equal(result.statusCode, 200);
       assert.deepEqual(await result.body.json(), { path: "/probe", value: 42 });
-    } finally {
+      console.log("undici: HTTP response assertions passed");
+    } catch (error) {
+      failure = error;
+    }
+    try {
       await agent.close();
+    } catch (error) {
+      failure = failure
+        ? new AggregateError([failure, error], "request and cleanup failed")
+        : error;
+    } finally {
+      for (const socket of sockets) socket.destroy();
       await new Promise((resolve) => server.close(resolve));
     }
+    if (failure) throw failure;
   },
   async "http2-wrapper"() {
     const { createSecureServer } = require("node:http2");
@@ -273,6 +300,7 @@ const checks = {
     );
   },
 };
+checks["undici-bare"] = () => checks.undici("undici");
 module.exports = async (name) => {
   assert.equal(typeof checks[name], "function");
   await checks[name]();
