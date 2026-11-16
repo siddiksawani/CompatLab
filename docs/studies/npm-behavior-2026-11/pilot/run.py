@@ -219,14 +219,16 @@ def run():
         if not successful(install):
             raise RuntimeError("Locked preparation failed. See the pilot artifact.")
         prerequisites = {}
-        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall"), ("better-sqlite3", "install"), ("canvas", "install")):
+        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall"), ("better-sqlite3", "build-release"), ("canvas", "install")):
             spec = shlex.quote(f"{name}@{versions[name]}")
-            prefix = "npm_config_nodedir=/usr/local npm_config_jobs=2 " if name == "better-sqlite3" else ""
+            command = f"npm rebuild --offline --no-audit --no-fund --foreground-scripts {spec}"
+            if name == "better-sqlite3":
+                command = "cd node_modules/better-sqlite3; npm run --ignore-scripts build-release -- --jobs=2 --nodedir=/usr/local"
             if name in assets:
-                prefix = f"mkdir -p node_modules/{name}/prebuilds; cp /pilot/assets/{name}/* node_modules/{name}/prebuilds/; "
+                command = f"mkdir -p node_modules/{name}/prebuilds; cp /pilot/assets/{name}/* node_modules/{name}/prebuilds/; {command}"
             result = measure(
                 image, volume, f"{name} lifecycle",
-                f"{prefix}npm rebuild --offline --no-audit --no-fund --foreground-scripts {spec}",
+                command,
                 writable_seed=True,
                 deadline=480 if name == "better-sqlite3" else 75,
             )

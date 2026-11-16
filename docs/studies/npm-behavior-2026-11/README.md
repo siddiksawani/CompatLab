@@ -49,7 +49,7 @@ actual versions, image ID, kernel, runsc version, commands, and timestamps.
 Preparation starts with a locked, script-disabled npm install from the
 public registry in a disposable gVisor container. The second preparation
 runs only the pinned bcrypt install, esbuild postinstall, better-sqlite3
-build, and canvas install hooks in network-disabled gVisor containers. The
+release build, and canvas install steps in network-disabled gVisor containers. The
 pinned Node Bookworm image supplies the compiler and headers for the SQLite
 build. The canvas prebuild is downloaded as data and checked against the
 release digest before offline preparation. Report failures during
