@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "metadataCapturedAt": "2026-11-16T05:39:37.411388+00:00",
+  "selection": "Purposeful coverage of native addons and Node-specific behavior. Versions and integrity are pinned from npm.",
+  "packages": [
+    {
+      "name": "sharp",
+      "version": "0.35.5",
+      "area": "native and lifecycle",
+      "integrity": "sha512-Ywn4OnzGukp7CDMrp08RQ50YKmuwG47brZgIVPTvBaaAfQlRlygrRqSrxdCiL9M+LlzLBiJ68IR1QqvzHyjC7g==",
+      "tarball": "https://registry.npmjs.org/sharp/-/sharp-0.35.5.tgz",
+      "repository": "git+https://github.com/lovell/sharp.git",
+      "publishedSourceCommit": "51a990faa26ade5586a4934ac9673c98d8893326"
+    },
+    {
+      "name": "better-sqlite3",
+      "version": "13.2.0",
+      "area": "native and lifecycle",
+      "integrity": "sha512-Z8Q/9x/uNyKxA1v4FNodyItRVRw1TeKBrmj32JhxhR0ceNcBY+wMobt/Bv7M7TzwPAXjnZRtNaEsATnUZSKWZQ==",
+      "tarball": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-13.2.0.tgz",
+      "repository": "git://github.com/WiseLibs/better-sqlite3.git",
+      "publishedSourceCommit": "e6f92bfec30f843d9b48f6e68dba9ab170361e7f"
+    },
+    {
+      "name": "bcrypt",
+      "version": "6.0.0",
+      "area": "native and lifecycle",
+      "integrity": "sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg==",
+      "tarball": "https://registry.npmjs.org/bcrypt/-/bcrypt-6.0.0.tgz",
+      "repository": "git+https://github.com/kelektiv/node.bcrypt.js.git",
+      "publishedSourceCommit": null
+    },
+    {
+      "name": "canvas",
+      "version": "3.2.3",
+      "area": "native and lifecycle",
+      "integrity": "sha512-PzE5nJZPz72YUAfo8oTp0u3fqqY7IzlTubneAihqDYAUcBk7ryeCmBbdJBEdaH0bptSOe2VT2Zwcb3UaFyaSWw==",
+      "tarball": "https://registry.npmjs.org/canvas/-/canvas-3.2.3.tgz",
+      "repository": "git://github.com/Automattic/node-canvas.git",
+      "publishedSourceCommit": "f91598e8c7186dbbce3733878d55aad33af29635"
+    },
+    {
+      "name": "esbuild",
+      "version": "0.28.2",
+      "area": "native and lifecycle",
+      "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==",
+      "tarball": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.2.tgz",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "publishedSourceCommit": "609683d892977362a0f99026cb74b96263d728a9"
+    },
+    {
+      "name": "piscina",
+      "version": "5.3.2",
+      "area": "workers",
+      "integrity": "sha512-vv7l/mM7B9WgrhDaudIqv1x6v4LOBRYYmpWGdWushhpbCmVHp11sUB2v4hj1CAeTGXVxuZFz6xOU1RalAiPKfQ==",
+      "tarball": "https://registry.npmjs.org/piscina/-/piscina-5.3.2.tgz",
+      "repository": "git+https://github.com/piscinajs/piscina.git",
+      "publishedSourceCommit": null
+    },
+    {
+      "name": "thread-stream",
+      "version": "4.2.1",
+      "area": "workers",
+      "integrity": "sha512-Stg6edJXC/6/xqGwSXwFokrUhChJ18amEjpKH89WrQQ0oVFDF+pUUcTpiwWhFUrE89Vf16FBOlwhaw+lescxMQ==",
+      "tarball": "https://registry.npmjs.org/thread-stream/-/thread-stream-4.2.1.tgz",
+      "repository": "git+https://github.com/mcollina/thread-stream.git",
+      "publishedSourceCommit": "aed8d4c37feef1d97d8b2f5c959c6d89e9656329"
+    },
+    {
+      "name": "workerpool",
+      "version": "10.0.3",
+      "area": "workers",
+      "integrity": "sha512-6z2Iis68Wqth93/G/wJP9u+R3O+d2XTlgWChGCwuT1qLbBsOYueGRZuJ++v3mtDP5KjYdy+WzvWC+VWETSVXJA==",
+      "tarball": "https://registry.npmjs.org/workerpool/-/workerpool-10.0.3.tgz",
+      "repository": "git://github.com/josdejong/workerpool.git",
+      "publishedSourceCommit": "601124cf86602c1ac88c273a8f99e9c40bea0f16"
+    },
+    {
+      "name": "http2-wrapper",
+      "version": "2.2.4",
+      "area": "http and http2",
+      "integrity": "sha512-y5jx4isTOKEC5Hu1lswc+IxytGlqDmwF1qJtk9qIS8l1KVxuHO5g522UfmErt1H2pMcH/xq+KiFQUB8aVWIABA==",
+      "tarball": "https://registry.npmjs.org/http2-wrapper/-/http2-wrapper-2.2.4.tgz",
+      "repository": "git+https://github.com/szmarczak/http2-wrapper.git",
+      "publishedSourceCommit": "fd5678e146a645e4e9ed41ff31f3a771c7b5d68f"
+    },
+    {
+      "name": "spdy",
+      "version": "4.0.2",
+      "area": "http and http2",
+      "integrity": "sha512-r46gZQZQV+Kl9oItvl1JZZqJKGr+oEkB08A6BzkiR7593/7IbtuncXHd2YoYeTsG4157ZssMu9KYvUHLcjcDoA==",
+      "tarball": "https://registry.npmjs.org/spdy/-/spdy-4.0.2.tgz",
+      "repository": "git://github.com/indutny/node-spdy.git",
+      "publishedSourceCommit": "661b14a8db40a76a9a4842fc12ca8908f989cfd9"
+    },
+    {
+      "name": "undici",
+      "version": "8.12.4",
+      "area": "http and http2",
+      "integrity": "sha512-8Mx+uNKKER2bA4AdtedkqRbwUCIJFr2nJckXRe5yrDqzePqwLP7VNcctN8/XdmDSbF7mS+jJKIszlL+vbam1VA==",
+      "tarball": "https://registry.npmjs.org/undici/-/undici-8.12.4.tgz",
+      "repository": "git+https://github.com/nodejs/undici.git",
+      "publishedSourceCommit": "779ee3e12cb8c1f365f6e69ee34b088159402d2f"
+    },
+    {
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "area": "module internals",
+      "integrity": "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==",
+      "tarball": "https://registry.npmjs.org/require-from-string/-/require-from-string-2.0.2.tgz",
+      "repository": "git+https://github.com/floatdrop/require-from-string.git",
+      "publishedSourceCommit": "d1575a49065eb7a49b86b4de963f04f1a14dfd60"
+    },
+    {
+      "name": "pirates",
+      "version": "4.0.7",
+      "area": "module internals",
+      "integrity": "sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==",
+      "tarball": "https://registry.npmjs.org/pirates/-/pirates-4.0.7.tgz",
+      "repository": "git+https://github.com/danez/pirates.git",
+      "publishedSourceCommit": "ecd5f6cd8491c4f0e496f98ed18fb073257a0444"
+    },
+    {
+      "name": "import-fresh",
+      "version": "4.0.1",
+      "area": "module internals",
+      "integrity": "sha512-/XFeXYgkuWgbtqPC7qPKvciXTvhtz7WMNQKQsAM1Kz+j0I5OWJDrybfiya6QtHF9oEvPkLwTHmC9+4OR/MmfIA==",
+      "tarball": "https://registry.npmjs.org/import-fresh/-/import-fresh-4.0.1.tgz",
+      "repository": "git+https://github.com/sindresorhus/import-fresh.git",
+      "publishedSourceCommit": "c916096f3448daa381556374f827f7f8bac3aba6"
+    },
+    {
+      "name": "cls-hooked",
+      "version": "4.2.2",
+      "area": "async context",
+      "integrity": "sha512-J4Xj5f5wq/4jAvcdgoGsL3G103BtWpZrMo8NEinRltN+xpTZdI+M38pyQqhuFU/P792xkMFvnKSf+Lm81U1bxw==",
+      "tarball": "https://registry.npmjs.org/cls-hooked/-/cls-hooked-4.2.2.tgz",
+      "repository": "git+https://github.com/jeff-lewis/cls-hooked.git",
+      "publishedSourceCommit": "d2b89a1a77260ff5ede511d883d0088aa4511fb5"
+    },
+    {
+      "name": "async-hook-domain",
+      "version": "4.0.1",
+      "area": "async context",
+      "integrity": "sha512-bSktexGodAjfHWIrSrrqxqWzf1hWBZBpmPNZv+TYUMyWa2eoefFc6q6H1+KtdHYSz35lrhWdmXt/XK9wNEZvww==",
+      "tarball": "https://registry.npmjs.org/async-hook-domain/-/async-hook-domain-4.0.1.tgz",
+      "repository": "git://github.com/tapjs/async-hook-domain.git",
+      "publishedSourceCommit": "b9ba43fd340b5003d3eaee6e22ed0cfb8d755130"
+    },
+    {
+      "name": "cross-spawn",
+      "version": "7.0.6",
+      "area": "subprocesses and signals",
+      "integrity": "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==",
+      "tarball": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+      "repository": "git+ssh://git@github.com/moxystudio/node-cross-spawn.git",
+      "publishedSourceCommit": "77cd97f3ca7b62c904a63a698fc4a79bf41977d0"
+    },
+    {
+      "name": "execa",
+      "version": "10.2.1",
+      "area": "subprocesses and signals",
+      "integrity": "sha512-/Bofl3ZBh2Q4/PG0W63qFzP5vDAypi8Zc90UWTBzaDNIYiX7apPOd0N6L8hG8CojUdq4V51adu8BObP+iVsSTw==",
+      "tarball": "https://registry.npmjs.org/execa/-/execa-10.2.1.tgz",
+      "repository": "git+https://github.com/sindresorhus/execa.git",
+      "publishedSourceCommit": "247faa0ff0641020e8790475989cee72df85d62b"
+    },
+    {
+      "name": "foreground-child",
+      "version": "4.0.3",
+      "area": "subprocesses and signals",
+      "integrity": "sha512-yeXZaNbCBGaT9giTpLPBdtedzjwhlJBUoL/R4BVQU5mn0TQXOHwVIl1Q2DMuBIdNno4ktA1abZ7dQFVxD6uHxw==",
+      "tarball": "https://registry.npmjs.org/foreground-child/-/foreground-child-4.0.3.tgz",
+      "repository": "git+https://github.com/tapjs/foreground-child.git",
+      "publishedSourceCommit": "de12a3009f838474c389f9ff26db0f1804fd3c01"
+    },
+    {
+      "name": "signal-exit",
+      "version": "4.1.0",
+      "area": "subprocesses and signals",
+      "integrity": "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==",
+      "tarball": "https://registry.npmjs.org/signal-exit/-/signal-exit-4.1.0.tgz",
+      "repository": "git+https://github.com/tapjs/signal-exit.git",
+      "publishedSourceCommit": "458776d9cf8be89712aa1f7b45bb2163ce15ef4a"
+    },
+    {
+      "name": "readable-stream",
+      "version": "4.8.0",
+      "area": "streams",
+      "integrity": "sha512-2jhTTU3Eilp/2DMT71gbcoqC35eQHasMJH0RHkYxwlxIv3+FR6Y5xAFZIwEGLxKkjZYEFlsiMNIdwUqjK2lLHQ==",
+      "tarball": "https://registry.npmjs.org/readable-stream/-/readable-stream-4.8.0.tgz",
+      "repository": "git+https://github.com/nodejs/readable-stream.git",
+      "publishedSourceCommit": "ffeeda66ce1c154ab43ada0f74e7110896a5d9dc"
+    },
+    {
+      "name": "pump",
+      "version": "3.0.4",
+      "area": "streams",
+      "integrity": "sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==",
+      "tarball": "https://registry.npmjs.org/pump/-/pump-3.0.4.tgz",
+      "repository": "git://github.com/mafintosh/pump.git",
+      "publishedSourceCommit": "714c0a70a8199104bf65a57582009d42f81d8d94"
+    },
+    {
+      "name": "split2",
+      "version": "4.2.0",
+      "area": "streams",
+      "integrity": "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==",
+      "tarball": "https://registry.npmjs.org/split2/-/split2-4.2.0.tgz",
+      "repository": "git+https://github.com/mcollina/split2.git",
+      "publishedSourceCommit": "919b26b59c9762b817a121f4416ccc44d82043ad"
+    },
+    {
+      "name": "end-of-stream",
+      "version": "1.4.5",
+      "area": "streams",
+      "integrity": "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==",
+      "tarball": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.4.5.tgz",
+      "repository": "git://github.com/mafintosh/end-of-stream.git",
+      "publishedSourceCommit": "cea89de8165f24e183603e63839522ec22af58df"
+    }
+  ]
+}
