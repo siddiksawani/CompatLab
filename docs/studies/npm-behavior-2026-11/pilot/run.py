@@ -30,10 +30,14 @@ CASES = {
 
 
 def cli(*args, timeout=60):
-    return subprocess.run(
-        args, timeout=timeout, check=True, stdin=subprocess.DEVNULL,
+    result = subprocess.run(
+        args, timeout=timeout, stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
-    ).stdout.strip()
+    )
+    output = result.stdout.strip()
+    if result.returncode:
+        raise RuntimeError(f"{' '.join(args[:2])} failed: {output[-4000:]}")
+    return output
 
 
 def now():
@@ -171,6 +175,9 @@ def run():
                 print(f"{name} {runtime}: {row['status']}", flush=True)
                 if row["status"] == "replay_required":
                     row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command)
+    except Exception as error:
+        receipt["infrastructureError"] = str(error)
+        raise
     finally:
         receipt["completedAt"] = now()
         OUTPUT.parent.mkdir(parents=True, exist_ok=True)
