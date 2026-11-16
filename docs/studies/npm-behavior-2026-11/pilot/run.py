@@ -26,15 +26,17 @@ CASES = (
     ("split2", "upstream_suite", [["./node_modules/split2/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
     ("bcrypt", "named_behavior", [["/pilot/bcrypt.cjs"]], None),
     ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
+    ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
+    ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
     (
         "bcrypt", "upstream_suite", [[
             "/pilot/upstream-cli.cjs", "jest", "--runInBand", "--json", "--config",
-            '{"rootDir":"/study/node_modules/bcrypt","testPathIgnorePatterns":[]}',
+            '{"rootDir":"/study/bcrypt-suite"}',
         ]], r'"numTotalTests":\s*(\d+)',
     ),
     (
         "spdy", "upstream_suite", [[
-            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json",
+            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
             "./node_modules/spdy/test/client-test.js", "./node_modules/spdy/test/server-test.js",
         ]], r'"tests":\s*(\d+)',
     ),
@@ -152,13 +154,14 @@ def run():
         "diagnostics": [],
     }
     try:
-        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version")
+        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; node24 --version")
         receipt["runtimeVersions"] = pins
         assert successful(pins)
         lines = pins["stdoutAndStderr"].splitlines()
         assert lines[0] == "v" + PROFILES["node"][0]
         assert lines[1] == PROFILES["bun"][0]
         assert lines[2].startswith("deno " + PROFILES["deno"][0] + " ")
+        assert lines[-1] == "v24.21.0"
         install = measure(
             image, volume, "locked npm install",
             "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
@@ -183,9 +186,13 @@ def run():
                 receipt["results"].append({"package": name, "tier": tier, "status": "preparation_failed"})
                 continue
             baseline_count = None
-            for runtime, (_, runner) in PROFILES.items():
+            setup = "cp -R /workspace/. /study/; cd /study; "
+            if name == "bcrypt" and tier == "upstream_suite":
+                setup += "cp -R node_modules/bcrypt bcrypt-suite; "
+            profiles = PROFILES if name != "spdy" else {**PROFILES, "node24": ("24.21.0", ["node24"])}
+            for runtime, (_, runner) in profiles.items():
                 commands = [shlex.join(runner + argv) for argv in arguments]
-                command = "cp -R /workspace/. /study/; cd /study; " + "; ".join(commands)
+                command = setup + "; ".join(commands)
                 row = measure(image, volume, f"{name} / {runtime}", command)
                 row.update(package=name, tier=tier, runtime=runtime, status="pass" if successful(row) else "replay_required")
                 if count_pattern:

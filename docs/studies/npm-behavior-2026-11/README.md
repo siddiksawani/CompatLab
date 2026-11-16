@@ -18,7 +18,10 @@ artifacts. Run both scripts listed by Pump's test command. For Split2, run
 the same TAP assertions as its unit command and record assertion counts,
 with lint and coverage instrumentation outside the observation. Run a
 bcrypt hash and verify case and an esbuild transform as separately labeled
-behavior smoke tests. Run the bcrypt Jest suite in-band and the SPDY client
+behavior smoke tests. Add a Sharp resize check through its shipped native
+binary and a ThreadStream check that reads back a file written by its worker.
+Run the bcrypt Jest suite in-band from a copy of the published package
+outside `node_modules`, where Jest discovers its tests. Run the SPDY client
 and server suites with their pinned Mocha runner. Keep the npm tarball,
 digest, and dev-tool lock.
 Later cohorts may use an upstream source checkout for tests missing from
@@ -35,7 +38,8 @@ tree. It stays outside the behavior cohort.
 
 Use identical published package bytes and a shared Node-prepared dependency
 tree on the three pinned Linux amd64 profiles. The pilot uses Node.js
-26.10.0, Bun 1.4.2 and Deno 2.9.7. Record pinned runtime image references,
+26.10.0, Bun 1.4.2 and Deno 2.9.7. SPDY also runs on Node.js 24.21.0 to
+check whether the Node.js baseline is version-dependent. Record pinned runtime image references,
 actual versions, image ID, kernel, runsc version, commands, and timestamps.
 Preparation starts with a locked, script-disabled npm install from the
 public registry in a disposable gVisor container. The second preparation
