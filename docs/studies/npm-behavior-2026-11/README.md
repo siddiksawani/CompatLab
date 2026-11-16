@@ -118,3 +118,18 @@ the shared consumer tree, so results are rerun for the earlier 11 versions.
 The full run has a 2 GiB memory cap and 768 MiB private workspace tmpfs.
 The checked-in localhost TLS key is a public test fixture used only inside
 network-disabled containers. It has no production use or trust authority.
+
+The completed study also runs a separate root import for all 24 versions
+in fresh containers. Named cases use the same completion rule, and the
+cohort remains fixed even when its Node baseline fails.
+
+Additional source suites are pinned at the frozen npm metadata commits.
+Workerpool runs its seven top-level JavaScript test files with Mocha
+11.7.6. Import-fresh runs both JavaScript unit files as separate processes
+and requires both test summaries for a pass. CLS-hooked runs eight of its
+nine Mocha files; the HTTP-agent file requires public Google access and is
+excluded before execution, along with its separately configured TAP suite.
+It is labeled an upstream subset. The runner records tests and skips and
+flags unequal passing coverage. Lint, type tests, coverage instrumentation,
+and source rebuilding are outside all suite observations. Published package
+implementation files are retained; only tests and fixtures are added.

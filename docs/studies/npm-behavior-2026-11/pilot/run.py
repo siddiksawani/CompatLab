@@ -63,6 +63,19 @@ REMAINING = (
     "signal-exit", "readable-stream",
 )
 CASES += tuple((name, "named_behavior", [["/pilot/remaining.cjs", name]], None) for name in REMAINING)
+CASES += (
+    ("workerpool", "upstream_suite", [["/pilot/upstream-cli.cjs", "mocha-v11", "--reporter", "json", "--exit", "./node_modules/workerpool/test/*.js"]], r'"tests":\s*(\d+)'),
+    ("import-fresh", "upstream_suite", [["./node_modules/import-fresh/tests/test.js"], ["./node_modules/import-fresh/tests/skip-node-modules.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
+    ("cls-hooked", "upstream_subset", [["/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
+        *[f"./node_modules/cls-hooked/test/{file}" for file in (
+            "async-context.test.js", "async-no-run-queue-multiple.test.js", "http-events.test.js",
+            "namespaces-multiple-values.test.js", "namespaces.test.js", "net-events.test.js",
+            "net-events2.test.js", "promise-context-convention.spec.js")]]], r'"tests":\s*(\d+)'),
+)
+CASES = tuple(
+    (row["name"], "root_import", [["/pilot/root-import.cjs", row["name"]]], None)
+    for row in json.loads((ROOT.parent / "cohort.json").read_text())["packages"]
+) + CASES
 STUDY_CONTROL = {
     "version": "18.2.0",
     "integrity": "sha512-9OpKOLeaoNFecEp7P6iYbzze/5CqWoH7N3SMs/6y1XF4nMvFMspEGZzJ6uFi9MmQwXhyzqYoSEKO3tvA3Z/o2w==",
@@ -202,7 +215,7 @@ def measure(image, volume, label, command, writable_seed=False, connected=False,
             "timedOut": timed_out,
             "outOfMemory": state["OOMKilled"],
             "containerError": state["Error"],
-            "stdoutAndStderr": log[-65000:],
+            "stdoutAndStderr": log if len(log) <= 65000 else log[:32000] + "\n[bounded log truncated]\n" + log[-32000:],
         }
     finally:
         cli("docker", "rm", "-f", cid)
@@ -291,6 +304,7 @@ def run():
                 receipt["results"].append({"package": name, "tier": tier, "status": "preparation_failed"})
                 continue
             baseline_count = None
+            baseline_skipped = None
             setup = "cp -R /workspace/. /study/; cd /study; "
             if name in sources:
                 setup += f"cp -R /pilot/source/{name}/. node_modules/{name}/; "
@@ -309,11 +323,12 @@ def run():
             if name == "better-sqlite3":
                 profiles = {**PROFILES, "bun144": ("1.4.4", ["bun144", "run", "--no-install"])}
             for runtime, (_, runner) in profiles.items():
-                named = tier != "upstream_suite"
+                named = not tier.startswith("upstream_")
                 executed_arguments = [["/pilot/probe-entry.cjs", *argv] if named else argv for argv in arguments]
                 commands = [shlex.join(runner + argv) for argv in executed_arguments]
                 command = setup + "; ".join(commands)
-                row = measure(image, volume, f"{name} / {runtime}", command)
+                deadline = 180 if tier.startswith("upstream_") and name in ("workerpool", "import-fresh", "cls-hooked") else 75
+                row = measure(image, volume, f"{name} / {runtime}", command, deadline=deadline)
                 row.update(package=name, tier=tier, runtime=runtime, status="pass" if successful(row) else "replay_required")
                 row["version"] = versions[name]
                 row["runtimeVersion"] = profiles[runtime][0]
@@ -323,19 +338,33 @@ def run():
                     row["completionValid"] = row["completion"] == expected and row["completionError"] is None
                     if not row["completionValid"]:
                         row["status"] = "replay_required"
+                if name == "pump" and tier == "upstream_suite":
+                    row["suiteCommandsReported"] = sum(marker in row["stdoutAndStderr"] for marker in ("test-browser.js passes", "test-node.js passes"))
+                    if row["suiteCommandsReported"] != 2:
+                        row["status"] = "replay_required"
                 if count_pattern:
-                    assertion_count = re.search(count_pattern, row["stdoutAndStderr"])
-                    row["testCount"] = int(assertion_count[1]) if assertion_count else None
-                    if not row["testCount"]:
+                    assertion_counts = re.findall(count_pattern, row["stdoutAndStderr"])
+                    row["testCount"] = sum(map(int, assertion_counts)) if assertion_counts else None
+                    row["suiteCommandsReported"] = len(assertion_counts)
+                    log = row["stdoutAndStderr"]
+                    if name == "bcrypt":
+                        skipped = re.search(r'"numPendingTests":\s*(\d+)', log)
+                    elif name in ("workerpool", "require-from-string", "spdy", "cls-hooked"):
+                        skipped = re.search(r'"pending":\s*(\d+)', log)
+                    else:
+                        skipped = re.search(r"(?m)^# (?:skip|skipped)\s+(\d+)\s*$", log)
+                    row["skippedCount"] = int(skipped[1]) if skipped else 0
+                    if not row["testCount"] or len(assertion_counts) != len(arguments):
                         row["status"] = "replay_required"
                     elif runtime == "node" and row["status"] == "pass":
                         baseline_count = row["testCount"]
-                    elif baseline_count and row["status"] == "pass" and row["testCount"] != baseline_count:
+                        baseline_skipped = row["skippedCount"]
+                    elif baseline_count and row["status"] == "pass" and (row["testCount"], row["skippedCount"]) != (baseline_count, baseline_skipped):
                         row["status"] = "coverage_mismatch"
                 receipt["results"].append(row)
                 print(f"{name} {tier} {runtime}: {row['status']}", flush=True)
                 if row["status"] != "pass":
-                    row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command)
+                    row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command, deadline=deadline)
                     if named:
                         row["replay"]["completionValid"] = row["replay"]["completion"] == expected and row["replay"]["completionError"] is None
         for order in ("fresh", "after-helper"):
