@@ -69,6 +69,11 @@ a suite. Deno uses full permissions inside this OS sandbox and offline
 dependency resolution. Bun's automatic package installation stays off.
 This research runs separately from hosted reports and public scanning.
 
+The pilot image runs commands with `/bin/sh -ec`, so a failed script stops
+a multi-script suite and its exit code reaches the receipt. Before running
+the suites, the pilot verifies this in a sandbox with an intentionally
+failing first command and a second command that would otherwise pass.
+
 ## Interpretation
 
 | Tier | What counts |

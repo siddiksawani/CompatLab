@@ -204,6 +204,13 @@ def run():
         "diagnostics": [],
     }
     try:
+        fail_fast = measure(
+            image, volume, "suite shell failure propagation",
+            "sh -c 'exit 23'; echo later-suite-command-ran",
+        )
+        receipt["shellFailFast"] = fail_fast
+        if fail_fast["exitCode"] != 23 or "later-suite-command-ran" in fail_fast["stdoutAndStderr"]:
+            raise RuntimeError("The pilot shell must stop a suite at its first failed command.")
         pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; gcc -dumpfullversion; node24 --version; bun144 --version")
         receipt["runtimeVersions"] = pins
         assert successful(pins)
