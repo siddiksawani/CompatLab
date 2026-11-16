@@ -30,10 +30,13 @@ const columnNames = ["Root import", "Root require", "Subpath imports", "Subpath 
 export function RuntimeMatrix({
   report,
   reportId,
+  rootOnly = false,
 }: {
   report: Pick<ReportPreview, "matrix" | "cells">;
   reportId?: string;
+  rootOnly?: boolean;
 }) {
+  const shownGroups = rootOnly ? groups.slice(0, 2) : groups;
   return (
     <>
       <div className="desktop-matrix">
@@ -42,9 +45,9 @@ export function RuntimeMatrix({
           <thead>
             <tr>
               <th scope="col">Runtime</th>
-              {columnNames.map((label) => (
-                <th scope="col" key={label}>
-                  {label}
+              {shownGroups.map(([group, mode], index) => (
+                <th scope="col" key={`${group}-${mode}`}>
+                  {columnNames[index]}
                 </th>
               ))}
             </tr>
@@ -58,7 +61,7 @@ export function RuntimeMatrix({
                   </strong>
                   <span className="runtime-version mono">{image.version}</span>
                 </th>
-                {groups.map(([group, mode]) => (
+                {shownGroups.map(([group, mode]) => (
                   <td key={`${group}-${mode}`}>
                     <Result
                       reportId={reportId}
@@ -83,7 +86,7 @@ export function RuntimeMatrix({
               {image.kind === "node" ? "Node.js" : image.kind === "bun" ? "Bun" : "Deno"}{" "}
               <span className="runtime-version mono">{image.version}</span>
             </h3>
-            {groups.map(([group, mode], index) => (
+            {shownGroups.map(([group, mode], index) => (
               <div className="row" key={`${group}-${mode}`}>
                 <span>{columnNames[index]}</span>
                 <Result
