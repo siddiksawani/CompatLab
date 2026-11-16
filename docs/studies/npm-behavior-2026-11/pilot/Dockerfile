@@ -8,9 +8,9 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=bun_current /usr/local/bin/bun /usr/local/bin/bun144
 COPY --from=deno /usr/bin/deno /usr/local/bin/deno
 COPY --from=node24 /usr/local/bin/node /usr/local/bin/node24
-RUN mkdir /workspace /study && chown 65534:65534 /workspace
+RUN mkdir /workspace /study /results && chown 65534:65534 /workspace /results
 COPY --chown=65534:65534 package.json package-lock.json /workspace/
-COPY *.cjs yargs-diagnostic.mjs /pilot/
+COPY *.cjs *.pem yargs-diagnostic.mjs /pilot/
 COPY source-suites/ /pilot/source/
 COPY release-assets/ /pilot/assets/
 

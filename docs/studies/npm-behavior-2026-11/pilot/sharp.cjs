@@ -12,10 +12,4 @@ async function check() {
   assert.deepEqual(data, Buffer.from([255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0]));
 }
 
-process.exitCode = 1;
-check().then(
-  () => {
-    process.exitCode = 0;
-  },
-  (error) => console.error(error),
-);
+module.exports = check;

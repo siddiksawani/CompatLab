@@ -1,4 +1,6 @@
 import hashlib
+import io
+import tarfile
 import json
 import os
 import platform
@@ -55,6 +57,12 @@ CASES = (
         ]], r'"tests":\s*(\d+)',
     ),
 )
+REMAINING = (
+    "piscina", "workerpool", "http2-wrapper", "undici", "pirates", "import-fresh",
+    "cls-hooked", "async-hook-domain", "cross-spawn", "execa", "foreground-child",
+    "signal-exit", "readable-stream",
+)
+CASES += tuple((name, "named_behavior", [["/pilot/remaining.cjs", name]], None) for name in REMAINING)
 STUDY_CONTROL = {
     "version": "18.2.0",
     "integrity": "sha512-9OpKOLeaoNFecEp7P6iYbzze/5CqWoH7N3SMs/6y1XF4nMvFMspEGZzJ6uFi9MmQwXhyzqYoSEKO3tvA3Z/o2w==",
@@ -134,14 +142,15 @@ def measure(image, volume, label, command, writable_seed=False, connected=False,
     mount = f"type=volume,src={volume},dst=/workspace"
     if not writable_seed:
         mount += ",readonly"
+    output_volume = cli("docker", "volume", "create", f"compatlab-evidence-{uuid4().hex}")
     cid = cli(
         "docker", "create", "--runtime=runsc", "--network", network, "--read-only",
         "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges:true",
-        "--pids-limit=128", "--cpus=2", "--memory=1536m",
+        "--pids-limit=128", "--cpus=2", "--memory=2g",
         "--log-driver=local", "--log-opt=max-size=1m", "--log-opt=max-file=2",
         "--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=256m,mode=1777",
-        "--tmpfs=/study:rw,exec,nosuid,nodev,size=384m,mode=1777",
-        "--mount", mount, image, command,
+        "--tmpfs=/study:rw,exec,nosuid,nodev,size=768m,mode=1777",
+        "--mount", mount, "--mount", f"type=volume,src={output_volume},dst=/results", image, command,
     )
     try:
         actual = cli("docker", "inspect", "--format", "{{.HostConfig.Runtime}} {{.HostConfig.NetworkMode}}", cid)
@@ -157,7 +166,33 @@ def measure(image, volume, label, command, writable_seed=False, connected=False,
             exit_code = int(cli("docker", "wait", cid))
         log = cli("docker", "logs", cid)
         state = json.loads(cli("docker", "inspect", "--format", "{{json .State}}", cid))
+        completion = None
+        evidence_error = None
+        process = subprocess.Popen(
+            ["docker", "cp", f"{cid}:/results/completion.json", "-"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        )
+        try:
+            data = process.stdout.read(65537)
+            if len(data) > 65536:
+                evidence_error = "Completion archive exceeds 64 KiB"
+                process.kill()
+            elif process.wait(timeout=20) == 0:
+                with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+                    entries = archive.getmembers()
+                    if len(entries) != 1 or not entries[0].isfile() or entries[0].size > 4096:
+                        raise ValueError("Invalid completion archive")
+                    completion = json.load(archive.extractfile(entries[0]))
+        except (ValueError, tarfile.TarError, subprocess.TimeoutExpired) as error:
+            evidence_error = str(error)
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=20)
         return {
+            "completion": completion,
+            "completionError": evidence_error,
+            "logTruncated": len(log) > 65000,
             "label": label,
             "command": command,
             "network": network,
@@ -171,6 +206,7 @@ def measure(image, volume, label, command, writable_seed=False, connected=False,
         }
     finally:
         cli("docker", "rm", "-f", cid)
+        cli("docker", "volume", "rm", output_volume)
 
 
 def successful(row):
@@ -189,12 +225,15 @@ def run():
     assert re.fullmatch(r"sha256:[a-f0-9]{64}", image), image
     volume = cli("docker", "volume", "create", f"compatlab-behavior-{uuid4().hex}")
     receipt = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "startedAt": now(),
         "sourceCommit": os.environ["GITHUB_SHA"],
         "kernel": platform.release(),
         "runtime": cli("runsc", "--version"),
         "image": image,
+        "runUrl": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+        "platform": "Linux amd64 / Debian Bookworm / glibc",
+        "limits": {"cpu": 2, "memoryMiB": 2048, "pids": 128, "studyTmpfsMiB": 768, "defaultDeadlineSeconds": 75},
         "lockSha256": hashlib.sha256((ROOT / "package-lock.json").read_bytes()).hexdigest(),
         "versions": versions,
         "upstreamSuiteSources": sources,
@@ -219,6 +258,9 @@ def run():
         assert lines[1] == PROFILES["bun"][0]
         assert lines[2].startswith("deno " + PROFILES["deno"][0] + " ")
         assert lines[-2:] == ["v24.21.0", "1.4.4"]
+        early_exit = measure(image, volume, "zero exit without completion", "node -e 'process.exit(0)'")
+        receipt["missingCompletionControl"] = early_exit
+        assert successful(early_exit) and early_exit["completion"] is None
         install = measure(
             image, volume, "locked npm install",
             "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
@@ -267,10 +309,20 @@ def run():
             if name == "better-sqlite3":
                 profiles = {**PROFILES, "bun144": ("1.4.4", ["bun144", "run", "--no-install"])}
             for runtime, (_, runner) in profiles.items():
-                commands = [shlex.join(runner + argv) for argv in arguments]
+                named = tier != "upstream_suite"
+                executed_arguments = [["/pilot/probe-entry.cjs", *argv] if named else argv for argv in arguments]
+                commands = [shlex.join(runner + argv) for argv in executed_arguments]
                 command = setup + "; ".join(commands)
                 row = measure(image, volume, f"{name} / {runtime}", command)
                 row.update(package=name, tier=tier, runtime=runtime, status="pass" if successful(row) else "replay_required")
+                row["version"] = versions[name]
+                row["runtimeVersion"] = profiles[runtime][0]
+                row["completionRequired"] = named
+                if named:
+                    expected = {"schemaVersion": 1, "file": arguments[0][0], "args": arguments[0][1:], "completed": True}
+                    row["completionValid"] = row["completion"] == expected and row["completionError"] is None
+                    if not row["completionValid"]:
+                        row["status"] = "replay_required"
                 if count_pattern:
                     assertion_count = re.search(count_pattern, row["stdoutAndStderr"])
                     row["testCount"] = int(assertion_count[1]) if assertion_count else None
@@ -284,6 +336,8 @@ def run():
                 print(f"{name} {tier} {runtime}: {row['status']}", flush=True)
                 if row["status"] != "pass":
                     row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command)
+                    if named:
+                        row["replay"]["completionValid"] = row["replay"]["completion"] == expected and row["replay"]["completionError"] is None
         for order in ("fresh", "after-helper"):
             argv = PROFILES["deno"][1] + ["./yargs-diagnostic.mjs", order]
             command = "cp -R /workspace/. /study/; cp /pilot/yargs-diagnostic.mjs /study/; cd /study; " + shlex.join(argv)

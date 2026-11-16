@@ -13,10 +13,4 @@ async function check() {
   assert.equal(await readFile(path, "utf8"), "CompatLab worker output\n");
 }
 
-process.exitCode = 1;
-check().then(
-  () => {
-    process.exitCode = 0;
-  },
-  (error) => console.error(error),
-);
+module.exports = check;

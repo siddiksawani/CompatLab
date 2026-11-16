@@ -13,7 +13,7 @@ Node APIs. Keep all 24 rows when publishing results, including unavailable
 tests and installation prerequisites. Record how many versions are evaluable
 in every reported tier. Registry-wide compatibility is outside this sample.
 
-The pilot uses upstream JavaScript suites packaged with the exact npm
+The pilot and full-cohort run use upstream JavaScript suites packaged with the exact npm
 artifacts. Run both scripts listed by Pump's test command. For Split2, run
 the same TAP assertions as its unit command and record assertion counts,
 with lint and coverage instrumentation outside the observation. Run a
@@ -91,3 +91,30 @@ non-pass in a fresh container. Reduce actionable differences to a small
 standalone reproduction, check for an existing report, and file upstream
 after the cause reproduces. Publish commands and raw evidence with the
 study, alongside the denominator, provenance, and coverage limits.
+
+## Full-cohort extension
+
+All 24 frozen versions receive an attempted upstream suite or a named
+behavior probe. The 13 additional probes cover Piscina worker arithmetic,
+Workerpool thread arithmetic, HTTP2-wrapper local TLS HTTP/2, Undici local
+HTTP, Pirates require-hook installation and removal, Import-fresh cache
+reset, CLS-hooked concurrent context isolation, Async-hook-domain timer
+error capture, Cross-spawn synchronous and asynchronous children, Execa
+success and nonzero exits, Foreground-child exit callbacks, Signal-exit
+callbacks, and Readable-stream backpressure and error propagation.
+These are bounded cases, not complete upstream suite coverage.
+
+Named probes must exit zero and produce the expected completion file after
+their assertions finish. The supervisor reads this file from a disposable
+output volume; stdout is retained only as evidence. An early zero exit
+without this file is not a pass. Asynchronous probes default to a nonzero
+exit until their awaited work completes. Child-process and worker probes
+check the runtime identity returned from their children. Deno subprocesses
+receive the same permission and offline flags as their parent. Runtime
+options spawned internally by a package remain part of the observation.
+
+The expanded lock remains exact. It adds the remaining frozen packages to
+the shared consumer tree, so results are rerun for the earlier 11 versions.
+The full run has a 2 GiB memory cap and 768 MiB private workspace tmpfs.
+The checked-in localhost TLS key is a public test fixture used only inside
+network-disabled containers. It has no production use or trust authority.
