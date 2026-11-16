@@ -129,7 +129,11 @@ test("MCP guide is discoverable and explains evidence without starting scans", a
       .locator("time"),
   ).toHaveText("October 5, 2026");
   await page.goto("/");
-  await expect(page.locator(`.article-callout a[href="${mcpArticlePath}"]`)).toBeVisible();
+  const heroLink = page
+    .locator(".hero")
+    .getByRole("link", { name: "Connect an AI agent with MCP" });
+  await expect(heroLink).toBeVisible();
+  await expect(heroLink).toHaveAttribute("href", mcpArticlePath);
   expect(await (await fixture(request, "counts")).json()).toEqual(before);
 });
 
