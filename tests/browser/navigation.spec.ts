@@ -48,33 +48,42 @@ test("homepage previews link to stored evidence without creating scan work", asy
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("No completed reports yet", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Browse the test results" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Example reports" })).toHaveCount(0);
   await requestScan(page, "compatlab-browser-fixture");
   await finish(page, request, "execute-mixed");
+  await page.goto("/");
+  await expect(page.locator(".report-preview")).toHaveCount(0);
+  await expect(page.locator(".recent-report-list .result")).toHaveText("Mixed results");
+  await requestScan(page, "@compatlab/browser-fixture");
+  await finish(page, request);
   const reportUrl = page.url();
   const counts: unknown = await (await fixture(request, "counts")).json();
   for (const width of [375, 390, 1280, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.locator(".report-preview")).toContainText("compatlab-browser-fixture");
+    await expect(page.locator(".report-preview")).toContainText("@compatlab/browser-fixture");
     await expect(page.locator(".report-preview")).toContainText("Linux amd64 / glibc");
-    await expect(page.locator(".report-preview")).toContainText("Planned checks completed");
     await expect(page.getByRole("searchbox")).toHaveAttribute(
       "placeholder",
       "e.g. zod or zod@4.6.7",
     );
-    await expect(page.locator(".recent-report-list .result")).toHaveText("Mixed results");
+    await expect(page.locator(".recent-report-list .result")).toHaveText([
+      "Passed",
+      "Mixed results",
+    ]);
     const versionSize = await page
       .locator(".recent-report-meta .mono")
+      .first()
       .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     expect(versionSize).toBeGreaterThanOrEqual(15);
     const activeMatrix = page.locator(
       width < 900 ? ".report-preview .mobile-matrix" : ".report-preview .desktop-matrix",
     );
     await expect(activeMatrix).toBeVisible();
-    await expect(activeMatrix).toContainText("1 passed · 1 failed");
-    await expect(activeMatrix).not.toContainText("observed");
+    await expect(activeMatrix).toContainText("Root import");
+    await expect(activeMatrix).toContainText("Root require");
+    await expect(activeMatrix).not.toContainText("Subpath");
     if (width === 375) {
       const search = await page.locator(".hero-search").boundingBox();
       const preview = await page.locator(".report-preview").boundingBox();
@@ -90,7 +99,10 @@ test("homepage previews link to stored evidence without creating scan work", asy
     }
   }
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole("region", { name: "Example reports" }).getByRole("link").click();
+  await page
+    .locator(".report-preview")
+    .getByRole("link", { name: /Open full report/ })
+    .click();
   await expect(page).toHaveURL(reportUrl);
   expect(await (await fixture(request, "counts")).json()).toEqual(counts);
   await fixture(request, "invalidate");
