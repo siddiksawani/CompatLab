@@ -28,19 +28,23 @@ def main():
                'runUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
                'image': image, 'runsc': pilot.cli('runsc', '--version'), 'results': []}
     try:
-        receipt['versions'] = pilot.measure(image, volume, 'versions', 'node --version; deno --version')
+        receipt['versions'] = pilot.measure(image, volume, 'versions', 'node --version; deno --version; deno298 --version')
         receipt['preparation'] = pilot.measure(image, volume, 'locked install',
             'npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org',
             writable_seed=True, connected=True, deadline=120)
         assert pilot.successful(receipt['preparation'])
         cases = [
-            ('node full suite', ['node', '--test', '--test-reporter=tap', './import-fresh-suite/tests/test.js', './import-fresh-suite/tests/skip-node-modules.js'], 180),
-            ('deno full suite', DENO_TEST + ['./import-fresh-suite/tests/test.js', './import-fresh-suite/tests/skip-node-modules.js'], 180),
-            ('deno isolated TLA case', DENO_TEST + ['--filter=top-level await can use importFresh without deadlock', './import-fresh-suite/tests/test.js'], 30),
+            ('deno298 full suite', ['deno298', *DENO_TEST[1:], './import-fresh-suite/tests/test.js', './import-fresh-suite/tests/skip-node-modules.js'], 180),
         ]
-        for runtime, runner in [('node', ['node']), ('deno', DENO)]:
+        for runtime, runner in [('node', ['node']), ('deno', DENO), ('deno298', ['deno298', *DENO[1:]])]:
             cases += [(runtime + ' ' + mode, runner + ['/pilot/import-fresh-repro.mjs', mode], 25)
-                      for mode in ('als', 'hook', 'nested')]
+                      for mode in ('nested', 'sequence')]
+        for runtime in ('node', 'deno', 'deno298'):
+            runner = ['node', '--test', '--test-reporter=tap'] if runtime == 'node' else [runtime, *DENO_TEST[1:]]
+            command = SETUP + 'node /pilot/import-fresh-repro.mjs trace-source; ' + shlex.join(runner + ['./import-fresh-suite/tests/test.js'])
+            row = pilot.measure(image, volume, runtime + ' traced suite (instrumented package)', command, deadline=45)
+            receipt['results'].append(row)
+            print(f"{row['label']}: exit={row['exitCode']} timeout={row['timedOut']}", flush=True)
         for label, argv, deadline in cases:
             row = pilot.measure(image, volume, label, SETUP + shlex.join(argv), deadline=deadline)
             receipt['results'].append(row)
