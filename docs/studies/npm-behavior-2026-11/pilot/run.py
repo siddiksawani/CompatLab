@@ -32,6 +32,7 @@ CASES = (
     ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
     ("better-sqlite3", "named_behavior", [["/pilot/better-sqlite3.cjs"]], None),
     ("better-sqlite3", "shipped_prebuild", [["/pilot/better-sqlite3.cjs"]], None),
+    ("better-sqlite3", "renamed_compiled_binding", [["/pilot/better-sqlite3.cjs", "--renamed-binding"]], None),
     ("canvas", "named_behavior", [["/pilot/canvas.cjs"]], None),
     ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
     ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
@@ -250,6 +251,9 @@ def run():
                 setup += "cp -R node_modules/bcrypt bcrypt-suite; "
             if tier == "shipped_prebuild":
                 setup += "rm -rf node_modules/better-sqlite3/build; test -f node_modules/better-sqlite3/prebuilds/linux-x64.node; "
+            if tier == "renamed_compiled_binding":
+                binding = "node_modules/better-sqlite3/build/Release"
+                setup += f"cp {binding}/better_sqlite3.node {binding}/sqlite-napi.node; cmp {binding}/better_sqlite3.node {binding}/sqlite-napi.node; "
             profiles = PROFILES
             if name == "spdy":
                 profiles = {**PROFILES, "node24": ("24.21.0", ["node24"])}

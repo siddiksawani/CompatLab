@@ -3,7 +3,10 @@ const Database = require("/study/node_modules/better-sqlite3");
 assert.equal(typeof Database, "function");
 console.log("The package root returned the Database constructor.");
 
-const database = new Database(":memory:");
+const nativeBinding = process.argv.includes("--renamed-binding")
+  ? { nativeBinding: "/study/node_modules/better-sqlite3/build/Release/sqlite-napi.node" }
+  : undefined;
+const database = new Database(":memory:", nativeBinding);
 try {
   database.exec("CREATE TABLE entries (score INTEGER)");
   database.prepare("INSERT INTO entries VALUES (?)").run(42);

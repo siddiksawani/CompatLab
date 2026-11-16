@@ -23,7 +23,9 @@ binary and a ThreadStream check that reads back a file written by its worker.
 Build better-sqlite3 against the pinned Node headers and try an in-memory
 insert and select through that same binary on each profile.
 Repeat with the npm tarball's bundled Linux prebuild as a control. Also
-run both variants on Bun 1.4.4 to check the later runtime release.
+load an identical copy of the rebuilt binary under a different filename
+through the package's `nativeBinding` option. Repeat the three modes on Bun
+1.4.4 to check the later runtime release.
 Give canvas its pinned Linux release prebuild and check image pixel output.
 Run the bcrypt Jest suite in-band from a copy of the published package
 outside `node_modules`, where Jest discovers its tests. Run the SPDY client
