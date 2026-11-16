@@ -39,26 +39,22 @@ def main():
             'npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org',
             writable_seed=True, connected=True, deadline=120)
         assert pilot.successful(receipt['preparation'])
-        cases = []
         for runtime in ('node', 'deno', 'deno298'):
             runner = ['node', '--test', '--test-reporter=tap'] if runtime == 'node' else [runtime, *DENO_TEST[1:]]
             for mode in ('plain', 'hook', 'package'):
-                setup = SETUP + 'cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; '
-                # Node's test runner consumes following arguments as files; configure via env instead.
-                command = setup + f'REPRO_MODE={mode} ' + shlex.join(runner + ['/study/repro.test.mjs'])
-                row = pilot.measure(image, volume, runtime + ' two tests ' + mode, command, deadline=25)
+                for bound in (False, True):
+                    setup = SETUP + 'cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; '
+                    command = setup + f'REPRO_MODE={mode} BIND_CONTEXT={int(bound)} ' + shlex.join(runner + ['/study/repro.test.mjs'])
+                    row = pilot.measure(image, volume, f'{runtime} two tests {mode} bound={bound}', command, deadline=15)
+                    receipt['results'].append(row)
+                    print(f"{row['label']}: exit={row['exitCode']} timeout={row['timedOut']}", flush=True)
+            for name in ('test.js', 'skip-node-modules.js'):
+                command = SETUP + 'node /pilot/import-fresh-repro.mjs bind-tests; ' + shlex.join(runner + ['./import-fresh-suite/tests/' + name])
+                row = pilot.measure(image, volume, f'{runtime} bound test callbacks / {name}', command, deadline=60)
                 receipt['results'].append(row)
                 print(f"{row['label']}: exit={row['exitCode']} timeout={row['timedOut']}", flush=True)
-            command = SETUP + 'node /pilot/import-fresh-repro.mjs trace-source; ' + shlex.join(runner + ['./import-fresh-suite/tests/test.js'])
-            row = pilot.measure(image, volume, runtime + ' traced suite (instrumented package)', command, deadline=25)
-            receipt['results'].append(row)
-            print(f"{row['label']}: exit={row['exitCode']} timeout={row['timedOut']}", flush=True)
-        for label, argv, deadline in cases:
-            row = pilot.measure(image, volume, label, SETUP + shlex.join(argv), deadline=deadline)
-            receipt['results'].append(row)
             OUTPUT.parent.mkdir(parents=True, exist_ok=True)
             OUTPUT.write_text(json.dumps(receipt, indent=2) + '\n')
-            print(f"{label}: exit={row['exitCode']} timeout={row['timedOut']}", flush=True)
     except Exception as error:
         receipt['infrastructureError'] = str(error)
         raise

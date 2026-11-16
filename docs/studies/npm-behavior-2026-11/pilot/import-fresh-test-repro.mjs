@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
-import { AsyncLocalStorage } from "node:async_hooks";
+import { AsyncLocalStorage, AsyncResource } from "node:async_hooks";
 import { writeFileSync } from "node:fs";
 import { registerHooks } from "node:module";
-import test from "node:test";
+import nativeTest from "node:test";
+import { setImmediate } from "node:timers/promises";
+
+const test =
+  process.env.BIND_CONTEXT === "1"
+    ? (name, fn) => nativeTest(name, AsyncResource.bind(fn))
+    : nativeTest;
 
 const mode = process.env.REPRO_MODE;
 const events = [];
@@ -39,11 +45,16 @@ if (mode === "package") {
     });
   for (const label of ["first", "second"]) {
     test(label, async () => {
+      record({ label, before: globalThis.contextStorage.getStore() ?? null });
+      assert.equal(globalThis.contextStorage.getStore(), undefined);
       await globalThis.contextStorage.run(label, async () => {
         const result = await import(`/study/context-child.mjs?${label}`);
         record({ label, observed: result.context ?? null });
         assert.equal(result.context, label);
+        await setImmediate();
       });
+      record({ label, after: globalThis.contextStorage.getStore() ?? null });
+      assert.equal(globalThis.contextStorage.getStore(), undefined);
     });
   }
 }

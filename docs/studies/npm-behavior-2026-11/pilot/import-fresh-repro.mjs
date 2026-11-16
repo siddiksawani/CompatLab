@@ -10,7 +10,23 @@ const deadline = setTimeout(() => {
   process.exit(124);
 }, 15000);
 try {
-  if (mode === "trace-source") {
+  if (mode === "bind-tests") {
+    for (const name of ["test.js", "skip-node-modules.js"]) {
+      const file = `/study/import-fresh-suite/tests/${name}`;
+      const source = readFileSync(file, "utf8");
+      const before = "import test from 'node:test';";
+      assert.equal(source.split(before).length, 2);
+      writeFileSync(
+        file,
+        source.replace(
+          before,
+          `import nativeTest from 'node:test';
+import {AsyncResource} from 'node:async_hooks';
+const test = (name, fn) => nativeTest(name, AsyncResource.bind(fn));`,
+        ),
+      );
+    }
+  } else if (mode === "trace-source") {
     const file = "/study/import-fresh-suite/index.js";
     let source = readFileSync(file, "utf8");
     for (const [before, after] of [
