@@ -66,6 +66,13 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+The Import-fresh assertion-triage follow-up preserves the original study and
+65-pass/four-failure adapted Deno suite. Independent reductions separate builtin
+export synchronization, hook-error code loss and discarded dynamic-import
+attributes. Publish raw receipts and upstream reports, verify actual target side
+effects, and keep instrumented registration counts separate from upstream tests.
+Public loading reports, badges, runtime images and admission remain unchanged.
+
 PR 79 completes the frozen 24-version npm behavior study in a separate, manually
 reproducible Linux amd64 gVisor workflow. It publishes reviewed per-case results,
 raw commands/logs/replays and pinned suite provenance with a server-rendered

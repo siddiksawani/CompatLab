@@ -43,11 +43,13 @@ and fails four. This is **69 completed**, not **69 passed**, and is explicitly
 an adapted suite. Deno's unmodified whole-file timeout remains in the original
 published table and raw data.
 
-The four remaining failures concern the hook-registration spy and three
-CommonJS import-attribute expectations (two error-code differences and a
-missing rejection). They require separate interpretation; suite failures alone
-do not establish four new runtime bugs. The follow-up reruns each failing test
-alone, without the context adapter, to distinguish them from adapter effects.
+The four retained failures have now been [triaged separately](assertions.md):
+a no-op export-synchronization method disconnects the registration spy, two
+attribute rejections lose their error codes without executing the target, and
+an unknown dynamic-import attribute is discarded with hooks active, allowing
+the target to execute. These are three causes, not four independent runtime bugs.
+The original isolated replays and the 65-pass/four-failure suite count remain
+unchanged; the new reductions and side-effect controls are separate evidence.
 
 ## Evidence and controls
 

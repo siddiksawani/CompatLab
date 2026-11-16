@@ -31,6 +31,15 @@ test("behavior study exposes all frozen versions and raw evidence without starti
     await expect(page.getByRole("article")).toContainText(
       "does not turn a loading badge into a behavior certificate",
     );
+    await expect(page.getByRole("heading", { name: "What the four failures mean" })).toBeVisible();
+    await expect(page.getByRole("article")).toContainText(
+      "The 65-pass/four-failure suite result is unchanged",
+    );
+    for (const issue of [37185, 37186, 37187]) {
+      await expect(
+        page.locator(`a[href="https://github.com/denoland/deno/issues/${issue}"]`),
+      ).toBeVisible();
+    }
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expectResponsiveLayout(page);

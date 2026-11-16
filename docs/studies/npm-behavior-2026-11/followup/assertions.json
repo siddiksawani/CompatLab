@@ -1,0 +1,2317 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-16T16:38:01.021516+00:00",
+  "sourceCommit": "ae3cc0183ae2157b8819908e546ae219b44c5adc",
+  "runUrl": "https://github.com/siddiksawani/CompatLab/actions/runs/43909369938",
+  "image": "sha256:daf572aefc1078d751a71a277c44706838706a128b4c65b461d536f558dd0a29",
+  "runsc": "runsc version release-20260928.0\nspec: 1.2.1",
+  "lockSha256": "c9e2a674664d63755b1b84e7e3f31eb77212877b1ce94f5ca4c33e090a86bc05",
+  "platform": "Linux amd64 / Debian Bookworm / glibc",
+  "results": [
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": true
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node builtin-sync-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:09.473310+00:00",
+      "endedAt": "2026-11-16T16:38:10.553140+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": true,
+        "code": "TRIAGE_ATTRIBUTE_REJECTED",
+        "name": "TypeError",
+        "message": "deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node loader-error-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:10.604857+00:00",
+      "endedAt": "2026-11-16T16:38:11.682540+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node registration-count-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:11.734262+00:00",
+      "endedAt": "2026-11-16T16:38:12.829493+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE",
+              "message": "Module \"file:///study/attribute-json.cjs\" is not of type \"json\""
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attribute \"type\" with value \"commonjs\" is not supported in file:///study/attribute-commonjs.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attribute \"unknown\" with value \"value\" is not supported in file:///study/attribute-unknown.cjs"
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs direct / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:12.880963+00:00",
+      "endedAt": "2026-11-16T16:38:13.966653+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {
+                  "unknown": "value"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {
+                  "unknown": "value"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs hook / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:14.019711+00:00",
+      "endedAt": "2026-11-16T16:38:15.075630+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-unknown.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs package / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:15.127305+00:00",
+      "endedAt": "2026-11-16T16:38:16.232466+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": true
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node builtin-sync-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:16.284415+00:00",
+      "endedAt": "2026-11-16T16:38:17.342056+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": true,
+        "code": "TRIAGE_ATTRIBUTE_REJECTED",
+        "name": "TypeError",
+        "message": "deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node loader-error-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:17.397483+00:00",
+      "endedAt": "2026-11-16T16:38:18.462311+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node registration-count-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:18.515730+00:00",
+      "endedAt": "2026-11-16T16:38:19.618701+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE",
+              "message": "Module \"file:///study/attribute-json.cjs\" is not of type \"json\""
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attribute \"type\" with value \"commonjs\" is not supported in file:///study/attribute-commonjs.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attribute \"unknown\" with value \"value\" is not supported in file:///study/attribute-unknown.cjs"
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs direct / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:19.671083+00:00",
+      "endedAt": "2026-11-16T16:38:20.765165+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "TRIAGE_ATTRIBUTE_REJECTED",
+              "message": "load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {
+                  "unknown": "value"
+                }
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {
+                  "unknown": "value"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs hook / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:20.817064+00:00",
+      "endedAt": "2026-11-16T16:38:21.897382+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_IMPORT_ATTRIBUTE_UNSUPPORTED",
+              "message": "Import attributes are not supported for the CommonJS module \"file:///study/attribute-unknown.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node import-attributes-repro.mjs package / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:21.952497+00:00",
+      "endedAt": "2026-11-16T16:38:23.055803+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node sync control fail=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=0 node /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:23.108751+00:00",
+      "endedAt": "2026-11-16T16:38:24.192578+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node sync control fail=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=1 node /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:24.246681+00:00",
+      "endedAt": "2026-11-16T16:38:25.347036+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected \"actual\" to be strictly unequal to: '1'\n    at file:///pilot/builtin-sync-repro.mjs:16:10\n    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)\n    at async node:internal/modules/esm/loader:650:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:105:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: '1',\n  expected: '1',\n  operator: 'notStrictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.10.0"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node context-bound suite / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; node --test --test-reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:25.401896+00:00",
+      "endedAt": "2026-11-16T16:38:31.486372+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 13\n# Subtest: fresh import returns a new ESM module instance\nok 1 - fresh import returns a new ESM module instance\n  ---\n  duration_ms: 16.874767\n  type: 'test'\n  ...\n# Subtest: dependency graph is fresh per call for ESM dependencies\nok 2 - dependency graph is fresh per call for ESM dependencies\n  ---\n  duration_ms: 2.582903\n  type: 'test'\n  ...\n# Subtest: top-level await can use importFresh without deadlock\nok 3 - top-level await can use importFresh without deadlock\n  ---\n  duration_ms: 3.300677\n  type: 'test'\n  ...\n# Subtest: top-level await fresh imports remain isolated when started concurrently\nok 4 - top-level await fresh imports remain isolated when started concurrently\n  ---\n  duration_ms: 105.797777\n  type: 'test'\n  ...\n# Subtest: CommonJS entry modules are fresh across fresh imports\nok 5 - CommonJS entry modules are fresh across fresh imports\n  ---\n  duration_ms: 2.606964\n  type: 'test'\n  ...\n# Subtest: CommonJS dependencies are fresh across fresh ESM entries\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\n  ---\n  duration_ms: 3.12889\n  type: 'test'\n  ...\n# Subtest: CommonJS cache tree clearing evicts all sibling dependencies\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\n  ---\n  duration_ms: 4.529026\n  type: 'test'\n  ...\n# Subtest: CommonJS dynamic import bridges are fresh across fresh imports\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\n  ---\n  duration_ms: 3.261446\n  type: 'test'\n  ...\n# Subtest: CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\n  ---\n  duration_ms: 3.084775\n  type: 'test'\n  ...\n# Subtest: concurrent fresh imports keep CJS bridge cache keys isolated\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\n  ---\n  duration_ms: 2.528434\n  type: 'test'\n  ...\n# Subtest: concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\n  ---\n  duration_ms: 2.416721\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted by previous fresh CJS bridge context\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\n  ---\n  duration_ms: 2.435746\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during an active fresh CJS bridge import\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\n  ---\n  duration_ms: 202.042938\n  type: 'test'\n  ...\n# Subtest: nested concurrent fresh CJS bridge imports remain isolated\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\n  ---\n  duration_ms: 7.719072\n  type: 'test'\n  ...\n# Subtest: shared CommonJS imports from multiple ESM parents do not collide\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\n  ---\n  duration_ms: 2.442893\n  type: 'test'\n  ...\n# Subtest: ESM packages in node_modules are fresh by default\nok 16 - ESM packages in node_modules are fresh by default\n  ---\n  duration_ms: 1.694361\n  type: 'test'\n  ...\n# Subtest: CommonJS packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\n  ---\n  duration_ms: 2.171649\n  type: 'test'\n  ...\n# Subtest: relative specifiers resolve against parentURL\nok 18 - relative specifiers resolve against parentURL\n  ---\n  duration_ms: 0.937543\n  type: 'test'\n  ...\n# Subtest: CommonJS module parent is bound to the importFresh parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\n  ---\n  duration_ms: 1.272147\n  type: 'test'\n  ...\n# Subtest: CommonJS loading works when require cache is unavailable\nok 20 - CommonJS loading works when require cache is unavailable\n  ---\n  duration_ms: 56.066333\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\n  ---\n  duration_ms: 253.853248\n  type: 'test'\n  ...\n# Subtest: CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\n  ---\n  duration_ms: 63.030893\n  type: 'test'\n  ...\n# Subtest: missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\n  ---\n  duration_ms: 52.76017\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\n  ---\n  duration_ms: 255.341871\n  type: 'test'\n  ...\n# Subtest: missing format in resolve chain does not force .js modules through CJS path\nok 25 - missing format in resolve chain does not force .js modules through CJS path\n  ---\n  duration_ms: 53.659476\n  type: 'test'\n  ...\n# Subtest: missing format fallback treats package-less .js as CommonJS\nok 26 - missing format fallback treats package-less .js as CommonJS\n  ---\n  duration_ms: 52.459434\n  type: 'test'\n  ...\n# Subtest: loader hooks are registered only once across cache-busted index imports\nok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  duration_ms: 58.162861\n  type: 'test'\n  ...\n# Subtest: race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\n  ---\n  duration_ms: 3399.028349\n  type: 'test'\n  ...\n# Subtest: race stress: stripped require parent URL and missing format remain isolated\nok 29 - race stress: stripped require parent URL and missing format remain isolated\n  ---\n  duration_ms: 235.422341\n  type: 'test'\n  ...\n# Subtest: moduleSpecifier must be a string\nok 30 - moduleSpecifier must be a string\n  ---\n  duration_ms: 0.617987\n  type: 'test'\n  ...\n# Subtest: importFresh options must be an object\nok 31 - importFresh options must be an object\n  ---\n  duration_ms: 0.123282\n  type: 'test'\n  ...\n# Subtest: importFresh options must reject arrays\nok 32 - importFresh options must reject arrays\n  ---\n  duration_ms: 0.067378\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes must be an object\nok 33 - importFresh importAttributes must be an object\n  ---\n  duration_ms: 0.056828\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes must reject arrays\nok 34 - importFresh importAttributes must reject arrays\n  ---\n  duration_ms: 0.057786\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes values must be strings\nok 35 - importFresh importAttributes values must be strings\n  ---\n  duration_ms: 0.064559\n  type: 'test'\n  ...\n# Subtest: parentURL must be a string or URL\nok 36 - parentURL must be a string or URL\n  ---\n  duration_ms: 0.070526\n  type: 'test'\n  ...\n# Subtest: parentURL must be a valid URL string\nok 37 - parentURL must be a valid URL string\n  ---\n  duration_ms: 0.049473\n  type: 'test'\n  ...\n# Subtest: parentURL must be a hierarchical URL string\nok 38 - parentURL must be a hierarchical URL string\n  ---\n  duration_ms: 0.136558\n  type: 'test'\n  ...\n# Subtest: parentURL must reject Windows path-like URL strings\nok 39 - parentURL must reject Windows path-like URL strings\n  ---\n  duration_ms: 0.091314\n  type: 'test'\n  ...\n# Subtest: parentURL can be a URL instance\nok 40 - parentURL can be a URL instance\n  ---\n  duration_ms: 11.184019\n  type: 'test'\n  ...\n# Subtest: createImportFresh options must be an object\nok 41 - createImportFresh options must be an object\n  ---\n  duration_ms: 0.225436\n  type: 'test'\n  ...\n# Subtest: createImportFresh options must reject arrays\nok 42 - createImportFresh options must reject arrays\n  ---\n  duration_ms: 0.103228\n  type: 'test'\n  ...\n# Subtest: createImportFresh skipNodeModules must be a boolean\nok 43 - createImportFresh skipNodeModules must be a boolean\n  ---\n  duration_ms: 0.095241\n  type: 'test'\n  ...\n# Subtest: createImportFresh throws on conflicting options\nok 44 - createImportFresh throws on conflicting options\n  ---\n  duration_ms: 0.082854\n  type: 'test'\n  ...\n# Subtest: createImportFresh can be called multiple times with the same options\nok 45 - createImportFresh can be called multiple times with the same options\n  ---\n  duration_ms: 2.86015\n  type: 'test'\n  ...\n# Subtest: absolute specifiers are supported\nok 46 - absolute specifiers are supported\n  ---\n  duration_ms: 1.153767\n  type: 'test'\n  ...\n# Subtest: builtin specifiers are supported\nok 47 - builtin specifiers are supported\n  ---\n  duration_ms: 0.563301\n  type: 'test'\n  ...\n# Subtest: JSON modules are supported\nok 48 - JSON modules are supported\n  ---\n  duration_ms: 1.924024\n  type: 'test'\n  ...\n# Subtest: explicit import attributes are forwarded\nok 49 - explicit import attributes are forwarded\n  ---\n  duration_ms: 0.583816\n  type: 'test'\n  ...\n# Subtest: JSON modules keep automatic type attribute when importAttributes is empty\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\n  ---\n  duration_ms: 0.639085\n  type: 'test'\n  ...\n# Subtest: JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\n  ---\n  duration_ms: 0.684631\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject a JSON type attribute before execution\nok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  duration_ms: 1.089936\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject an unsupported import attribute before execution\nok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  duration_ms: 0.663316\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject an unknown import attribute before execution\nok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  duration_ms: 0.663125\n  type: 'test'\n  ...\n# Subtest: CommonJS targets accept an empty import attribute object\nok 55 - CommonJS targets accept an empty import attribute object\n  ---\n  duration_ms: 1.24142\n  type: 'test'\n  ...\n# Subtest: fresh import busts cache for data URLs\nok 56 - fresh import busts cache for data URLs\n  ---\n  duration_ms: 1.437521\n  type: 'test'\n  ...\n# Subtest: specifiers with search parameters are supported\nok 57 - specifiers with search parameters are supported\n  ---\n  duration_ms: 1.292221\n  type: 'test'\n  ...\n# Subtest: CommonJS specifiers with search parameters are fresh\nok 58 - CommonJS specifiers with search parameters are fresh\n  ---\n  duration_ms: 1.238193\n  type: 'test'\n  ...\n# Subtest: CommonJS revoked proxy exports can be imported fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\n  ---\n  duration_ms: 1.015373\n  type: 'test'\n  ...\n# Subtest: CommonJS undefined exports are treated as valid exports\nok 60 - CommonJS undefined exports are treated as valid exports\n  ---\n  duration_ms: 1.480584\n  type: 'test'\n  ...\n# Subtest: CommonJS named exports are exposed for exports assignments\nok 61 - CommonJS named exports are exposed for exports assignments\n  ---\n  duration_ms: 1.195069\n  type: 'test'\n  ...\n# Subtest: CommonJS non-enumerable data properties are exposed as named exports\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\n  ---\n  duration_ms: 1.010095\n  type: 'test'\n  ...\n# Subtest: CommonJS getters are not executed while building named exports\nok 63 - CommonJS getters are not executed while building named exports\n  ---\n  duration_ms: 1.779734\n  type: 'test'\n  ...\n# Subtest: CommonJS function default export does not expose intrinsic function named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\n  ---\n  duration_ms: 0.907697\n  type: 'test'\n  ...\n# Subtest: CommonJS class default export does not expose intrinsic class named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n  ---\n  duration_ms: 1.072058\n  type: 'test'\n  ...\n1..65\n# tests 65\n# suites 0\n# pass 65\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 4972.182693",
+      "tap": {
+        "complete": true,
+        "planned": 65,
+        "passed": 65,
+        "failed": 0,
+        "failures": []
+      }
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node context-bound suite / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; node --test --test-reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:31.539049+00:00",
+      "endedAt": "2026-11-16T16:38:32.749374+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 13\n# Subtest: skipNodeModules keeps CommonJS node_modules cached\nok 1 - skipNodeModules keeps CommonJS node_modules cached\n  ---\n  duration_ms: 7.49855\n  type: 'test'\n  ...\n# Subtest: skipNodeModules keeps ESM node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\n  ---\n  duration_ms: 2.53259\n  type: 'test'\n  ...\n# Subtest: skipNodeModules also keeps downstream non-node_modules imports shared\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\n  ---\n  duration_ms: 4.485225\n  type: 'test'\n  ...\n# Subtest: skipNodeModules importFresh function can be recreated with same options\nok 4 - skipNodeModules importFresh function can be recreated with same options\n  ---\n  duration_ms: 2.230697\n  type: 'test'\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 4\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 93.762607",
+      "tap": {
+        "complete": true,
+        "planned": 4,
+        "passed": 4,
+        "failed": 0,
+        "failures": []
+      }
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno builtin-sync-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:32.804003+00:00",
+      "endedAt": "2026-11-16T16:38:33.950545+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n\nfalse !== true\n\n  assert.equal(result.namedChanged, !skipPatch);\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:15:10"
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": false,
+        "code": "ERR_MODULE_NOT_FOUND",
+        "name": "TypeError",
+        "message": "TypeError: deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno loader-error-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:34.002565+00:00",
+      "endedAt": "2026-11-16T16:38:35.115069+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'ERR_MODULE_NOT_FOUND'\n- 'TRIAGE_ATTRIBUTE_REJECTED'\n\nassert.equal(observed?.code, expected.code);\n       ^\n    at file:///pilot/loader-error-repro.mjs:34:8"
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno registration-count-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:35.167416+00:00",
+      "endedAt": "2026-11-16T16:38:36.331062+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "Expected a JSON module, but identified a JavaScript module.\n  Specifier: file:///study/attribute-json.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"commonjs\" is not a valid module type."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"unknown\" attribute is not supported."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs direct / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:36.386243+00:00",
+      "endedAt": "2026-11-16T16:38:37.514080+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {}
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs hook / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:37.565375+00:00",
+      "endedAt": "2026-11-16T16:38:38.685313+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs package / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:38.738687+00:00",
+      "endedAt": "2026-11-16T16:38:39.865104+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno builtin-sync-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:39.917988+00:00",
+      "endedAt": "2026-11-16T16:38:41.018276+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n\nfalse !== true\n\n  assert.equal(result.namedChanged, !skipPatch);\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:15:10"
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": false,
+        "code": "ERR_MODULE_NOT_FOUND",
+        "name": "TypeError",
+        "message": "TypeError: deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno loader-error-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:41.069901+00:00",
+      "endedAt": "2026-11-16T16:38:42.167505+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'ERR_MODULE_NOT_FOUND'\n- 'TRIAGE_ATTRIBUTE_REJECTED'\n\nassert.equal(observed?.code, expected.code);\n       ^\n    at file:///pilot/loader-error-repro.mjs:34:8"
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno registration-count-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:42.219933+00:00",
+      "endedAt": "2026-11-16T16:38:43.373192+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "Expected a JSON module, but identified a JavaScript module.\n  Specifier: file:///study/attribute-json.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"commonjs\" is not a valid module type."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"unknown\" attribute is not supported."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs direct / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:43.424828+00:00",
+      "endedAt": "2026-11-16T16:38:44.539785+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {}
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs hook / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:44.591479+00:00",
+      "endedAt": "2026-11-16T16:38:45.703476+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno import-attributes-repro.mjs package / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:45.754844+00:00",
+      "endedAt": "2026-11-16T16:38:46.886248+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno sync control fail=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=0 deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:46.942339+00:00",
+      "endedAt": "2026-11-16T16:38:48.072509+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno sync control fail=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=1 deno run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:48.124564+00:00",
+      "endedAt": "2026-11-16T16:38:49.230182+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected \"actual\" to be strictly unequal to: '1'\n  assert.notEqual(process.env.FAIL_CONTROL, \"1\");\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:16:10"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno context-bound suite / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:49.282897+00:00",
+      "endedAt": "2026-11-16T16:38:56.145638+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/test.js\nok 1 - fresh import returns a new ESM module instance\nok 2 - dependency graph is fresh per call for ESM dependencies\nok 3 - top-level await can use importFresh without deadlock\nok 4 - top-level await fresh imports remain isolated when started concurrently\nok 5 - CommonJS entry modules are fresh across fresh imports\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\nok 16 - ESM packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\nok 18 - relative specifiers resolve against parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\nok 20 - CommonJS loading works when require cache is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 25 - missing format in resolve chain does not force .js modules through CJS path\nok 26 - missing format fallback treats package-less .js as CommonJS\nnot ok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  {\"message\":\"AssertionError: Got unwanted exception.\\nActual message: \\\"Command failed: /usr/local/bin/deno /study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs\\nerror: Uncaught (in promise) TypeError: Expected registerHooks to be called once, got 0.\\n\\t\\tthrow new TypeError(`Expected registerHooks to be called once, got ${registerHooksCallCount}.`);\\n\\t\\t      ^\\n    at file:///study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs:20:9\\n\\\"\\n\\tassert.doesNotThrow(() => {\\n\\t       ^\\n    at NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:260:9)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 29 - race stress: stripped require parent URL and missing format remain isolated\nok 30 - moduleSpecifier must be a string\nok 31 - importFresh options must be an object\nok 32 - importFresh options must reject arrays\nok 33 - importFresh importAttributes must be an object\nok 34 - importFresh importAttributes must reject arrays\nok 35 - importFresh importAttributes values must be strings\nok 36 - parentURL must be a string or URL\nok 37 - parentURL must be a valid URL string\nok 38 - parentURL must be a hierarchical URL string\nok 39 - parentURL must reject Windows path-like URL strings\nok 40 - parentURL can be a URL instance\nok 41 - createImportFresh options must be an object\nok 42 - createImportFresh options must reject arrays\nok 43 - createImportFresh skipNodeModules must be a boolean\nok 44 - createImportFresh throws on conflicting options\nok 45 - createImportFresh can be called multiple times with the same options\nok 46 - absolute specifiers are supported\nok 47 - builtin specifiers are supported\nok 48 - JSON modules are supported\nok 49 - explicit import attributes are forwarded\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nnot ok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:427:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_UNSUPPORTED'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:438:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Missing expected rejection.\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:449:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 55 - CommonJS targets accept an empty import attribute object\nok 56 - fresh import busts cache for data URLs\nok 57 - specifiers with search parameters are supported\nok 58 - CommonJS specifiers with search parameters are fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\nok 60 - CommonJS undefined exports are treated as valid exports\nok 61 - CommonJS named exports are exposed for exports assignments\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\nok 63 - CommonJS getters are not executed while building named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n1..65\nerror: Test failed",
+      "tap": {
+        "complete": true,
+        "planned": 65,
+        "passed": 61,
+        "failed": 4,
+        "failures": [
+          "loader hooks are registered only once across cache-busted index imports",
+          "CommonJS targets reject a JSON type attribute before execution",
+          "CommonJS targets reject an unsupported import attribute before execution",
+          "CommonJS targets reject an unknown import attribute before execution"
+        ]
+      }
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno context-bound suite / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:56.197936+00:00",
+      "endedAt": "2026-11-16T16:38:57.449175+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/skip-node-modules.js\nok 1 - skipNodeModules keeps CommonJS node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\nok 4 - skipNodeModules importFresh function can be recreated with same options\n1..4",
+      "tap": {
+        "complete": true,
+        "planned": 4,
+        "passed": 4,
+        "failed": 0,
+        "failures": []
+      }
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 builtin-sync-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:57.503407+00:00",
+      "endedAt": "2026-11-16T16:38:58.625071+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n\nfalse !== true\n\n  assert.equal(result.namedChanged, !skipPatch);\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:15:10"
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": false,
+        "code": "ERR_MODULE_NOT_FOUND",
+        "name": "TypeError",
+        "message": "TypeError: deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 loader-error-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:58.679018+00:00",
+      "endedAt": "2026-11-16T16:38:59.804244+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'ERR_MODULE_NOT_FOUND'\n- 'TRIAGE_ATTRIBUTE_REJECTED'\n\nassert.equal(observed?.code, expected.code);\n       ^\n    at file:///pilot/loader-error-repro.mjs:34:8"
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 registration-count-repro.mjs / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:38:59.860535+00:00",
+      "endedAt": "2026-11-16T16:39:01.006478+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "Expected a JSON module, but identified a JavaScript module.\n  Specifier: file:///study/attribute-json.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"commonjs\" is not a valid module type."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"unknown\" attribute is not supported."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs direct / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:01.062474+00:00",
+      "endedAt": "2026-11-16T16:39:02.216463+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {}
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs hook / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:02.272068+00:00",
+      "endedAt": "2026-11-16T16:39:03.370416+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs package / attempt 1",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:03.422347+00:00",
+      "endedAt": "2026-11-16T16:39:04.547325+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": true,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 builtin-sync-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:04.599448+00:00",
+      "endedAt": "2026-11-16T16:39:05.719804+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n\nfalse !== true\n\n  assert.equal(result.namedChanged, !skipPatch);\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:15:10"
+    },
+    {
+      "suiteResult": {
+        "rejected": true,
+        "sameError": false,
+        "code": "ERR_MODULE_NOT_FOUND",
+        "name": "TypeError",
+        "message": "TypeError: deliberate loader rejection"
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 loader-error-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/loader-error-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:05.772194+00:00",
+      "endedAt": "2026-11-16T16:39:06.890544+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'ERR_MODULE_NOT_FOUND'\n- 'TRIAGE_ATTRIBUTE_REJECTED'\n\nassert.equal(observed?.code, expected.code);\n       ^\n    at file:///pilot/loader-error-repro.mjs:34:8"
+    },
+    {
+      "suiteResult": {
+        "registrations": 1,
+        "values": [
+          1,
+          1,
+          1
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 registration-count-repro.mjs / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/registration-count-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:06.943928+00:00",
+      "endedAt": "2026-11-16T16:39:08.080752+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "direct",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "Expected a JSON module, but identified a JavaScript module.\n  Specifier: file:///study/attribute-json.cjs"
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"commonjs\" is not a valid module type."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": null,
+              "message": "\"unknown\" attribute is not supported."
+            },
+            "executed": 0,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs direct / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs direct",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:08.132795+00:00",
+      "endedAt": "2026-11-16T16:39:09.238245+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "hook",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:empty",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:empty",
+                "attributes": {}
+              }
+            ]
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:json",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:json",
+                "attributes": {
+                  "type": "json"
+                }
+              }
+            ]
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: load-hook sentinel"
+            },
+            "executed": 0,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:commonjs",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:commonjs",
+                "attributes": {
+                  "type": "commonjs"
+                }
+              }
+            ]
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": 1,
+            "executed": 1,
+            "events": [
+              {
+                "phase": "resolve",
+                "specifier": "triage:unknown",
+                "attributes": {}
+              },
+              {
+                "phase": "load",
+                "url": "triage:unknown",
+                "attributes": {}
+              }
+            ]
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs hook / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs hook",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:09.291216+00:00",
+      "endedAt": "2026-11-16T16:39:10.402730+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "mode": "package",
+        "cases": [
+          {
+            "name": "empty",
+            "attributes": {},
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          },
+          {
+            "name": "json",
+            "attributes": {
+              "type": "json"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-json.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "commonjs",
+            "attributes": {
+              "type": "commonjs"
+            },
+            "loaded": false,
+            "error": {
+              "name": "TypeError",
+              "code": "ERR_MODULE_NOT_FOUND",
+              "message": "TypeError: Import attributes are not supported for the CommonJS module \"file:///study/attribute-commonjs.cjs\"."
+            },
+            "executed": 0,
+            "events": []
+          },
+          {
+            "name": "unknown",
+            "attributes": {
+              "unknown": "value"
+            },
+            "loaded": true,
+            "value": {
+              "value": 1
+            },
+            "executed": 1,
+            "events": []
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 import-attributes-repro.mjs package / attempt 2",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/import-attributes-repro.mjs package",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:10.456113+00:00",
+      "endedAt": "2026-11-16T16:39:11.624326+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 sync control fail=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=0 deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:11.681783+00:00",
+      "endedAt": "2026-11-16T16:39:12.861807+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": ""
+    },
+    {
+      "suiteResult": {
+        "before": true,
+        "defaultChanged": false,
+        "namedChanged": false
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 sync control fail=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; SKIP_PATCH=1 FAIL_CONTROL=1 deno298 run -A --no-config --no-lock --node-modules-dir=manual --cached-only /pilot/builtin-sync-repro.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:12.913692+00:00",
+      "endedAt": "2026-11-16T16:39:14.044192+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "error: Uncaught (in promise) AssertionError: Expected \"actual\" to be strictly unequal to: '1'\n  assert.notEqual(process.env.FAIL_CONTROL, \"1\");\n         ^\n    at file:///pilot/builtin-sync-repro.mjs:16:10"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 context-bound suite / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:14.095506+00:00",
+      "endedAt": "2026-11-16T16:39:20.961939+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/test.js\nok 1 - fresh import returns a new ESM module instance\nok 2 - dependency graph is fresh per call for ESM dependencies\nok 3 - top-level await can use importFresh without deadlock\nok 4 - top-level await fresh imports remain isolated when started concurrently\nok 5 - CommonJS entry modules are fresh across fresh imports\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\nok 16 - ESM packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\nok 18 - relative specifiers resolve against parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\nok 20 - CommonJS loading works when require cache is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 25 - missing format in resolve chain does not force .js modules through CJS path\nok 26 - missing format fallback treats package-less .js as CommonJS\nnot ok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  {\"message\":\"AssertionError: Got unwanted exception.\\nActual message: \\\"Command failed: /usr/local/bin/deno298 /study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs\\nerror: Uncaught (in promise) TypeError: Expected registerHooks to be called once, got 0.\\n\\t\\tthrow new TypeError(`Expected registerHooks to be called once, got ${registerHooksCallCount}.`);\\n\\t\\t      ^\\n    at file:///study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs:20:9\\n\\\"\\n\\tassert.doesNotThrow(() => {\\n\\t       ^\\n    at NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:260:9)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 29 - race stress: stripped require parent URL and missing format remain isolated\nok 30 - moduleSpecifier must be a string\nok 31 - importFresh options must be an object\nok 32 - importFresh options must reject arrays\nok 33 - importFresh importAttributes must be an object\nok 34 - importFresh importAttributes must reject arrays\nok 35 - importFresh importAttributes values must be strings\nok 36 - parentURL must be a string or URL\nok 37 - parentURL must be a valid URL string\nok 38 - parentURL must be a hierarchical URL string\nok 39 - parentURL must reject Windows path-like URL strings\nok 40 - parentURL can be a URL instance\nok 41 - createImportFresh options must be an object\nok 42 - createImportFresh options must reject arrays\nok 43 - createImportFresh skipNodeModules must be a boolean\nok 44 - createImportFresh throws on conflicting options\nok 45 - createImportFresh can be called multiple times with the same options\nok 46 - absolute specifiers are supported\nok 47 - builtin specifiers are supported\nok 48 - JSON modules are supported\nok 49 - explicit import attributes are forwarded\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nnot ok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:427:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_UNSUPPORTED'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:438:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Missing expected rejection.\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:449:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 55 - CommonJS targets accept an empty import attribute object\nok 56 - fresh import busts cache for data URLs\nok 57 - specifiers with search parameters are supported\nok 58 - CommonJS specifiers with search parameters are fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\nok 60 - CommonJS undefined exports are treated as valid exports\nok 61 - CommonJS named exports are exposed for exports assignments\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\nok 63 - CommonJS getters are not executed while building named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n1..65\nerror: Test failed",
+      "tap": {
+        "complete": true,
+        "planned": 65,
+        "passed": 61,
+        "failed": 4,
+        "failures": [
+          "loader hooks are registered only once across cache-busted index imports",
+          "CommonJS targets reject a JSON type attribute before execution",
+          "CommonJS targets reject an unsupported import attribute before execution",
+          "CommonJS targets reject an unknown import attribute before execution"
+        ]
+      }
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 context-bound suite / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T16:39:21.015390+00:00",
+      "endedAt": "2026-11-16T16:39:22.253295+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/skip-node-modules.js\nok 1 - skipNodeModules keeps CommonJS node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\nok 4 - skipNodeModules importFresh function can be recreated with same options\n1..4",
+      "tap": {
+        "complete": true,
+        "planned": 4,
+        "passed": 4,
+        "failed": 0,
+        "failures": []
+      }
+    }
+  ],
+  "versions": {
+    "suiteResult": null,
+    "suiteResultError": null,
+    "completion": null,
+    "completionError": null,
+    "logTruncated": false,
+    "label": "versions",
+    "command": "node --version; deno --version; deno298 --version",
+    "network": "none",
+    "startedAt": "2026-11-16T16:38:01.068104+00:00",
+    "endedAt": "2026-11-16T16:38:02.292973+00:00",
+    "exitCode": 0,
+    "timedOut": false,
+    "outOfMemory": false,
+    "containerError": "",
+    "stdoutAndStderr": "v26.10.0\ndeno 2.9.7 (stable, release, x86_64-unknown-linux-gnu)\nv8 15.0.245.2-rusty\ntypescript 6.0.3\ndeno 2.9.8 (stable, release, x86_64-unknown-linux-gnu)\nv8 15.0.245.2-rusty\ntypescript 6.0.3"
+  },
+  "preparation": {
+    "suiteResult": null,
+    "suiteResultError": null,
+    "completion": null,
+    "completionError": null,
+    "logTruncated": false,
+    "label": "locked install",
+    "command": "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
+    "network": "bridge",
+    "startedAt": "2026-11-16T16:38:02.347921+00:00",
+    "endedAt": "2026-11-16T16:38:09.421330+00:00",
+    "exitCode": 0,
+    "timedOut": false,
+    "outOfMemory": false,
+    "containerError": "",
+    "stdoutAndStderr": "npm warn deprecated samsam@1.3.0: This package has been deprecated in favour of @sinonjs/samsam\nnpm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.\nnpm warn deprecated mkdirp@0.5.4: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)\nnpm warn deprecated text-encoding@0.6.4: no longer maintained\nnpm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.\nnpm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated formatio@1.2.0: This package is unmaintained. Use @sinonjs/formatio instead\nnpm warn deprecated formidable@1.2.6: Please upgrade to latest, formidable@v2 or formidable@v3! Check these notes: https://bit.ly/2ZEqIau\nnpm warn deprecated superagent@3.5.2: Please upgrade to superagent v10.2.2+, see release notes at https://github.com/forwardemail/superagent/releases/tag/v10.2.2 - maintenance is supported by Forward Email @ https://forwardemail.net\nnpm warn deprecated glob@7.1.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated debug@3.2.6: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)\nnpm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated sinon@2.3.8: 16.1.1\n\nadded 682 packages in 7s\nnpm notice\nnpm notice New major version of npm available! 11.19.1 -> 12.2.2\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2\nnpm notice To update run: npm install -g npm@12.2.2\nnpm notice"
+  },
+  "completedAt": "2026-11-16T16:39:22.275575+00:00"
+}

@@ -32,6 +32,8 @@ def build(check=False):
     analysis = json.loads((ROOT / "analysis.json").read_text())
     followup = runpy.run_path(str(ROOT / "followup/verify.py"))["verify"]()
     assert followup == analysis["denoFollowup"]["totals"]
+    assertion_run = json.loads((ROOT / "followup/assertions.json").read_text())
+    runpy.run_path(str(ROOT / "followup/assertions-verify.py"))["verify_observations"](assertion_run)
     cohort = json.loads((ROOT / "cohort.json").read_text())["packages"]
     run = next(row for row in evidence["runs"] if row["sourceCommit"] == analysis["sourceCommit"])
     assert run.get("completedAt") and not run.get("infrastructureError")

@@ -56,6 +56,27 @@
         "passed": 65,
         "failed": 4
       }
+    },
+    "triage": {
+      "summary": "The four retained assertions reduce to three causes. Independent checks distinguish a spy that cannot observe calls, lost error codes, and an attribute that is discarded before validation. The 65-pass/four-failure suite result is unchanged.",
+      "evidence": "https://github.com/siddiksawani/CompatLab/blob/main/docs/studies/npm-behavior-2026-11/followup/assertions.md",
+      "findings": [
+        {
+          "title": "Registration spy: export synchronization",
+          "summary": "Deno leaves the named export unchanged after syncBuiltinESMExports(), so the spy cannot observe registration. A separately instrumented copy records exactly one registration; the original spy assertion still fails.",
+          "upstream": "https://github.com/denoland/deno/issues/37185"
+        },
+        {
+          "title": "Two type attributes: error-code loss",
+          "summary": "Both calls reject before the CommonJS target executes. Deno replaces the thrown hook error code with ERR_MODULE_NOT_FOUND, so these are error-code mismatches, not missing files or observed target execution.",
+          "upstream": "https://github.com/denoland/deno/issues/37186"
+        },
+        {
+          "title": "Unknown attribute: validation bypassed",
+          "summary": "With hooks active, Deno drops the unknown dynamic-import attribute before the package can validate it, and the target executes once. Without hooks, Deno correctly rejects it. Earlier Deno work explicitly covered static imports only.",
+          "upstream": "https://github.com/denoland/deno/issues/37187"
+        }
+      ]
     }
   },
   "audit": "The audit corrected measurement mistakes before publication: Bun's bare undici shim lacked Agent.close while the explicitly pinned npm package passed; Import-fresh fixtures had to move outside node_modules; Deno needed deno test to execute node:test; asynchronous probes needed awaited completion records; and Mocha failures needed structured evidence beyond bounded stdout. Superseded receipts are retained with explanations. A failed first command was injected into Pump's shell sequence and propagated exit 23; no false Pump pass was observed. The separate Yargs diagnostic returned the same ERR_MODULE_NOT_FOUND code in all six fresh/order controls, so the earlier inconsistent-code suspicion did not reproduce.",
