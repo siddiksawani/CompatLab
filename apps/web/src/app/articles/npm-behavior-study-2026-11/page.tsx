@@ -171,10 +171,25 @@ export default async function BehaviorStudy() {
         <strong>{study.denoFollowup.date}.</strong> {study.denoFollowup.summary}
       </p>
       <p>
-        The remaining failures concern a hook-registration spy and three CommonJS import-attribute
-        expectations. They need separate interpretation. Read the{" "}
+        Read the{" "}
         <a href={study.denoFollowup.evidence}>follow-up protocol, controls and raw receipts</a> or
         the <a href={study.denoFollowup.upstream}>upstream context-leak report</a>.
+      </p>
+      <h3 id="deno-assertions">What the four failures mean</h3>
+      <p>{study.denoFollowup.triage.summary}</p>
+      <ul>
+        {study.denoFollowup.triage.findings.map((finding) => (
+          <li key={finding.upstream}>
+            <strong>{finding.title}.</strong> {finding.summary}{" "}
+            <a href={finding.upstream}>Upstream reproduction</a>.
+          </li>
+        ))}
+      </ul>
+      <p>
+        The{" "}
+        <a href={study.denoFollowup.triage.evidence}>assertion-triage protocol and raw receipts</a>{" "}
+        retain the controls, prior-work references and instrumented-copy limitation. These reports
+        are awaiting upstream fixes; no Deno runtime fix is claimed here.
       </p>
       <h2 id="method">Method and limits</h2>
       <ul>
