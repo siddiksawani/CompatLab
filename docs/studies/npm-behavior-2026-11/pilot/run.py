@@ -30,6 +30,7 @@ CASES = (
     ("bcrypt", "named_behavior", [["/pilot/bcrypt.cjs"]], None),
     ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
     ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
+    ("better-sqlite3", "named_behavior", [["/pilot/better-sqlite3.cjs"]], None),
     ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
     ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
     (
@@ -187,7 +188,7 @@ def run():
         "diagnostics": [],
     }
     try:
-        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; node24 --version")
+        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; gcc -dumpfullversion; node24 --version")
         receipt["runtimeVersions"] = pins
         assert successful(pins)
         lines = pins["stdoutAndStderr"].splitlines()
@@ -204,12 +205,14 @@ def run():
         if not successful(install):
             raise RuntimeError("Locked preparation failed. See the pilot artifact.")
         prerequisites = {}
-        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall")):
+        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall"), ("better-sqlite3", "install")):
             spec = shlex.quote(f"{name}@{versions[name]}")
+            prefix = "npm_config_nodedir=/usr/local npm_config_jobs=2 " if name == "better-sqlite3" else ""
             result = measure(
                 image, volume, f"{name} lifecycle",
-                f"npm rebuild --offline --no-audit --no-fund --foreground-scripts {spec}",
+                f"{prefix}npm rebuild --offline --no-audit --no-fund --foreground-scripts {spec}",
                 writable_seed=True,
+                deadline=480 if name == "better-sqlite3" else 75,
             )
             receipt["preparation"].append(result)
             result["hookObserved"] = f"> {name}@{versions[name]} {hook}" in result["stdoutAndStderr"]

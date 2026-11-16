@@ -20,6 +20,8 @@ with lint and coverage instrumentation outside the observation. Run a
 bcrypt hash and verify case and an esbuild transform as separately labeled
 behavior smoke tests. Add a Sharp resize check through its shipped native
 binary and a ThreadStream check that reads back a file written by its worker.
+Build better-sqlite3 against the pinned Node headers and try an in-memory
+insert and select through that same binary on each profile.
 Run the bcrypt Jest suite in-band from a copy of the published package
 outside `node_modules`, where Jest discovers its tests. Run the SPDY client
 and server suites with their pinned Mocha runner. Keep the npm tarball,
@@ -45,8 +47,9 @@ check whether the Node.js baseline is version-dependent. Record pinned runtime i
 actual versions, image ID, kernel, runsc version, commands, and timestamps.
 Preparation starts with a locked, script-disabled npm install from the
 public registry in a disposable gVisor container. The second preparation
-runs only the pinned bcrypt install and esbuild postinstall lifecycle
-hooks in a network-disabled gVisor container. Report failures during
+runs only the pinned bcrypt install, esbuild postinstall and better-sqlite3
+build hooks in a network-disabled gVisor container. The pinned Node Bookworm
+image supplies the compiler and headers for the SQLite build. Report failures during
 preparation separately from runtime checks. Add further hooks only
 alongside the pinned inputs that the packages need. A missing compiler,
 shared library, prebuild or fixture is a prerequisite observation.
