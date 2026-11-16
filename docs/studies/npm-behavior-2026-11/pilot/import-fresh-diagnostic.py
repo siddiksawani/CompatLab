@@ -58,13 +58,13 @@ def main():
         inventory = json.loads((pilot.ROOT / 'import-fresh-tests.json').read_text())
         for runtime in ('node', 'deno', 'deno298'):
             runner = ['node', '--test', '--test-reporter=tap'] if runtime == 'node' else [runtime, *DENO_TEST[1:]]
-            for bound, fail in ((False, False), (True, False), (True, True)):
-                command = SETUP + f'BIND_CONTEXT={int(bound)} FAIL_CONTROL={int(fail)} ' + shlex.join(runner + ['/pilot/async-context-repro.mjs'])
-                row = pilot.measure(image, volume, f'{runtime} minimal context bound={bound} fail={fail}', command, deadline=15)
+            for bound, fail, skip_import in ((False, False, False), (False, False, True), (True, False, False), (True, True, False)):
+                command = SETUP + f'BIND_CONTEXT={int(bound)} FAIL_CONTROL={int(fail)} SKIP_IMPORT={int(skip_import)} ' + shlex.join(runner + ['/pilot/async-context-repro.mjs'])
+                row = pilot.measure(image, volume, f'{runtime} minimal context bound={bound} fail={fail} skip_import={skip_import}', command, deadline=15)
                 receipt['results'].append(row)
                 row['tap'] = tap_report(row, ['first context finishes', 'second context starts empty'])
                 assert row['tap']['complete'], row['label']
-                assert row['tap']['failed'] == int(fail or (runtime != 'node' and not bound)), row['label']
+                assert row['tap']['failed'] == int(fail or (runtime != 'node' and not bound and not skip_import)), row['label']
             for bound in (False, True):
                 command = SETUP + 'cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; ' + f'REPRO_MODE=package BIND_CONTEXT={int(bound)} ' + shlex.join(runner + ['/study/repro.test.mjs'])
                 row = pilot.measure(image, volume, f'{runtime} two imports bound={bound}', command, deadline=15)
@@ -83,6 +83,13 @@ def main():
                     if runtime == 'node':
                         assert row['tap']['failed'] == 0, row['label']
                     print(f"{row['label']}: {row['tap']['passed']} passed, {row['tap']['failed']} failed", flush=True)
+            if runtime != 'node':
+                for name in [inventory['test.js'][index - 1] for index in (27, 52, 53, 54)]:
+                    argv = [*runner, '--filter=/^' + re.escape(name) + '$/', './import-fresh-suite/tests/test.js']
+                    row = pilot.measure(image, volume, runtime + ' isolated original / ' + name, SETUP + shlex.join(argv), deadline=30)
+                    receipt['results'].append(row)
+                    row['tap'] = tap_report(row, [name])
+                    assert row['tap']['complete'] and row['tap']['failed'] == 1, row['label']
             OUTPUT.parent.mkdir(parents=True, exist_ok=True)
             OUTPUT.write_text(json.dumps(receipt, indent=2) + '\n')
     except Exception as error:
