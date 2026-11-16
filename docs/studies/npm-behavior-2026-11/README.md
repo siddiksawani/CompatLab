@@ -24,9 +24,11 @@ Run the bcrypt Jest suite in-band from a copy of the published package
 outside `node_modules`, where Jest discovers its tests. Run the SPDY client
 and server suites with their pinned Mocha runner. Keep the npm tarball,
 digest, and dev-tool lock.
-Later cohorts may use an upstream source checkout for tests missing from
-the tarball. Pin and verify the release commit, test assets, and dependency
-lock before executing those files.
+The end-of-stream and require-from-string tarballs omit their suites. The
+pilot fetches their tests from the package's published source commit,
+verifies the pinned file hashes, and runs them against the npm artifacts.
+The released entry files match the corresponding source files byte for byte.
+End-of-stream uses its pinned Tape 4 dependency in its test directory.
 
 As a separate control, repeat the loading study's offline Deno import of
 `yargs/browser` with the browser entry alone and after `yargs/helpers`.

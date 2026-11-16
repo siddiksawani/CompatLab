@@ -4,9 +4,12 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import subprocess
+import tempfile
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.request import urlopen
 from uuid import uuid4
 
 
@@ -28,6 +31,13 @@ CASES = (
     ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
     ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
     ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
+    ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
+    (
+        "require-from-string", "upstream_suite", [[
+            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
+            "./node_modules/require-from-string/test/index.js",
+        ]], r'"tests":\s*(\d+)',
+    ),
     (
         "bcrypt", "upstream_suite", [[
             "/pilot/upstream-cli.cjs", "jest", "--runInBand", "--json", "--config",
@@ -81,6 +91,27 @@ def validate_pins():
             assert re.fullmatch(r"https://registry\.npmjs\.org/[^?#\s]+\.tgz", package["resolved"]), path
             assert re.fullmatch(r"sha512-[A-Za-z0-9+/]{86}==", package["integrity"]), path
     return {name: pinned[name]["version"] for name in sorted(tested)}
+
+
+def build_image(sources, versions):
+    with tempfile.TemporaryDirectory(prefix="compatlab-behavior-") as temporary:
+        context = Path(temporary) / "context"
+        shutil.copytree(ROOT, context)
+        for name, source in sources.items():
+            assert name in versions and re.fullmatch(r"[a-z0-9-]+", name), name
+            assert re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", source["repository"])
+            assert re.fullmatch(r"[a-f0-9]{40}", source["commit"])
+            for filename, digest in source["files"].items():
+                path = PurePosixPath(filename)
+                assert not path.is_absolute() and ".." not in path.parts, filename
+                url = f"https://raw.githubusercontent.com/{source['repository']}/{source['commit']}/{filename}"
+                with urlopen(url, timeout=20) as response:
+                    data = response.read(256 * 1024 + 1)
+                assert len(data) <= 256 * 1024 and hashlib.sha256(data).hexdigest() == digest, url
+                destination = context / "source-suites" / name / path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(data)
+        return cli("docker", "build", "--quiet", "--network=none", "--platform=linux/amd64", str(context), timeout=180)
 
 
 def measure(image, volume, label, command, writable_seed=False, connected=False, deadline=75):
@@ -137,7 +168,8 @@ def run():
     assert os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted"
     assert platform.system() == "Linux" and platform.machine() == "x86_64"
     versions = validate_pins()
-    image = cli("docker", "build", "--quiet", "--network=none", "--platform=linux/amd64", str(ROOT), timeout=180)
+    sources = json.loads((ROOT / "source-suites.json").read_text())
+    image = build_image(sources, versions)
     assert re.fullmatch(r"sha256:[a-f0-9]{64}", image), image
     volume = cli("docker", "volume", "create", f"compatlab-behavior-{uuid4().hex}")
     receipt = {
@@ -149,6 +181,7 @@ def run():
         "image": image,
         "lockSha256": hashlib.sha256((ROOT / "package-lock.json").read_bytes()).hexdigest(),
         "versions": versions,
+        "upstreamSuiteSources": sources,
         "preparation": [],
         "results": [],
         "diagnostics": [],
@@ -187,6 +220,10 @@ def run():
                 continue
             baseline_count = None
             setup = "cp -R /workspace/. /study/; cd /study; "
+            if name in sources:
+                setup += f"cp -R /pilot/source/{name}/. node_modules/{name}/; "
+            if name == "end-of-stream":
+                setup += "mkdir -p node_modules/end-of-stream/node_modules; ln -s ../../tape-v4 node_modules/end-of-stream/node_modules/tape; "
             if name == "bcrypt" and tier == "upstream_suite":
                 setup += "cp -R node_modules/bcrypt bcrypt-suite; "
             profiles = PROFILES if name != "spdy" else {**PROFILES, "node24": ("24.21.0", ["node24"])}

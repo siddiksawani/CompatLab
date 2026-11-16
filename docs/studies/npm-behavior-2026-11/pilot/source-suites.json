@@ -1,0 +1,18 @@
+{
+  "require-from-string": {
+    "repository": "floatdrop/require-from-string",
+    "commit": "d1575a49065eb7a49b86b4de963f04f1a14dfd60",
+    "files": {
+      "test/index.js": "e70ab19a12a5747b10192596dcc5e7a0908169b1273f82962967d681f9dccd78",
+      "test/fixture/module.js": "0648013648dbf7af45ab0638d3a102a764ecc3f052e5e285e9dcf61d3d19fe31",
+      "test/fixture/submodule.js": "0be0dab0331a978fab5cc14ca414b2f3f170877a21e80209cc50c3bb536b7172"
+    }
+  },
+  "end-of-stream": {
+    "repository": "mafintosh/end-of-stream",
+    "commit": "cea89de8165f24e183603e63839522ec22af58df",
+    "files": {
+      "test.js": "99ca782d304420aa74ea143621cbe3d051053b0b71edc12d57091af5b73d5013"
+    }
+  }
+}

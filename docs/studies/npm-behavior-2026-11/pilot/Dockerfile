@@ -9,6 +9,7 @@ COPY --from=node24 /usr/local/bin/node /usr/local/bin/node24
 RUN mkdir /workspace /study && chown 65534:65534 /workspace
 COPY --chown=65534:65534 package.json package-lock.json /workspace/
 COPY *.cjs yargs-diagnostic.mjs /pilot/
+COPY source-suites/ /pilot/source/
 
 ENV HOME=/tmp DENO_DIR=/tmp/deno NO_COLOR=1
 USER 65534:65534
