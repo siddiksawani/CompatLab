@@ -31,6 +31,7 @@ CASES = (
     ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
     ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
     ("better-sqlite3", "named_behavior", [["/pilot/better-sqlite3.cjs"]], None),
+    ("better-sqlite3", "shipped_prebuild", [["/pilot/better-sqlite3.cjs"]], None),
     ("canvas", "named_behavior", [["/pilot/canvas.cjs"]], None),
     ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
     ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
@@ -202,14 +203,14 @@ def run():
         "diagnostics": [],
     }
     try:
-        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; gcc -dumpfullversion; node24 --version")
+        pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version; gcc -dumpfullversion; node24 --version; bun144 --version")
         receipt["runtimeVersions"] = pins
         assert successful(pins)
         lines = pins["stdoutAndStderr"].splitlines()
         assert lines[0] == "v" + PROFILES["node"][0]
         assert lines[1] == PROFILES["bun"][0]
         assert lines[2].startswith("deno " + PROFILES["deno"][0] + " ")
-        assert lines[-1] == "v24.21.0"
+        assert lines[-2:] == ["v24.21.0", "1.4.4"]
         install = measure(
             image, volume, "locked npm install",
             "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
@@ -236,7 +237,7 @@ def run():
             result["hookObserved"] = f"> {name}@{versions[name]} {hook}" in result["stdoutAndStderr"]
             prerequisites[name] = successful(result) and result["hookObserved"]
         for name, tier, arguments, count_pattern in CASES:
-            if not prerequisites.get(name, True):
+            if tier != "shipped_prebuild" and not prerequisites.get(name, True):
                 receipt["results"].append({"package": name, "tier": tier, "status": "preparation_failed"})
                 continue
             baseline_count = None
@@ -247,7 +248,13 @@ def run():
                 setup += "mkdir -p node_modules/end-of-stream/node_modules; ln -s ../../tape-v4 node_modules/end-of-stream/node_modules/tape; "
             if name == "bcrypt" and tier == "upstream_suite":
                 setup += "cp -R node_modules/bcrypt bcrypt-suite; "
-            profiles = PROFILES if name != "spdy" else {**PROFILES, "node24": ("24.21.0", ["node24"])}
+            if tier == "shipped_prebuild":
+                setup += "rm -rf node_modules/better-sqlite3/build; test -f node_modules/better-sqlite3/prebuilds/linux-x64.node; "
+            profiles = PROFILES
+            if name == "spdy":
+                profiles = {**PROFILES, "node24": ("24.21.0", ["node24"])}
+            if name == "better-sqlite3":
+                profiles = {**PROFILES, "bun144": ("1.4.4", ["bun144", "run", "--no-install"])}
             for runtime, (_, runner) in profiles.items():
                 commands = [shlex.join(runner + argv) for argv in arguments]
                 command = setup + "; ".join(commands)
