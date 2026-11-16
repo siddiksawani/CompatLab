@@ -1,6 +1,7 @@
 name: npm behavior study pilot
 
 on:
+  workflow_dispatch:
   push:
     branches: [feat/npm-behavior-study-pilot]
     paths:

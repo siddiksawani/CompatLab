@@ -40,7 +40,7 @@ CASES = (
     ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
     (
         "require-from-string", "upstream_suite", [[
-            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
+            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "/pilot/mocha-reporter.cjs", "--exit",
             "./node_modules/require-from-string/test/index.js",
         ]], r'"tests":\s*(\d+)',
     ),
@@ -52,7 +52,7 @@ CASES = (
     ),
     (
         "spdy", "upstream_suite", [[
-            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
+            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "/pilot/mocha-reporter.cjs", "--exit",
             "./node_modules/spdy/test/client-test.js", "./node_modules/spdy/test/server-test.js",
         ]], r'"tests":\s*(\d+)',
     ),
@@ -66,9 +66,9 @@ CASES += tuple((name, "named_behavior", [["/pilot/remaining.cjs", name]], None) 
 CASES += (
     ("workerpool", "reduced_worker_channel", [["/pilot/worker-channel.cjs"]], None),
     ("undici", "bare_specifier", [["/pilot/remaining.cjs", "undici-bare"]], None),
-    ("workerpool", "upstream_suite", [["/pilot/upstream-cli.cjs", "mocha-v11", "--reporter", "json", "--exit", "./node_modules/workerpool/test/*.js"]], r'"tests":\s*(\d+)'),
-    ("import-fresh", "upstream_suite", [["./node_modules/import-fresh/tests/test.js"], ["./node_modules/import-fresh/tests/skip-node-modules.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
-    ("cls-hooked", "upstream_subset", [["/pilot/upstream-cli.cjs", "mocha", "--reporter", "json", "--exit",
+    ("workerpool", "upstream_suite", [["/pilot/upstream-cli.cjs", "mocha-v11", "--reporter", "/pilot/mocha-reporter.cjs", "--exit", "./node_modules/workerpool/test/*.js"]], r'"tests":\s*(\d+)'),
+    ("import-fresh", "upstream_suite", [["./import-fresh-suite/tests/test.js"], ["./import-fresh-suite/tests/skip-node-modules.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
+    ("cls-hooked", "upstream_subset", [["/pilot/upstream-cli.cjs", "mocha", "--reporter", "/pilot/mocha-reporter.cjs", "--exit",
         *[f"./node_modules/cls-hooked/test/{file}" for file in (
             "async-context.test.js", "async-no-run-queue-multiple.test.js", "http-events.test.js",
             "namespaces-multiple-values.test.js", "namespaces.test.js", "net-events.test.js",
@@ -152,6 +152,30 @@ def build_image(sources, assets, versions):
         return cli("docker", "build", "--quiet", "--network=none", "--platform=linux/amd64", str(context), timeout=180)
 
 
+def read_container_json(cid, filename, limit):
+    process = subprocess.Popen(
+        ["docker", "cp", f"{cid}:/results/{filename}", "-"],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    )
+    try:
+        data = process.stdout.read(limit + 65537)
+        if len(data) > limit + 65536:
+            return None, "Evidence archive exceeds its bound"
+        if process.wait(timeout=20) != 0:
+            return None, None
+        with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+            entries = archive.getmembers()
+            if len(entries) != 1 or not entries[0].isfile() or entries[0].size > limit:
+                return None, "Invalid evidence archive"
+            return json.load(archive.extractfile(entries[0])), None
+    except (ValueError, tarfile.TarError, subprocess.TimeoutExpired) as error:
+        return None, str(error)
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=20)
+
+
 def measure(image, volume, label, command, writable_seed=False, connected=False, deadline=75):
     network = "bridge" if connected else "none"
     mount = f"type=volume,src={volume},dst=/workspace"
@@ -181,30 +205,11 @@ def measure(image, volume, label, command, writable_seed=False, connected=False,
             exit_code = int(cli("docker", "wait", cid))
         log = cli("docker", "logs", cid)
         state = json.loads(cli("docker", "inspect", "--format", "{{json .State}}", cid))
-        completion = None
-        evidence_error = None
-        process = subprocess.Popen(
-            ["docker", "cp", f"{cid}:/results/completion.json", "-"],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-        )
-        try:
-            data = process.stdout.read(65537)
-            if len(data) > 65536:
-                evidence_error = "Completion archive exceeds 64 KiB"
-                process.kill()
-            elif process.wait(timeout=20) == 0:
-                with tarfile.open(fileobj=io.BytesIO(data)) as archive:
-                    entries = archive.getmembers()
-                    if len(entries) != 1 or not entries[0].isfile() or entries[0].size > 4096:
-                        raise ValueError("Invalid completion archive")
-                    completion = json.load(archive.extractfile(entries[0]))
-        except (ValueError, tarfile.TarError, subprocess.TimeoutExpired) as error:
-            evidence_error = str(error)
-        finally:
-            if process.poll() is None:
-                process.kill()
-            process.wait(timeout=20)
+        completion, evidence_error = read_container_json(cid, "completion.json", 4096)
+        suite, suite_error = read_container_json(cid, "suite.json", 262144)
         return {
+            "suiteResult": suite,
+            "suiteResultError": suite_error,
             "completion": completion,
             "completionError": evidence_error,
             "logTruncated": len(log) > 65000,
@@ -316,6 +321,8 @@ def run():
                 setup += "mkdir -p node_modules/end-of-stream/node_modules; ln -s ../../tape-v4 node_modules/end-of-stream/node_modules/tape; "
             if name == "bcrypt" and tier == "upstream_suite":
                 setup += "cp -R node_modules/bcrypt bcrypt-suite; "
+            if name == "import-fresh" and tier == "upstream_suite":
+                setup += "cp -R node_modules/import-fresh import-fresh-suite; "
             if tier == "shipped_prebuild":
                 setup += "rm -rf node_modules/better-sqlite3/build; test -f node_modules/better-sqlite3/prebuilds/linux-x64.node; "
             if tier == "renamed_compiled_binding":
@@ -327,6 +334,11 @@ def run():
             if name == "better-sqlite3" or (name in REMAINING and not tier.startswith("upstream_") and tier != "root_import"):
                 profiles = {**PROFILES, "bun144": ("1.4.4", ["bun144", "run", "--no-install"])}
             for runtime, (_, runner) in profiles.items():
+                if name == "import-fresh" and tier == "upstream_suite":
+                    if runtime == "node":
+                        runner = ["node", "--test", "--test-reporter=tap"]
+                    elif runtime == "deno":
+                        runner = ["deno", "test", "-A", "--no-config", "--no-lock", "--node-modules-dir=manual", "--cached-only", "--no-check", "--reporter=tap"]
                 named = not tier.startswith("upstream_")
                 executed_arguments = [["/pilot/probe-entry.cjs", *argv] if named else argv for argv in arguments]
                 commands = [shlex.join(runner + argv) for argv in executed_arguments]
@@ -348,6 +360,8 @@ def run():
                         row["status"] = "replay_required"
                 if count_pattern:
                     assertion_counts = re.findall(count_pattern, row["stdoutAndStderr"])
+                    if name == "import-fresh" and not assertion_counts:
+                        assertion_counts = re.findall(r"(?m)^1\.\.(\d+)\s*$", row["stdoutAndStderr"])
                     row["testCount"] = sum(map(int, assertion_counts)) if assertion_counts else None
                     row["suiteCommandsReported"] = len(assertion_counts)
                     log = row["stdoutAndStderr"]
@@ -358,6 +372,14 @@ def run():
                     else:
                         skipped = re.search(r"(?m)^# (?:skip|skipped)\s+(\d+)\s*$", log)
                     row["skippedCount"] = int(skipped[1]) if skipped else 0
+                    if name == "import-fresh":
+                        row["skippedCount"] = sum(map(int, re.findall(r"(?m)^# (?:skip|skipped)\s+(\d+)\s*$", log)))
+                    if row["suiteResult"] is not None:
+                        stats = row["suiteResult"]["stats"]
+                        row["testCount"] = stats["tests"]
+                        row["skippedCount"] = stats["pending"]
+                    if name in ("workerpool", "require-from-string", "spdy", "cls-hooked") and row["suiteResult"] is None:
+                        row["status"] = "replay_required"
                     if not row["testCount"] or len(assertion_counts) != len(arguments):
                         row["status"] = "replay_required"
                     elif runtime == "node" and row["status"] == "pass":

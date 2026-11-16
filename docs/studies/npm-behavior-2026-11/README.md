@@ -124,7 +124,7 @@ in fresh containers. Named cases use the same completion rule, and the
 cohort remains fixed even when its Node baseline fails.
 
 Additional source suites are pinned at the frozen npm metadata commits.
-Workerpool runs its seven top-level JavaScript test files with Mocha
+Workerpool runs all top-level JavaScript files in its test directory with Mocha
 11.7.6. Import-fresh runs both JavaScript unit files as separate processes
 and requires both test summaries for a pass. CLS-hooked runs eight of its
 nine Mocha files; the HTTP-agent file requires public Google access and is
@@ -146,3 +146,36 @@ Workerpool logs the dispatch, result assertion and teardown boundaries to
 locate a timeout. Additional named cases run on Bun 1.4.4 as a supplement
 to the original 1.4.2 comparison. Neither supplementary runtime nor shim
 results are silently folded into the primary matrix.
+
+### Suite-runner corrections
+
+Import-fresh tests run from a copy of its published implementation outside
+`node_modules`. Otherwise `skipNodeModules` also skips the test's own
+workspace modules and creates a false baseline failure. Node runs those
+two files with `--test --test-reporter=tap`; Deno uses `deno test` with full
+permissions, offline resolution and the TAP reporter. `deno run` registers
+its `node:test` cases without executing them, so zero exit alone is unusable.
+The earlier unexecuted run and misplaced-fixture failures are retained as
+superseded harness observations. Bun's missing loader hook stops this suite
+before its assertions register.
+
+Mocha suites retain compact structured statistics and individual test events
+in a separate bounded file, including errors and skips. This prevents long
+stdout logs from dropping failure details. Their `--exit` flag ends the
+process after the assertions; it does not certify a leak-free process lifetime.
+The named worker case separately awaits pool teardown. Full stdout logs are
+bounded, and any truncation is recorded. A raw suite failure is not automatically
+a runtime bug, particularly when the Node baseline also fails or test counts differ.
+
+## Reproduce
+
+The `npm behavior study pilot` Actions workflow is manually dispatchable after
+merge. It uses a disposable GitHub-hosted Linux amd64 runner and requires no
+repository secrets. Select the recorded source revision for historical replay;
+use the checked-in lock and source pins rather than resolving newer packages.
+On a fork, update its repository/actor guard to the fork owner deliberately.
+The Python runner refuses developer-host execution. Commands in the data post
+are the inner commands from the receipt, after the runner builds the image,
+prepares the shared volume and copies it to `/study` in a fresh sandbox.
+Each rerun records a new image ID, run date and source commit. It is a rebuild,
+not reuse of the historical installed volume.
