@@ -47,6 +47,10 @@ def check_reduction(row, runtime, script, args):
                 else:
                     expected = None if args[0] == 'direct' and name != 'json' else 'ERR_MODULE_NOT_FOUND'
                 assert case['error']['code'] == expected
+                assert case['error']['name'] == 'TypeError'
+                if args[0] in ('hook', 'package'):
+                    message = 'load-hook sentinel' if args[0] == 'hook' else f'Import attributes are not supported for the CommonJS module "file:///study/attribute-{name}.cjs".'
+                    assert case['error']['message'] == (message if node else 'TypeError: ' + message)
             if args[0] == 'hook':
                 assert [event['phase'] for event in case['events']] == ['resolve', 'load']
                 assert case['events'][0]['attributes'] == (attributes if node else {})

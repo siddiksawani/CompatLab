@@ -27,12 +27,22 @@ class StudyAssertionEvidenceTest(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     VERIFY(run)
 
-    def test_lost_side_effect_and_missing_coverage_are_rejected(self):
+    def test_lost_side_effect_is_rejected(self):
         row = next(row for row in self.run['results'] if row['label'] == 'deno298 import-attributes-repro.mjs package / attempt 1')
         row['suiteResult']['cases'][-1]['executed'] = 0
         with self.assertRaises(AssertionError):
             VERIFY(self.run)
-        self.setUp()
+
+    def test_unrelated_resolution_error_cannot_stand_in_for_attribute_rejection(self):
+        for mode in ('hook', 'package'):
+            with self.subTest(mode=mode):
+                run = copy.deepcopy(self.run)
+                row = next(row for row in run['results'] if row['label'] == f'deno298 import-attributes-repro.mjs {mode} / attempt 1')
+                row['suiteResult']['cases'][1]['error']['message'] = 'Cannot find module file:///study/attribute-json.cjs'
+                with self.assertRaises(AssertionError):
+                    VERIFY(run)
+
+    def test_missing_measurement_is_rejected(self):
         self.run['results'].pop()
         with self.assertRaises(AssertionError):
             VERIFY(self.run)
