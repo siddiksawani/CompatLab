@@ -66,6 +66,15 @@ PR 39 confirms subpath batch failures that follow an earlier failed load in the 
 
 ### Discovery and adoption follow-ups
 
+PR 79 completes the frozen 24-version npm behavior study in a separate, manually
+reproducible Linux amd64 gVisor workflow. It publishes reviewed per-case results,
+raw commands/logs/replays and pinned suite provenance with a server-rendered
+article and downloadable JSON/CSV. Named behavior, upstream suites, missing
+coverage and baseline failures stay distinct; public loading reports and badges
+keep their existing meaning. Validation includes negative completion controls,
+fresh-container failure replays, publication consistency checks, and browser
+coverage for discovery, accessibility and read-only downloads.
+
 PR 56 records the multi-turn MCP summary evaluation for issue #55; it changes documentation only.
 Claude Code 2.1.310 ran 12 eight-turn conversations against the live read-only endpoint with only
 the two CompatLab tools enabled: `claude-sonnet-5-5` and `claude-haiku-5-5`, three repeats each for

@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     ...baseMetadata.openGraph,
     type: "article",
     publishedTime: article.publishedAt,
+    modifiedTime: article.modifiedAt,
     authors: [article.author],
   },
 };
@@ -41,6 +42,7 @@ export default async function NovemberStudy() {
           headline: article.title,
           description: article.description,
           datePublished: article.publishedAt,
+          dateModified: article.modifiedAt,
           inLanguage: "en",
           author: { "@type": "Organization", name: article.author, url: origin },
           mainEntityOfPage: origin + article.path,
@@ -74,6 +76,13 @@ export default async function NovemberStudy() {
         </p>
       </header>
 
+      <p>
+        Follow-up:{" "}
+        <a href="/articles/npm-behavior-study-2026-11">
+          we called package APIs and attempted upstream tests for 24 deliberately selected versions
+        </a>
+        . That study separates behavior from loading and keeps baseline failures visible.
+      </p>
       <h2 id="results">Loading results</h2>
       <p>
         The study attempted {totals.attempted} exact versions. {totals.preparationPass} produced a

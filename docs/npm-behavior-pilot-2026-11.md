@@ -1,4 +1,8 @@
-# November npm behavior pilot results
+# November npm behavior pilot results (historical)
+
+This records the initial eleven-package pilot, not the completed study. See the
+[full-cohort results and triage](studies/npm-behavior-2026-11/README.md) and
+[published follow-up](https://compatlab.me/articles/npm-behavior-study-2026-11).
 
 The [November behavior protocol](studies/npm-behavior-2026-11/README.md)
 pins 24 versions. This pilot covered eleven of them. It attempted six
@@ -55,8 +59,10 @@ Every run returned `ERR_MODULE_NOT_FOUND` with the same unsupported-HTTPS
 message. This used the pinned Yargs tarball with the pilot's dependency
 lock. The previously reported variation did not reproduce in this setup.
 
-Thirteen pinned versions still need a first run. The next suite work is
-to verify the matching source and fixtures for packages whose npm
-tarballs omit them, including the native packages tested here only with
-named behavior checks. The cohort was chosen to exercise those APIs,
-so the results describe only the cases tested here.
+At the end of this pilot, thirteen pinned versions had not run. The completed
+study subsequently covered all 24 versions, added root-import controls and
+three more upstream suite attempts, and reran the original cases with the
+expanded lock. This historical table is not a current task list. Most native
+packages still have only named behavior coverage; their full upstream suites
+remain outside the published study. The selected cases do not estimate a
+registry-wide failure rate.

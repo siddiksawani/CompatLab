@@ -4,6 +4,11 @@ The November loading study found that 97 of 100 selected versions passed the
 root import check on all four tested profiles. This study asks what happens
 when code calls the package or runs its upstream tests.
 
+The completed [data post](https://compatlab.me/articles/npm-behavior-study-2026-11)
+and [versioned results](results/README.md) separate named behavior from upstream
+suite coverage. The [initial eleven-package pilot](../../npm-behavior-pilot-2026-11.md)
+is historical; all 24 frozen versions appear in the completed study.
+
 ## Frozen cohort
 
 The [cohort](cohort.json) pins 24 npm artifacts across native addons and

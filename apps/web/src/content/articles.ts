@@ -33,10 +33,26 @@ export const novemberStudyArticle = {
   description:
     "A frozen 100-version npm study with root import and require results, subpath coverage, and reproducible observations on four pinned runtimes.",
   publishedAt: "2026-11-13",
+  modifiedAt: "2026-11-16",
   author: "CompatLab",
 } as const;
 
-export const articles = [novemberStudyArticle, migrationArticle, mcpArticle, compatibilityArticle];
+export const behaviorStudyArticle = {
+  path: "/articles/npm-behavior-study-2026-11",
+  title: "npm packages can import and still fail: a 24-package behavior study",
+  description:
+    "Pinned behavior checks and upstream tests for 24 npm versions on Node.js, Bun and Deno, with reproduced differences, baseline failures and downloadable raw results.",
+  publishedAt: "2026-11-16",
+  author: "CompatLab",
+} as const;
+
+export const articles = [
+  behaviorStudyArticle,
+  novemberStudyArticle,
+  migrationArticle,
+  mcpArticle,
+  compatibilityArticle,
+];
 
 export function articleDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
