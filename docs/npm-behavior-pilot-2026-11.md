@@ -37,7 +37,11 @@ the call to open a database, including fresh replays. Both versions passed
 with the npm tarball's bundled binary and with a byte-identical copy of the
 locally built binary under a different filename. Both Node.js 26 and Deno
 passed all three variants. The Bun 1.4.4 source checks for the original
-filename suffix when loading a native addon. [Bun issue #49082](https://github.com/oven-sh/bun/issues/49082)
+filename suffix when loading a native addon. This independently reproduces the
+filename check already documented in [Bun PR #47648](https://github.com/oven-sh/bun/pull/47648),
+opened November 1, 2026. That proposed fix remained open and unmerged when
+checked November 16, 2026. The [reply on our issue](https://github.com/oven-sh/bun/issues/49082#issuecomment-6909379788)
+links the earlier work.
 
 The same two error-reporting assertions in the require-from-string
 suite failed on all three runtimes, including fresh

@@ -8,9 +8,9 @@
     {
       "id": "sqlite",
       "title": "An identical native binary worked after a filename change",
-      "summary": "better-sqlite3@13.2.0 imported successfully, but opening a database through our from-source binding failed on Bun 1.4.2 and 1.4.4. The shipped prebuild passed. A byte-identical copy of the rebuilt binary also passed when selected under a different filename. Node and Deno passed all three variants. The evidence points to Bun's filename guard, not a blanket inability to run this addon. We filed issue #49082; it links an already-open fix that predates this study.",
+      "summary": "Bun PR #47648, opened November 1, 2026, already documented this filename check and proposed a fix before our study. Our matched-binary checks independently reproduced it: better-sqlite3@13.2.0 imported successfully, but opening a database through our from-source binding failed on Bun 1.4.2 and 1.4.4. The shipped prebuild passed. A byte-identical copy of the rebuilt binary also passed when selected under a different filename. Node and Deno passed all three variants. As checked November 16, 2026, the earlier PR remained open and unmerged.",
       "command": "bun run --no-install /pilot/probe-entry.cjs /pilot/better-sqlite3.cjs",
-      "evidence": "https://github.com/oven-sh/bun/issues/49082"
+      "evidence": "https://github.com/oven-sh/bun/pull/47648"
     },
     {
       "id": "workers",
