@@ -6,6 +6,7 @@
     "bcrypt": "6.0.0",
     "better-sqlite3": "13.2.0",
     "callback-stream": "1.1.0",
+    "canvas": "3.2.3",
     "end-of-stream": "1.4.5",
     "esbuild": "0.28.2",
     "jest": "29.7.0",
@@ -23,6 +24,7 @@
   "allowScripts": {
     "bcrypt@6.0.0": true,
     "esbuild@0.28.2": true,
-    "better-sqlite3@13.2.0": true
+    "better-sqlite3@13.2.0": true,
+    "canvas@3.2.3": true
   }
 }

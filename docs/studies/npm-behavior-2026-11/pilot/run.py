@@ -31,6 +31,7 @@ CASES = (
     ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
     ("sharp", "named_behavior", [["/pilot/sharp.cjs"]], None),
     ("better-sqlite3", "named_behavior", [["/pilot/better-sqlite3.cjs"]], None),
+    ("canvas", "named_behavior", [["/pilot/canvas.cjs"]], None),
     ("thread-stream", "named_behavior", [["/pilot/thread-stream.cjs"]], None),
     ("end-of-stream", "upstream_suite", [["./node_modules/end-of-stream/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
     (
@@ -94,7 +95,7 @@ def validate_pins():
     return {name: pinned[name]["version"] for name in sorted(tested)}
 
 
-def build_image(sources, versions):
+def build_image(sources, assets, versions):
     with tempfile.TemporaryDirectory(prefix="compatlab-behavior-") as temporary:
         context = Path(temporary) / "context"
         shutil.copytree(ROOT, context)
@@ -112,6 +113,17 @@ def build_image(sources, versions):
                 destination = context / "source-suites" / name / path
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(data)
+        for name, asset in assets.items():
+            assert name in versions and re.fullmatch(r"[a-z0-9-]+", name), name
+            assert re.fullmatch(r"[A-Za-z0-9_.-]+\.tar\.gz", asset["file"]), asset["file"]
+            assert asset["url"].startswith("https://github.com/")
+            assert 0 < asset["bytes"] <= 16 * 1024 * 1024
+            with urlopen(asset["url"], timeout=60) as response:
+                data = response.read(asset["bytes"] + 1)
+            assert len(data) == asset["bytes"] and hashlib.sha256(data).hexdigest() == asset["sha256"]
+            destination = context / "release-assets" / name / asset["file"]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
         return cli("docker", "build", "--quiet", "--network=none", "--platform=linux/amd64", str(context), timeout=180)
 
 
@@ -170,7 +182,8 @@ def run():
     assert platform.system() == "Linux" and platform.machine() == "x86_64"
     versions = validate_pins()
     sources = json.loads((ROOT / "source-suites.json").read_text())
-    image = build_image(sources, versions)
+    assets = json.loads((ROOT / "release-assets.json").read_text())
+    image = build_image(sources, assets, versions)
     assert re.fullmatch(r"sha256:[a-f0-9]{64}", image), image
     volume = cli("docker", "volume", "create", f"compatlab-behavior-{uuid4().hex}")
     receipt = {
@@ -183,6 +196,7 @@ def run():
         "lockSha256": hashlib.sha256((ROOT / "package-lock.json").read_bytes()).hexdigest(),
         "versions": versions,
         "upstreamSuiteSources": sources,
+        "releaseAssets": assets,
         "preparation": [],
         "results": [],
         "diagnostics": [],
@@ -205,9 +219,11 @@ def run():
         if not successful(install):
             raise RuntimeError("Locked preparation failed. See the pilot artifact.")
         prerequisites = {}
-        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall"), ("better-sqlite3", "install")):
+        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall"), ("better-sqlite3", "install"), ("canvas", "install")):
             spec = shlex.quote(f"{name}@{versions[name]}")
             prefix = "npm_config_nodedir=/usr/local npm_config_jobs=2 " if name == "better-sqlite3" else ""
+            if name in assets:
+                prefix = f"mkdir -p node_modules/{name}/prebuilds; cp /pilot/assets/{name}/* node_modules/{name}/prebuilds/; "
             result = measure(
                 image, volume, f"{name} lifecycle",
                 f"{prefix}npm rebuild --offline --no-audit --no-fund --foreground-scripts {spec}",

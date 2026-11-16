@@ -1,0 +1,8 @@
+{
+  "canvas": {
+    "file": "canvas-v3.2.3-napi-v7-linux-x64.tar.gz",
+    "url": "https://github.com/Automattic/node-canvas/releases/download/v3.2.3/canvas-v3.2.3-napi-v7-linux-x64.tar.gz",
+    "bytes": 8681961,
+    "sha256": "886d1cc270d4caad1d1698ee97532e79c60e992e16fe5f37f2d3bb058f4292b0"
+  }
+}
