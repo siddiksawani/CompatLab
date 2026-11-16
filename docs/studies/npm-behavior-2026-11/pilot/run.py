@@ -21,11 +21,28 @@ PROFILES = {
          "--cached-only"],
     ),
 }
-CASES = {
-    "pump": ("upstream_suite", ["node_modules/pump/test-browser.js", "node_modules/pump/test-node.js"]),
-    "split2": ("upstream_suite", ["node_modules/split2/test.js"]),
-    "bcrypt": ("named_behavior", ["/pilot/bcrypt.cjs"]),
-    "esbuild": ("named_behavior", ["/pilot/esbuild.cjs"]),
+CASES = (
+    ("pump", "upstream_suite", [["./node_modules/pump/test-browser.js"], ["./node_modules/pump/test-node.js"]], None),
+    ("split2", "upstream_suite", [["./node_modules/split2/test.js"]], r"(?m)^# tests\s+(\d+)\s*$"),
+    ("bcrypt", "named_behavior", [["/pilot/bcrypt.cjs"]], None),
+    ("esbuild", "named_behavior", [["/pilot/esbuild.cjs"]], None),
+    (
+        "bcrypt", "upstream_suite", [[
+            "/pilot/upstream-cli.cjs", "jest", "--runInBand", "--json", "--config",
+            '{"rootDir":"/study/node_modules/bcrypt","testPathIgnorePatterns":[]}',
+        ]], r'"numTotalTests":\s*(\d+)',
+    ),
+    (
+        "spdy", "upstream_suite", [[
+            "/pilot/upstream-cli.cjs", "mocha", "--reporter", "json",
+            "./node_modules/spdy/test/client-test.js", "./node_modules/spdy/test/server-test.js",
+        ]], r'"tests":\s*(\d+)',
+    ),
+)
+STUDY_CONTROL = {
+    "version": "18.2.0",
+    "integrity": "sha512-9OpKOLeaoNFecEp7P6iYbzze/5CqWoH7N3SMs/6y1XF4nMvFMspEGZzJ6uFi9MmQwXhyzqYoSEKO3tvA3Z/o2w==",
+    "tarball": "https://registry.npmjs.org/yargs/-/yargs-18.2.0.tgz",
 }
 
 
@@ -49,7 +66,9 @@ def validate_pins():
     cohort = json.loads((ROOT.parent / "cohort.json").read_text())["packages"]
     pinned = {row["name"]: row for row in cohort}
     assert len(pinned) == len(cohort) == 24
-    for name in CASES:
+    tested = {name for name, _, _, _ in CASES}
+    pinned["yargs"] = STUDY_CONTROL
+    for name in tested | {"yargs"}:
         package = lock["packages"][f"node_modules/{name}"]
         assert package["version"] == pinned[name]["version"], name
         assert package["integrity"] == pinned[name]["integrity"], name
@@ -59,7 +78,7 @@ def validate_pins():
             assert not package.get("link"), path
             assert re.fullmatch(r"https://registry\.npmjs\.org/[^?#\s]+\.tgz", package["resolved"]), path
             assert re.fullmatch(r"sha512-[A-Za-z0-9+/]{86}==", package["integrity"]), path
-    return {name: pinned[name]["version"] for name in CASES}
+    return {name: pinned[name]["version"] for name in sorted(tested)}
 
 
 def measure(image, volume, label, command, writable_seed=False, connected=False, deadline=75):
@@ -130,6 +149,7 @@ def run():
         "versions": versions,
         "preparation": [],
         "results": [],
+        "diagnostics": [],
     }
     try:
         pins = measure(image, volume, "runtime versions", "node --version; bun --version; deno --version; npm --version")
@@ -148,7 +168,7 @@ def run():
         if not successful(install):
             raise RuntimeError("Locked preparation failed. See the pilot artifact.")
         prerequisites = {}
-        for name in ("bcrypt", "esbuild"):
+        for name, hook in (("bcrypt", "install"), ("esbuild", "postinstall")):
             spec = shlex.quote(f"{name}@{versions[name]}")
             result = measure(
                 image, volume, f"{name} lifecycle",
@@ -156,25 +176,36 @@ def run():
                 writable_seed=True,
             )
             receipt["preparation"].append(result)
-            prerequisites[name] = successful(result)
-        for name, (tier, files) in CASES.items():
+            result["hookObserved"] = f"> {name}@{versions[name]} {hook}" in result["stdoutAndStderr"]
+            prerequisites[name] = successful(result) and result["hookObserved"]
+        for name, tier, arguments, count_pattern in CASES:
             if not prerequisites.get(name, True):
                 receipt["results"].append({"package": name, "tier": tier, "status": "preparation_failed"})
                 continue
+            baseline_count = None
             for runtime, (_, runner) in PROFILES.items():
-                commands = [shlex.join(runner + [f if f.startswith("/") else f"./{f}"]) for f in files]
+                commands = [shlex.join(runner + argv) for argv in arguments]
                 command = "cp -R /workspace/. /study/; cd /study; " + "; ".join(commands)
                 row = measure(image, volume, f"{name} / {runtime}", command)
                 row.update(package=name, tier=tier, runtime=runtime, status="pass" if successful(row) else "replay_required")
-                if name == "split2":
-                    assertion_count = re.search(r"(?m)^# tests\s+(\d+)\s*$", row["stdoutAndStderr"])
+                if count_pattern:
+                    assertion_count = re.search(count_pattern, row["stdoutAndStderr"])
                     row["testCount"] = int(assertion_count[1]) if assertion_count else None
                     if not row["testCount"]:
                         row["status"] = "replay_required"
+                    elif runtime == "node" and row["status"] == "pass":
+                        baseline_count = row["testCount"]
+                    elif baseline_count and row["status"] == "pass" and row["testCount"] != baseline_count:
+                        row["status"] = "coverage_mismatch"
                 receipt["results"].append(row)
-                print(f"{name} {runtime}: {row['status']}", flush=True)
-                if row["status"] == "replay_required":
+                print(f"{name} {tier} {runtime}: {row['status']}", flush=True)
+                if row["status"] != "pass":
                     row["replay"] = measure(image, volume, f"{name} / {runtime} replay", command)
+        for order in ("fresh", "after-helper"):
+            argv = PROFILES["deno"][1] + ["./yargs-diagnostic.mjs", order]
+            command = "cp -R /workspace/. /study/; cp /pilot/yargs-diagnostic.mjs /study/; cd /study; " + shlex.join(argv)
+            for attempt in range(1, 4):
+                receipt["diagnostics"].append(measure(image, volume, f"yargs {order} {attempt}", command))
     except Exception as error:
         receipt["infrastructureError"] = str(error)
         raise

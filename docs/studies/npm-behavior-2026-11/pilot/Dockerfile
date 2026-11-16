@@ -6,7 +6,7 @@ COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=deno /usr/bin/deno /usr/local/bin/deno
 RUN mkdir /workspace /study && chown 65534:65534 /workspace
 COPY --chown=65534:65534 package.json package-lock.json /workspace/
-COPY bcrypt.cjs esbuild.cjs /pilot/
+COPY bcrypt.cjs esbuild.cjs upstream-cli.cjs yargs-diagnostic.mjs /pilot/
 
 ENV HOME=/tmp DENO_DIR=/tmp/deno NO_COLOR=1
 USER 65534:65534

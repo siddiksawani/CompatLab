@@ -13,15 +13,23 @@ Node APIs. Keep all 24 rows when publishing results, including unavailable
 tests and installation prerequisites. Record how many versions are evaluable
 in every reported tier. Registry-wide compatibility is outside this sample.
 
-The pilot uses two upstream JavaScript suites packaged with the exact npm
+The pilot uses upstream JavaScript suites packaged with the exact npm
 artifacts. Run both scripts listed by Pump's test command. For Split2, run
 the same TAP assertions as its unit command and record assertion counts,
 with lint and coverage instrumentation outside the observation. Run a
 bcrypt hash and verify case and an esbuild transform as separately labeled
-behavior smoke tests. Keep the npm tarball, digest, and dev-tool lock.
+behavior smoke tests. Run the bcrypt Jest suite in-band and the SPDY client
+and server suites with their pinned Mocha runner. Keep the npm tarball,
+digest, and dev-tool lock.
 Later cohorts may use an upstream source checkout for tests missing from
 the tarball. Pin and verify the release commit, test assets, and dependency
 lock before executing those files.
+
+As a separate control, repeat the loading study's offline Deno import of
+`yargs/browser` with the browser entry alone and after `yargs/helpers`.
+Record the raw error codes and messages for each fresh container. This
+control uses the same pinned Yargs tarball with a newly locked dependency
+tree. It stays outside the behavior cohort.
 
 ## Execution
 
