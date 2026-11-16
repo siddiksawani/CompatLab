@@ -9,6 +9,10 @@ and [versioned results](results/README.md) separate named behavior from upstream
 suite coverage. The [initial eleven-package pilot](../../npm-behavior-pilot-2026-11.md)
 is historical; all 24 frozen versions appear in the completed study.
 
+The [November 16 Import-fresh follow-up](followup/README.md) isolates the Deno
+full-suite timeout and provides a labeled context-binding workaround. It
+retains four assertion failures and does not replace the original observations.
+
 ## Frozen cohort
 
 The [cohort](cohort.json) pins 24 npm artifacts across native addons and

@@ -34,7 +34,30 @@
       "evidence": "https://bun.sh/docs/runtime/nodejs-compat"
     }
   ],
-  "suiteInterpretation": "A failed upstream suite is not automatically a runtime defect. Require-from-string relies on historical error formatting; SPDY depends on private bindings removed from current Node. Workerpool and CLS-hooked also have failing Node baselines and different failures or coverage on other runtimes. Their complete structured errors and fresh replays remain in the raw data. Compare individual cases only when their prerequisites and test coverage match. Import-fresh completes 69 tests on Node, stops before registration on Bun, and stalls twice on Deno after two completed tests, before its top-level-await case completes. Deno's stall remains unisolated; it is a timeout observation, not an established runtime bug. Mocha failure totals can include hooks in addition to test cases, and Workerpool's Deno failure count changes between replay attempts.",
+  "suiteInterpretation": "A failed upstream suite is not automatically a runtime defect. Require-from-string relies on historical error formatting; SPDY depends on private bindings removed from current Node. Workerpool and CLS-hooked also have failing Node baselines and different failures or coverage on other runtimes. Their complete structured errors and fresh replays remain in the raw data. Compare individual cases only when their prerequisites and test coverage match. Import-fresh completes 69 tests on Node, stops before registration on Bun, and stalls twice on Deno after two completed tests, before its top-level-await case completes. Those are the original unmodified-suite observations. The dated Deno follow-up below isolates the stall and reports an adapted suite separately. Mocha failure totals can include hooks in addition to test cases, and Workerpool's Deno failure count changes between replay attempts.",
+  "denoFollowup": {
+    "date": "November 16, 2026",
+    "summary": "A package-free reproduction isolates a cross-test async-context leak after a dynamic import on Deno 2.9.7 and 2.9.8. Binding test callbacks to their registration context removes the Import-fresh deadlock: all 69 tests finish in two fresh attempts on each profile. Node passes 69; each Deno version passes 65 and fails four. The four failures also reproduce individually without the adapter. This is an adapted-suite result, not a passing unmodified suite or a change to the original 189 observations.",
+    "evidence": "https://github.com/siddiksawani/CompatLab/tree/main/docs/studies/npm-behavior-2026-11/followup",
+    "upstream": "https://github.com/denoland/deno/issues/37184",
+    "totals": {
+      "node": {
+        "completed": 69,
+        "passed": 69,
+        "failed": 0
+      },
+      "deno": {
+        "completed": 69,
+        "passed": 65,
+        "failed": 4
+      },
+      "deno298": {
+        "completed": 69,
+        "passed": 65,
+        "failed": 4
+      }
+    }
+  },
   "audit": "The audit corrected measurement mistakes before publication: Bun's bare undici shim lacked Agent.close while the explicitly pinned npm package passed; Import-fresh fixtures had to move outside node_modules; Deno needed deno test to execute node:test; asynchronous probes needed awaited completion records; and Mocha failures needed structured evidence beyond bounded stdout. Superseded receipts are retained with explanations. A failed first command was injected into Pump's shell sequence and propagated exit 23; no false Pump pass was observed. The separate Yargs diagnostic returned the same ERR_MODULE_NOT_FOUND code in all six fresh/order controls, so the earlier inconsistent-code suspicion did not reproduce.",
   "schemaVersion": 1,
   "runUrl": "https://github.com/siddiksawani/CompatLab/actions/runs/43825045750",
@@ -3888,7 +3911,7 @@
       "runtimeVersion": "2.9.7",
       "status": "timeout",
       "classification": "unresolved_suite_timeout",
-      "explanation": "Using deno test actually executes node:test cases. The first two ESM tests pass, then no further test finishes before the 180-second container deadline; the third source case concerns top-level await. A fresh replay produces the same two completed tests and timeout. The second file never runs. The small named ESM cache-reset probe passes; the suite stall is not isolated to a runtime defect.",
+      "explanation": "Using deno test actually executes node:test cases. The first two ESM tests pass, then no further test finishes before the 180-second container deadline; the third source case concerns top-level await. A fresh replay produces the same two completed tests and timeout. The second file never runs. The small named ESM cache-reset probe passes; the stall was unisolated at initial publication. See the separately labeled November 16 context-binding follow-up; this row retains the original whole-file timeout.",
       "rawStatus": "replay_required",
       "exitCode": 137,
       "timedOut": true,

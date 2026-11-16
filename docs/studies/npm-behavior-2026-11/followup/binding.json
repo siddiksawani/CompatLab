@@ -1,0 +1,781 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-16T13:03:40.681299+00:00",
+  "sourceCommit": "716546b01a38790c03f773601ba3a38a21502672",
+  "runUrl": "https://github.com/siddiksawani/CompatLab/actions/runs/43872045788",
+  "image": "sha256:ce801611ef05b14de15b969fbe035e6b90701ac14bee6983c8cc724fbb66e043",
+  "runsc": "runsc version release-20260928.0\nspec: 1.2.1",
+  "lockSha256": "c9e2a674664d63755b1b84e7e3f31eb77212877b1ce94f5ca4c33e090a86bc05",
+  "platform": "Linux amd64 / Debian Bookworm / glibc",
+  "results": [
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests plain bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=0 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:48.824243+00:00",
+      "endedAt": "2026-11-16T13:03:50.040617+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first\nok 1 - first\n  ---\n  duration_ms: 8.32517\n  type: 'test'\n  ...\n# Subtest: second\nok 2 - second\n  ---\n  duration_ms: 2.473579\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 78.730161"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests plain bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=1 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:50.097103+00:00",
+      "endedAt": "2026-11-16T13:03:51.289562+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first\nok 1 - first\n  ---\n  duration_ms: 8.320295\n  type: 'test'\n  ...\n# Subtest: second\nok 2 - second\n  ---\n  duration_ms: 2.117878\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 83.307097"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests hook bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=0 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:51.346378+00:00",
+      "endedAt": "2026-11-16T13:03:52.526300+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first\nok 1 - first\n  ---\n  duration_ms: 8.824303\n  type: 'test'\n  ...\n# Subtest: second\nok 2 - second\n  ---\n  duration_ms: 2.10954\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 81.034723"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests hook bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=1 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:52.582425+00:00",
+      "endedAt": "2026-11-16T13:03:53.788295+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first\nok 1 - first\n  ---\n  duration_ms: 8.309795\n  type: 'test'\n  ...\n# Subtest: second\nok 2 - second\n  ---\n  duration_ms: 2.151777\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 77.113397"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started",
+          "nested passed"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests package bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=0 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:53.845209+00:00",
+      "endedAt": "2026-11-16T13:03:55.039279+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first import\nok 1 - first import\n  ---\n  duration_ms: 5.599424\n  type: 'test'\n  ...\n# Subtest: nested import\nok 2 - nested import\n  ---\n  duration_ms: 4.202759\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 90.378585"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started",
+          "nested passed"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node two tests package bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=1 node --test --test-reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:55.094504+00:00",
+      "endedAt": "2026-11-16T13:03:56.330127+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 13\n# Subtest: first import\nok 1 - first import\n  ---\n  duration_ms: 6.029969\n  type: 'test'\n  ...\n# Subtest: nested import\nok 2 - nested import\n  ---\n  duration_ms: 4.182851\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 85.718327"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node bound test callbacks / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; node --test --test-reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:03:56.385850+00:00",
+      "endedAt": "2026-11-16T13:04:02.560096+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 13\n# Subtest: fresh import returns a new ESM module instance\nok 1 - fresh import returns a new ESM module instance\n  ---\n  duration_ms: 16.540901\n  type: 'test'\n  ...\n# Subtest: dependency graph is fresh per call for ESM dependencies\nok 2 - dependency graph is fresh per call for ESM dependencies\n  ---\n  duration_ms: 2.900729\n  type: 'test'\n  ...\n# Subtest: top-level await can use importFresh without deadlock\nok 3 - top-level await can use importFresh without deadlock\n  ---\n  duration_ms: 3.183939\n  type: 'test'\n  ...\n# Subtest: top-level await fresh imports remain isolated when started concurrently\nok 4 - top-level await fresh imports remain isolated when started concurrently\n  ---\n  duration_ms: 107.198408\n  type: 'test'\n  ...\n# Subtest: CommonJS entry modules are fresh across fresh imports\nok 5 - CommonJS entry modules are fresh across fresh imports\n  ---\n  duration_ms: 3.06826\n  type: 'test'\n  ...\n# Subtest: CommonJS dependencies are fresh across fresh ESM entries\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\n  ---\n  duration_ms: 3.32726\n  type: 'test'\n  ...\n# Subtest: CommonJS cache tree clearing evicts all sibling dependencies\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\n  ---\n  duration_ms: 4.508054\n  type: 'test'\n  ...\n# Subtest: CommonJS dynamic import bridges are fresh across fresh imports\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\n  ---\n  duration_ms: 3.338746\n  type: 'test'\n  ...\n# Subtest: CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\n  ---\n  duration_ms: 2.906052\n  type: 'test'\n  ...\n# Subtest: concurrent fresh imports keep CJS bridge cache keys isolated\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\n  ---\n  duration_ms: 2.822779\n  type: 'test'\n  ...\n# Subtest: concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\n  ---\n  duration_ms: 2.365986\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted by previous fresh CJS bridge context\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\n  ---\n  duration_ms: 2.292559\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during an active fresh CJS bridge import\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\n  ---\n  duration_ms: 201.616631\n  type: 'test'\n  ...\n# Subtest: nested concurrent fresh CJS bridge imports remain isolated\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\n  ---\n  duration_ms: 7.137937\n  type: 'test'\n  ...\n# Subtest: shared CommonJS imports from multiple ESM parents do not collide\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\n  ---\n  duration_ms: 2.570958\n  type: 'test'\n  ...\n# Subtest: ESM packages in node_modules are fresh by default\nok 16 - ESM packages in node_modules are fresh by default\n  ---\n  duration_ms: 1.828213\n  type: 'test'\n  ...\n# Subtest: CommonJS packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\n  ---\n  duration_ms: 2.18897\n  type: 'test'\n  ...\n# Subtest: relative specifiers resolve against parentURL\nok 18 - relative specifiers resolve against parentURL\n  ---\n  duration_ms: 0.764747\n  type: 'test'\n  ...\n# Subtest: CommonJS module parent is bound to the importFresh parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\n  ---\n  duration_ms: 1.852153\n  type: 'test'\n  ...\n# Subtest: CommonJS loading works when require cache is unavailable\nok 20 - CommonJS loading works when require cache is unavailable\n  ---\n  duration_ms: 56.879417\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\n  ---\n  duration_ms: 255.37193\n  type: 'test'\n  ...\n# Subtest: CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\n  ---\n  duration_ms: 63.837265\n  type: 'test'\n  ...\n# Subtest: missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\n  ---\n  duration_ms: 49.305495\n  type: 'test'\n  ...\n# Subtest: regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\n  ---\n  duration_ms: 249.367993\n  type: 'test'\n  ...\n# Subtest: missing format in resolve chain does not force .js modules through CJS path\nok 25 - missing format in resolve chain does not force .js modules through CJS path\n  ---\n  duration_ms: 55.570129\n  type: 'test'\n  ...\n# Subtest: missing format fallback treats package-less .js as CommonJS\nok 26 - missing format fallback treats package-less .js as CommonJS\n  ---\n  duration_ms: 62.151314\n  type: 'test'\n  ...\n# Subtest: loader hooks are registered only once across cache-busted index imports\nok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  duration_ms: 57.366576\n  type: 'test'\n  ...\n# Subtest: race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\n  ---\n  duration_ms: 3452.7794\n  type: 'test'\n  ...\n# Subtest: race stress: stripped require parent URL and missing format remain isolated\nok 29 - race stress: stripped require parent URL and missing format remain isolated\n  ---\n  duration_ms: 235.350052\n  type: 'test'\n  ...\n# Subtest: moduleSpecifier must be a string\nok 30 - moduleSpecifier must be a string\n  ---\n  duration_ms: 0.766734\n  type: 'test'\n  ...\n# Subtest: importFresh options must be an object\nok 31 - importFresh options must be an object\n  ---\n  duration_ms: 0.126314\n  type: 'test'\n  ...\n# Subtest: importFresh options must reject arrays\nok 32 - importFresh options must reject arrays\n  ---\n  duration_ms: 0.068979\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes must be an object\nok 33 - importFresh importAttributes must be an object\n  ---\n  duration_ms: 0.056799\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes must reject arrays\nok 34 - importFresh importAttributes must reject arrays\n  ---\n  duration_ms: 0.058966\n  type: 'test'\n  ...\n# Subtest: importFresh importAttributes values must be strings\nok 35 - importFresh importAttributes values must be strings\n  ---\n  duration_ms: 0.118749\n  type: 'test'\n  ...\n# Subtest: parentURL must be a string or URL\nok 36 - parentURL must be a string or URL\n  ---\n  duration_ms: 0.075779\n  type: 'test'\n  ...\n# Subtest: parentURL must be a valid URL string\nok 37 - parentURL must be a valid URL string\n  ---\n  duration_ms: 0.050731\n  type: 'test'\n  ...\n# Subtest: parentURL must be a hierarchical URL string\nok 38 - parentURL must be a hierarchical URL string\n  ---\n  duration_ms: 0.209223\n  type: 'test'\n  ...\n# Subtest: parentURL must reject Windows path-like URL strings\nok 39 - parentURL must reject Windows path-like URL strings\n  ---\n  duration_ms: 0.192119\n  type: 'test'\n  ...\n# Subtest: parentURL can be a URL instance\nok 40 - parentURL can be a URL instance\n  ---\n  duration_ms: 12.704073\n  type: 'test'\n  ...\n# Subtest: createImportFresh options must be an object\nok 41 - createImportFresh options must be an object\n  ---\n  duration_ms: 0.208093\n  type: 'test'\n  ...\n# Subtest: createImportFresh options must reject arrays\nok 42 - createImportFresh options must reject arrays\n  ---\n  duration_ms: 0.100589\n  type: 'test'\n  ...\n# Subtest: createImportFresh skipNodeModules must be a boolean\nok 43 - createImportFresh skipNodeModules must be a boolean\n  ---\n  duration_ms: 0.099017\n  type: 'test'\n  ...\n# Subtest: createImportFresh throws on conflicting options\nok 44 - createImportFresh throws on conflicting options\n  ---\n  duration_ms: 0.08154\n  type: 'test'\n  ...\n# Subtest: createImportFresh can be called multiple times with the same options\nok 45 - createImportFresh can be called multiple times with the same options\n  ---\n  duration_ms: 4.884752\n  type: 'test'\n  ...\n# Subtest: absolute specifiers are supported\nok 46 - absolute specifiers are supported\n  ---\n  duration_ms: 2.136778\n  type: 'test'\n  ...\n# Subtest: builtin specifiers are supported\nok 47 - builtin specifiers are supported\n  ---\n  duration_ms: 1.665156\n  type: 'test'\n  ...\n# Subtest: JSON modules are supported\nok 48 - JSON modules are supported\n  ---\n  duration_ms: 1.651162\n  type: 'test'\n  ...\n# Subtest: explicit import attributes are forwarded\nok 49 - explicit import attributes are forwarded\n  ---\n  duration_ms: 0.791566\n  type: 'test'\n  ...\n# Subtest: JSON modules keep automatic type attribute when importAttributes is empty\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\n  ---\n  duration_ms: 0.661995\n  type: 'test'\n  ...\n# Subtest: JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\n  ---\n  duration_ms: 0.70466\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject a JSON type attribute before execution\nok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  duration_ms: 0.963322\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject an unsupported import attribute before execution\nok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  duration_ms: 0.636732\n  type: 'test'\n  ...\n# Subtest: CommonJS targets reject an unknown import attribute before execution\nok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  duration_ms: 0.65313\n  type: 'test'\n  ...\n# Subtest: CommonJS targets accept an empty import attribute object\nok 55 - CommonJS targets accept an empty import attribute object\n  ---\n  duration_ms: 1.172249\n  type: 'test'\n  ...\n# Subtest: fresh import busts cache for data URLs\nok 56 - fresh import busts cache for data URLs\n  ---\n  duration_ms: 1.416346\n  type: 'test'\n  ...\n# Subtest: specifiers with search parameters are supported\nok 57 - specifiers with search parameters are supported\n  ---\n  duration_ms: 1.29538\n  type: 'test'\n  ...\n# Subtest: CommonJS specifiers with search parameters are fresh\nok 58 - CommonJS specifiers with search parameters are fresh\n  ---\n  duration_ms: 1.364719\n  type: 'test'\n  ...\n# Subtest: CommonJS revoked proxy exports can be imported fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\n  ---\n  duration_ms: 0.949835\n  type: 'test'\n  ...\n# Subtest: CommonJS undefined exports are treated as valid exports\nok 60 - CommonJS undefined exports are treated as valid exports\n  ---\n  duration_ms: 1.448873\n  type: 'test'\n  ...\n# Subtest: CommonJS named exports are exposed for exports assignments\nok 61 - CommonJS named exports are exposed for exports assignments\n  ---\n  duration_ms: 0.972485\n  type: 'test'\n  ...\n# Subtest: CommonJS non-enumerable data properties are exposed as named exports\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\n  ---\n  duration_ms: 1.020027\n  type: 'test'\n  ...\n# Subtest: CommonJS getters are not executed while building named exports\nok 63 - CommonJS getters are not executed while building named exports\n  ---\n  duration_ms: 2.024896\n  type: 'test'\n  ...\n# Subtest: CommonJS function default export does not expose intrinsic function named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\n  ---\n  duration_ms: 1.144122\n  type: 'test'\n  ...\n# Subtest: CommonJS class default export does not expose intrinsic class named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n  ---\n  duration_ms: 1.023902\n  type: 'test'\n  ...\n1..65\n# tests 65\n# suites 0\n# pass 65\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 5043.766589"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "node bound test callbacks / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; node --test --test-reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:02.615632+00:00",
+      "endedAt": "2026-11-16T13:04:03.872839+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 13\n# Subtest: skipNodeModules keeps CommonJS node_modules cached\nok 1 - skipNodeModules keeps CommonJS node_modules cached\n  ---\n  duration_ms: 7.952954\n  type: 'test'\n  ...\n# Subtest: skipNodeModules keeps ESM node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\n  ---\n  duration_ms: 2.169633\n  type: 'test'\n  ...\n# Subtest: skipNodeModules also keeps downstream non-node_modules imports shared\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\n  ---\n  duration_ms: 4.711631\n  type: 'test'\n  ...\n# Subtest: skipNodeModules importFresh function can be recreated with same options\nok 4 - skipNodeModules importFresh function can be recreated with same options\n  ---\n  duration_ms: 1.815097\n  type: 'test'\n  ...\n1..4\n# tests 4\n# suites 0\n# pass 4\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 91.350244"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": "first"
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests plain bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=0 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:03.925819+00:00",
+      "endedAt": "2026-11-16T13:04:05.146327+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nnot ok 2 - second\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'first'\\n- undefined\\n\\n      assert.equal(globalThis.contextStorage.getStore(), undefined);\\n             ^\\n    at NodeTestContext.<anonymous> (file:///study/repro.test.mjs:49:14)\",\"severity\":\"fail\",\"at\":{\"file\":\"./repro.test.mjs\",\"line\":47}}\n  ...\n1..2\nerror: Test failed"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests plain bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=1 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:05.201725+00:00",
+      "endedAt": "2026-11-16T13:04:06.438230+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nok 2 - second\n1..2"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": "first"
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests hook bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=0 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:06.494326+00:00",
+      "endedAt": "2026-11-16T13:04:07.723910+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nnot ok 2 - second\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'first'\\n- undefined\\n\\n      assert.equal(globalThis.contextStorage.getStore(), undefined);\\n             ^\\n    at NodeTestContext.<anonymous> (file:///study/repro.test.mjs:49:14)\",\"severity\":\"fail\",\"at\":{\"file\":\"./repro.test.mjs\",\"line\":47}}\n  ...\n1..2\nerror: Test failed"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests hook bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=1 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:07.777465+00:00",
+      "endedAt": "2026-11-16T13:04:08.987154+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nok 2 - second\n1..2"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests package bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=0 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:09.039376+00:00",
+      "endedAt": "2026-11-16T13:04:24.261914+00:00",
+      "exitCode": 137,
+      "timedOut": true,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first import"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started",
+          "nested passed"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno two tests package bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=1 deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:24.315267+00:00",
+      "endedAt": "2026-11-16T13:04:25.532788+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first import\nok 2 - nested import\n1..2"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno bound test callbacks / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:25.585399+00:00",
+      "endedAt": "2026-11-16T13:04:32.542789+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/test.js\nok 1 - fresh import returns a new ESM module instance\nok 2 - dependency graph is fresh per call for ESM dependencies\nok 3 - top-level await can use importFresh without deadlock\nok 4 - top-level await fresh imports remain isolated when started concurrently\nok 5 - CommonJS entry modules are fresh across fresh imports\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\nok 16 - ESM packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\nok 18 - relative specifiers resolve against parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\nok 20 - CommonJS loading works when require cache is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 25 - missing format in resolve chain does not force .js modules through CJS path\nok 26 - missing format fallback treats package-less .js as CommonJS\nnot ok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  {\"message\":\"AssertionError: Got unwanted exception.\\nActual message: \\\"Command failed: /usr/local/bin/deno /study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs\\nerror: Uncaught (in promise) TypeError: Expected registerHooks to be called once, got 0.\\n\\t\\tthrow new TypeError(`Expected registerHooks to be called once, got ${registerHooksCallCount}.`);\\n\\t\\t      ^\\n    at file:///study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs:20:9\\n\\\"\\n\\tassert.doesNotThrow(() => {\\n\\t       ^\\n    at NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:260:9)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 29 - race stress: stripped require parent URL and missing format remain isolated\nok 30 - moduleSpecifier must be a string\nok 31 - importFresh options must be an object\nok 32 - importFresh options must reject arrays\nok 33 - importFresh importAttributes must be an object\nok 34 - importFresh importAttributes must reject arrays\nok 35 - importFresh importAttributes values must be strings\nok 36 - parentURL must be a string or URL\nok 37 - parentURL must be a valid URL string\nok 38 - parentURL must be a hierarchical URL string\nok 39 - parentURL must reject Windows path-like URL strings\nok 40 - parentURL can be a URL instance\nok 41 - createImportFresh options must be an object\nok 42 - createImportFresh options must reject arrays\nok 43 - createImportFresh skipNodeModules must be a boolean\nok 44 - createImportFresh throws on conflicting options\nok 45 - createImportFresh can be called multiple times with the same options\nok 46 - absolute specifiers are supported\nok 47 - builtin specifiers are supported\nok 48 - JSON modules are supported\nok 49 - explicit import attributes are forwarded\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nnot ok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:427:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_UNSUPPORTED'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:438:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Missing expected rejection.\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:449:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 55 - CommonJS targets accept an empty import attribute object\nok 56 - fresh import busts cache for data URLs\nok 57 - specifiers with search parameters are supported\nok 58 - CommonJS specifiers with search parameters are fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\nok 60 - CommonJS undefined exports are treated as valid exports\nok 61 - CommonJS named exports are exposed for exports assignments\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\nok 63 - CommonJS getters are not executed while building named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n1..65\nerror: Test failed"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno bound test callbacks / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:32.594338+00:00",
+      "endedAt": "2026-11-16T13:04:33.861416+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/skip-node-modules.js\nok 1 - skipNodeModules keeps CommonJS node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\nok 4 - skipNodeModules importFresh function can be recreated with same options\n1..4"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": "first"
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests plain bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=0 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:33.917602+00:00",
+      "endedAt": "2026-11-16T13:04:35.122542+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nnot ok 2 - second\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'first'\\n- undefined\\n\\n      assert.equal(globalThis.contextStorage.getStore(), undefined);\\n             ^\\n    at NodeTestContext.<anonymous> (file:///study/repro.test.mjs:49:14)\",\"severity\":\"fail\",\"at\":{\"file\":\"./repro.test.mjs\",\"line\":47}}\n  ...\n1..2\nerror: Test failed"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests plain bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=plain BIND_CONTEXT=1 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:35.180379+00:00",
+      "endedAt": "2026-11-16T13:04:36.427804+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nok 2 - second\n1..2"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": "first"
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests hook bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=0 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:36.483011+00:00",
+      "endedAt": "2026-11-16T13:04:37.704754+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nnot ok 2 - second\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ 'first'\\n- undefined\\n\\n      assert.equal(globalThis.contextStorage.getStore(), undefined);\\n             ^\\n    at NodeTestContext.<anonymous> (file:///study/repro.test.mjs:49:14)\",\"severity\":\"fail\",\"at\":{\"file\":\"./repro.test.mjs\",\"line\":47}}\n  ...\n1..2\nerror: Test failed"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          {
+            "label": "first",
+            "before": null
+          },
+          {
+            "label": "first",
+            "observed": "first"
+          },
+          {
+            "label": "first",
+            "after": null
+          },
+          {
+            "label": "second",
+            "before": null
+          },
+          {
+            "label": "second",
+            "observed": "second"
+          },
+          {
+            "label": "second",
+            "after": null
+          }
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests hook bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=hook BIND_CONTEXT=1 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:37.761478+00:00",
+      "endedAt": "2026-11-16T13:04:39.007481+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first\nok 2 - second\n1..2"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests package bound=False",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=0 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:39.061625+00:00",
+      "endedAt": "2026-11-16T13:04:54.295656+00:00",
+      "exitCode": 137,
+      "timedOut": true,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first import"
+    },
+    {
+      "suiteResult": {
+        "events": [
+          "first passed",
+          "nested started",
+          "nested passed"
+        ]
+      },
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 two tests package bound=True",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; cp /pilot/import-fresh-test-repro.mjs /study/repro.test.mjs; REPRO_MODE=package BIND_CONTEXT=1 deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap /study/repro.test.mjs",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:54.350923+00:00",
+      "endedAt": "2026-11-16T13:04:55.591291+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "TAP version 14\n# ./repro.test.mjs\nok 1 - first import\nok 2 - nested import\n1..2"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 bound test callbacks / test.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/test.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:04:55.647267+00:00",
+      "endedAt": "2026-11-16T13:05:02.740320+00:00",
+      "exitCode": 1,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/test.js\nok 1 - fresh import returns a new ESM module instance\nok 2 - dependency graph is fresh per call for ESM dependencies\nok 3 - top-level await can use importFresh without deadlock\nok 4 - top-level await fresh imports remain isolated when started concurrently\nok 5 - CommonJS entry modules are fresh across fresh imports\nok 6 - CommonJS dependencies are fresh across fresh ESM entries\nok 7 - CommonJS cache tree clearing evicts all sibling dependencies\nok 8 - CommonJS dynamic import bridges are fresh across fresh imports\nok 9 - CommonJS deferred microtask dynamic import bridges are fresh across fresh imports\nok 10 - concurrent fresh imports keep CJS bridge cache keys isolated\nok 11 - concurrent fresh imports keep deferred microtask CJS bridge cache keys isolated\nok 12 - regular require is not retargeted by previous fresh CJS bridge context\nok 13 - regular require is not retargeted during an active fresh CJS bridge import\nok 14 - nested concurrent fresh CJS bridge imports remain isolated\nok 15 - shared CommonJS imports from multiple ESM parents do not collide\nok 16 - ESM packages in node_modules are fresh by default\nok 17 - CommonJS packages in node_modules are fresh by default\nok 18 - relative specifiers resolve against parentURL\nok 19 - CommonJS module parent is bound to the importFresh parentURL\nok 20 - CommonJS loading works when require cache is unavailable\nok 21 - regular require is not retargeted during active fresh import when AsyncLocalStorage store is unavailable\nok 22 - CommonJS dynamic import bridges are fresh when require parent URL search is stripped\nok 23 - missing format fallback treats package-less .js as CommonJS when require parent URL search is stripped\nok 24 - regular require is not retargeted during active fresh import when require parent URL search is stripped\nok 25 - missing format in resolve chain does not force .js modules through CJS path\nok 26 - missing format fallback treats package-less .js as CommonJS\nnot ok 27 - loader hooks are registered only once across cache-busted index imports\n  ---\n  {\"message\":\"AssertionError: Got unwanted exception.\\nActual message: \\\"Command failed: /usr/local/bin/deno298 /study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs\\nerror: Uncaught (in promise) TypeError: Expected registerHooks to be called once, got 0.\\n\\t\\tthrow new TypeError(`Expected registerHooks to be called once, got ${registerHooksCallCount}.`);\\n\\t\\t      ^\\n    at file:///study/import-fresh-suite/tests/fixtures/register-hooks-once-runner.mjs:20:9\\n\\\"\\n\\tassert.doesNotThrow(() => {\\n\\t       ^\\n    at NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:260:9)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 28 - race stress: fresh imports remain isolated across repeated concurrent CJS bridge scenarios\nok 29 - race stress: stripped require parent URL and missing format remain isolated\nok 30 - moduleSpecifier must be a string\nok 31 - importFresh options must be an object\nok 32 - importFresh options must reject arrays\nok 33 - importFresh importAttributes must be an object\nok 34 - importFresh importAttributes must reject arrays\nok 35 - importFresh importAttributes values must be strings\nok 36 - parentURL must be a string or URL\nok 37 - parentURL must be a valid URL string\nok 38 - parentURL must be a hierarchical URL string\nok 39 - parentURL must reject Windows path-like URL strings\nok 40 - parentURL can be a URL instance\nok 41 - createImportFresh options must be an object\nok 42 - createImportFresh options must reject arrays\nok 43 - createImportFresh skipNodeModules must be a boolean\nok 44 - createImportFresh throws on conflicting options\nok 45 - createImportFresh can be called multiple times with the same options\nok 46 - absolute specifiers are supported\nok 47 - builtin specifiers are supported\nok 48 - JSON modules are supported\nok 49 - explicit import attributes are forwarded\nok 50 - JSON modules keep automatic type attribute when importAttributes is empty\nok 51 - JSON modules keep automatic type attribute when importAttributes.type is non-enumerable\nnot ok 52 - CommonJS targets reject a JSON type attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_TYPE_INCOMPATIBLE'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:427:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 53 - CommonJS targets reject an unsupported import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Expected values to be strictly deep-equal:\\n+ actual - expected\\n\\n  Comparison {\\n+   code: 'ERR_MODULE_NOT_FOUND'\\n-   code: 'ERR_IMPORT_ATTRIBUTE_UNSUPPORTED'\\n  }\\n\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:438:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nnot ok 54 - CommonJS targets reject an unknown import attribute before execution\n  ---\n  {\"message\":\"AssertionError: Missing expected rejection.\\n\\tawait assert.rejects(\\n\\t^\\n    at async NodeTestContext.<anonymous> (file:///study/import-fresh-suite/tests/test.js:449:2)\",\"severity\":\"fail\",\"at\":{\"file\":\"./import-fresh-suite/tests/test.js\",\"line\":9}}\n  ...\nok 55 - CommonJS targets accept an empty import attribute object\nok 56 - fresh import busts cache for data URLs\nok 57 - specifiers with search parameters are supported\nok 58 - CommonJS specifiers with search parameters are fresh\nok 59 - CommonJS revoked proxy exports can be imported fresh\nok 60 - CommonJS undefined exports are treated as valid exports\nok 61 - CommonJS named exports are exposed for exports assignments\nok 62 - CommonJS non-enumerable data properties are exposed as named exports\nok 63 - CommonJS getters are not executed while building named exports\nok 64 - CommonJS function default export does not expose intrinsic function named exports\nok 65 - CommonJS class default export does not expose intrinsic class named exports\n1..65\nerror: Test failed"
+    },
+    {
+      "suiteResult": null,
+      "suiteResultError": null,
+      "completion": null,
+      "completionError": null,
+      "logTruncated": false,
+      "label": "deno298 bound test callbacks / skip-node-modules.js",
+      "command": "cp -R /workspace/. /study/; cd /study; cp -R /pilot/source/import-fresh/. node_modules/import-fresh/; cp -R node_modules/import-fresh import-fresh-suite; node /pilot/import-fresh-repro.mjs bind-tests; deno298 test -A --no-config --no-lock --node-modules-dir=manual --cached-only --no-check --reporter=tap ./import-fresh-suite/tests/skip-node-modules.js",
+      "network": "none",
+      "startedAt": "2026-11-16T13:05:02.794780+00:00",
+      "endedAt": "2026-11-16T13:05:04.104304+00:00",
+      "exitCode": 0,
+      "timedOut": false,
+      "outOfMemory": false,
+      "containerError": "",
+      "stdoutAndStderr": "diagnostic completed bind-tests\nTAP version 14\n# ./import-fresh-suite/tests/skip-node-modules.js\nok 1 - skipNodeModules keeps CommonJS node_modules cached\nok 2 - skipNodeModules keeps ESM node_modules cached\nok 3 - skipNodeModules also keeps downstream non-node_modules imports shared\nok 4 - skipNodeModules importFresh function can be recreated with same options\n1..4"
+    }
+  ],
+  "versions": {
+    "suiteResult": null,
+    "suiteResultError": null,
+    "completion": null,
+    "completionError": null,
+    "logTruncated": false,
+    "label": "versions",
+    "command": "node --version; deno --version; deno298 --version",
+    "network": "none",
+    "startedAt": "2026-11-16T13:03:40.727398+00:00",
+    "endedAt": "2026-11-16T13:03:41.429958+00:00",
+    "exitCode": 0,
+    "timedOut": false,
+    "outOfMemory": false,
+    "containerError": "",
+    "stdoutAndStderr": "v26.10.0\ndeno 2.9.7 (stable, release, x86_64-unknown-linux-gnu)\nv8 15.0.245.2-rusty\ntypescript 6.0.3\ndeno 2.9.8 (stable, release, x86_64-unknown-linux-gnu)\nv8 15.0.245.2-rusty\ntypescript 6.0.3"
+  },
+  "preparation": {
+    "suiteResult": null,
+    "suiteResultError": null,
+    "completion": null,
+    "completionError": null,
+    "logTruncated": false,
+    "label": "locked install",
+    "command": "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org",
+    "network": "bridge",
+    "startedAt": "2026-11-16T13:03:41.483509+00:00",
+    "endedAt": "2026-11-16T13:03:48.766861+00:00",
+    "exitCode": 0,
+    "timedOut": false,
+    "outOfMemory": false,
+    "containerError": "",
+    "stdoutAndStderr": "npm warn deprecated samsam@1.3.0: This package has been deprecated in favour of @sinonjs/samsam\nnpm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.\nnpm warn deprecated mkdirp@0.5.4: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)\nnpm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.\nnpm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated formatio@1.2.0: This package is unmaintained. Use @sinonjs/formatio instead\nnpm warn deprecated formidable@1.2.6: Please upgrade to latest, formidable@v2 or formidable@v3! Check these notes: https://bit.ly/2ZEqIau\nnpm warn deprecated text-encoding@0.6.4: no longer maintained\nnpm warn deprecated glob@7.1.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated debug@3.2.6: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)\nnpm warn deprecated superagent@3.5.2: Please upgrade to superagent v10.2.2+, see release notes at https://github.com/forwardemail/superagent/releases/tag/v10.2.2 - maintenance is supported by Forward Email @ https://forwardemail.net\nnpm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me\nnpm warn deprecated sinon@2.3.8: 16.1.1\n\nadded 682 packages in 7s\nnpm notice\nnpm notice New major version of npm available! 11.19.1 -> 12.2.2\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2\nnpm notice To update run: npm install -g npm@12.2.2\nnpm notice"
+  },
+  "completedAt": "2026-11-16T13:05:04.125346+00:00"
+}

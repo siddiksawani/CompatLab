@@ -166,6 +166,16 @@ export default async function BehaviorStudy() {
         </table>
       </section>
       <p>{study.suiteInterpretation}</p>
+      <h2 id="deno-followup">Deno follow-up: completing the Import-fresh suite</h2>
+      <p>
+        <strong>{study.denoFollowup.date}.</strong> {study.denoFollowup.summary}
+      </p>
+      <p>
+        The remaining failures concern a hook-registration spy and three CommonJS import-attribute
+        expectations. They need separate interpretation. Read the{" "}
+        <a href={study.denoFollowup.evidence}>follow-up protocol, controls and raw receipts</a> or
+        the <a href={study.denoFollowup.upstream}>upstream context-leak report</a>.
+      </p>
       <h2 id="method">Method and limits</h2>
       <ul>
         <li>

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import io
 import json
+import runpy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -29,6 +30,8 @@ def passed(row):
 def build(check=False):
     evidence = json.loads((ROOT / "results/raw-results.json").read_text())
     analysis = json.loads((ROOT / "analysis.json").read_text())
+    followup = runpy.run_path(str(ROOT / "followup/verify.py"))["verify"]()
+    assert followup == analysis["denoFollowup"]["totals"]
     cohort = json.loads((ROOT / "cohort.json").read_text())["packages"]
     run = next(row for row in evidence["runs"] if row["sourceCommit"] == analysis["sourceCommit"])
     assert run.get("completedAt") and not run.get("infrastructureError")
@@ -115,7 +118,7 @@ def build(check=False):
     }
     assert totals == analysis["expectedTotals"], "Reconcile the written findings with the measured counts"
     summary = {
-        **{field: analysis[field] for field in ("sourceCommit", "cohortCommit", "headline", "coverage", "rootImports", "findings", "suiteInterpretation", "audit")},
+        **{field: analysis[field] for field in ("sourceCommit", "cohortCommit", "headline", "coverage", "rootImports", "findings", "suiteInterpretation", "denoFollowup", "audit")},
         "schemaVersion": 1, "runUrl": run["runUrl"], "startedAt": run["startedAt"], "completedAt": run["completedAt"],
         "lockSha256": run["lockSha256"], "totals": totals, "packages": packages, "suites": suites, "observations": observations,
     }

@@ -1,0 +1,30 @@
+name: Import-fresh Deno follow-up
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/import-fresh-deno-timeout]
+    paths:
+      - .github/workflows/import-fresh-diagnostic.yml
+      - docs/studies/npm-behavior-2026-11/pilot/**
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    if: github.repository == 'siddiksawani/CompatLab' && github.actor == 'siddiksawani'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/install-ci-runsc.sh
+      - run: python3 docs/studies/npm-behavior-2026-11/pilot/import-fresh-diagnostic.py
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: import-fresh-diagnostic
+          path: test-results/import-fresh-diagnostic.json
+          if-no-files-found: error
