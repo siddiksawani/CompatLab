@@ -4,6 +4,7 @@ import { labels, readError } from "../components/labels";
 import { ReportPreviewCard } from "../components/report-preview";
 import { Search } from "../components/search";
 import {
+  behaviorStudyArticle,
   compatibilityArticle,
   mcpArticle,
   migrationArticle,
@@ -75,6 +76,9 @@ export default async function Home({
           <div className="hero-links">
             <a className="text-link" href={novemberStudyArticle.path}>
               {novemberStudyArticle.title}
+            </a>
+            <a className="text-link" href={behaviorStudyArticle.path}>
+              Study 2: what happened when we called the APIs
             </a>
             <a className="text-link" href={mcpArticle.path}>
               Connect an AI agent with MCP

@@ -16,7 +16,8 @@
       "!**/next-env.d.ts",
       "!playwright-report",
       "!test-results",
-      "!**/.browser-fixtures"
+      "!**/.browser-fixtures",
+      "!docs/studies/npm-behavior-2026-11/results/**/*.json"
     ]
   },
   "formatter": {

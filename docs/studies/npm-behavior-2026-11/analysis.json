@@ -1,0 +1,303 @@
+{
+  "sourceCommit": "c43dbbea80811ccdf8c0ca75cebf06f86978ae7e",
+  "cohortCommit": "df872548ba72d8542669e38ae51477c18341b5a2",
+  "cohortSha256": "63e57984a935c5fd02f7886494c8dedfe9ecc1ba7811a38ba8ad7dea285125e4",
+  "expectedObservations": 189,
+  "headline": "Four packages imported on Bun 1.4.2, then failed our named behavior probes. Node.js 26.10.0 and Deno 2.9.7 passed all 19 named probes; Bun passed 15. The four differences reproduced on Bun 1.4.4. These are selected API cases, not an npm-wide compatibility score.",
+  "coverage": "All 24 frozen versions are included: 19 received named behavior probes and nine received upstream suite or subset attempts, with four packages in both groups. The final run contains 189 runtime/case observations, including separate root imports, supplementary runtime versions and matched controls. Preparation succeeded for the shared tree and all four recorded offline hook/build steps.",
+  "rootImports": "Separate root imports passed for 23 of 24 versions on Node, 23 of 24 on Bun, and 24 of 24 on Deno. SPDY failed to import on Node and Bun. Bun's ordinary undici specifier resolves to its built-in shim, so that root-import result describes the consumer resolution, not the installed npm artifact.",
+  "findings": [
+    {
+      "id": "sqlite",
+      "title": "An identical native binary worked after a filename change",
+      "summary": "better-sqlite3@13.2.0 imported successfully, but opening a database through our from-source binding failed on Bun 1.4.2 and 1.4.4. The shipped prebuild passed. A byte-identical copy of the rebuilt binary also passed when selected under a different filename. Node and Deno passed all three variants. The evidence points to Bun's filename guard, not a blanket inability to run this addon. We filed issue #49082; it links an already-open fix that predates this study.",
+      "command": "bun run --no-install /pilot/probe-entry.cjs /pilot/better-sqlite3.cjs",
+      "evidence": "https://github.com/oven-sh/bun/issues/49082"
+    },
+    {
+      "id": "workers",
+      "title": "A worker could start without receiving its task",
+      "summary": "Workerpool@10.0.3 loaded on all three primary profiles. Its thread task completed on Node and Deno but timed out at 75 seconds on Bun 1.4.2 and 1.4.4, including fresh replays. A package-free reduction selected the web message-listener branch because those globals exist, then received no echo within eight seconds on both Bun versions. This matches the message-channel mismatch already reported upstream; Piscina and Thread-stream passed their separate named cases.",
+      "command": "bun run --no-install /pilot/probe-entry.cjs /pilot/worker-channel.cjs",
+      "evidence": "https://github.com/oven-sh/bun/issues/43459"
+    },
+    {
+      "id": "hooks",
+      "title": "Importing a loader utility did not exercise its loader hook",
+      "summary": "Import-fresh@4.0.1 imported on Bun, then threw when the named case created its fresh-import loader: module.registerHooks was unavailable. The same cache-reset case passed on Node and Deno. Both tested Bun versions reproduced the gap. This is a known Node API omission, not a newly discovered import-fresh defect.",
+      "command": "bun run --no-install /pilot/probe-entry.cjs /pilot/remaining.cjs import-fresh",
+      "evidence": "https://github.com/oven-sh/bun/issues/27369"
+    },
+    {
+      "id": "context",
+      "title": "A timer lost the namespace value after a successful import",
+      "summary": "CLS-hooked@4.2.2 loaded on all primary profiles. In two concurrent namespace runs, Bun 1.4.2 and 1.4.4 returned undefined where the timer callback should have received its stored value. Node and Deno passed this narrow case. Bun documents async_hooks limitations. The broader CLS suite also failed on Node and Deno, so this passing timer probe cannot certify HTTP or TCP context propagation.",
+      "command": "bun run --no-install /pilot/probe-entry.cjs /pilot/remaining.cjs cls-hooked",
+      "evidence": "https://bun.sh/docs/runtime/nodejs-compat"
+    }
+  ],
+  "scopes": {
+    "sharp": "Resize a red pixel; verify dimensions and bytes",
+    "better-sqlite3": "Insert/select through a from-source native binding",
+    "bcrypt": "Hash and verify, including a wrong password",
+    "canvas": "Render red and transparent pixels; read them back",
+    "esbuild": "Transform TypeScript and evaluate the result",
+    "piscina": "Worker arithmetic and child runtime identity",
+    "thread-stream": "Worker writes a file; await close and read back",
+    "workerpool": "Thread task, runtime identity and pool teardown",
+    "http2-wrapper": "Local TLS HTTP/2 request and response",
+    "spdy": "Upstream client and server tests",
+    "undici": "Local HTTP and Agent.close using the pinned npm entry",
+    "require-from-string": "Upstream seven-test suite",
+    "pirates": "Install a require hook, load, remove and reload",
+    "import-fresh": "Repeated ESM imports reset module-local state",
+    "cls-hooked": "Concurrent timer namespace isolation",
+    "async-hook-domain": "Catch a timer exception in its domain",
+    "cross-spawn": "Sync/async child output, exit and runtime identity",
+    "execa": "Successful child and nonzero exit rejection",
+    "foreground-child": "Child exit callback, output and runtime identity",
+    "signal-exit": "Normal child-exit callback (not OS signal delivery)",
+    "readable-stream": "Object stream backpressure and error propagation",
+    "pump": "Both shipped JavaScript test scripts",
+    "split2": "Shipped unit assertions (no lint or coverage)",
+    "end-of-stream": "Pinned upstream test assertions"
+  },
+  "suiteScopes": {
+    "pump": {
+      "tier": "upstream_suite",
+      "note": "Both test-browser.js and test-node.js under each runtime; no real browser. Two completion markers, not an assertion count."
+    },
+    "split2": {
+      "tier": "upstream_suite",
+      "note": "59 TAP assertions from the shipped unit file; lint and coverage excluded."
+    },
+    "end-of-stream": {
+      "tier": "upstream_suite",
+      "note": "18 TAP assertions from the pinned source test, using Tape 4."
+    },
+    "bcrypt": {
+      "tier": "upstream_suite",
+      "note": "75 Jest tests, run in-band against a copy of the published implementation outside node_modules."
+    },
+    "require-from-string": {
+      "tier": "upstream_suite",
+      "note": "Two old error-message/stack-format expectations fail on all three profiles; no passing Node baseline."
+    },
+    "spdy": {
+      "tier": "upstream_suite",
+      "note": "Node 24/26 and Bun stop before tests. Deno reaches the suite but fails; no passing Node baseline."
+    },
+    "workerpool": {
+      "tier": "upstream_suite",
+      "note": "All top-level JavaScript test files from the pinned source. Node baseline fails; other profiles also differ in test coverage and child-process assumptions."
+    },
+    "import-fresh": {
+      "tier": "upstream_suite",
+      "note": "Both pinned unit files, copied outside node_modules. Node and Deno use native test runners; Bun lacks module.registerHooks."
+    },
+    "cls-hooked": {
+      "tier": "upstream_subset",
+      "note": "Eight Mocha files. Public-Google-dependent http-agent-break.test.js and the separately configured TAP suite excluded before execution. Node baseline also fails."
+    }
+  },
+  "suiteInterpretation": "A failed upstream suite is not automatically a runtime defect. Require-from-string relies on historical error formatting; SPDY depends on private bindings removed from current Node. Workerpool and CLS-hooked also have failing Node baselines and different failures or coverage on other runtimes. Their complete structured errors and fresh replays remain in the raw data. Compare individual cases only when their prerequisites and test coverage match. Import-fresh completes 69 tests on Node, stops before registration on Bun, and stalls twice on Deno after two completed tests, before its top-level-await case completes. Deno's stall remains unisolated; it is a timeout observation, not an established runtime bug. Mocha failure totals can include hooks in addition to test cases, and Workerpool's Deno failure count changes between replay attempts.",
+  "audit": "The audit corrected measurement mistakes before publication: Bun's bare undici shim lacked Agent.close while the explicitly pinned npm package passed; Import-fresh fixtures had to move outside node_modules; Deno needed deno test to execute node:test; asynchronous probes needed awaited completion records; and Mocha failures needed structured evidence beyond bounded stdout. Superseded receipts are retained with explanations. A failed first command was injected into Pump's shell sequence and propagated exit 23; no false Pump pass was observed. The separate Yargs diagnostic returned the same ERR_MODULE_NOT_FOUND code in all six fresh/order controls, so the earlier inconsistent-code suspicion did not reproduce.",
+  "expectedTotals": {
+    "packages": 24,
+    "observations": 189,
+    "namedPackages": 19,
+    "suitePackages": 9,
+    "namedPass": {
+      "node": 19,
+      "bun": 15,
+      "deno": 19
+    },
+    "rootImportPass": {
+      "node": 23,
+      "bun": 23,
+      "deno": 24
+    }
+  },
+  "nonPasses": {
+    "spdy/root_import/node": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "SPDY depends on http_parser, which is absent in the pinned Node 26 baseline. The root and suite stop before tests; the fresh replay agrees.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "spdy/root_import/bun": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "The dependency requests process.binding(\"stream_wrap\"), which Bun does not implement. Node also fails this version, so the suite is not a matched regression comparison.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "spdy/root_import/node24": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "The supplementary Node 24 baseline also lacks http_parser. It stops before tests and repeats the failure.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "better-sqlite3/named_behavior/bun": {
+      "status": "difference",
+      "classification": "native_loader_filename_guard",
+      "explanation": "The package root loads, but Bun rejects the from-source native binding under its original filename. A fresh replay agrees. Both the shipped prebuild and a byte-identical renamed compiled binding pass on the same Bun profile.",
+      "display": "Difference: native binding rejected"
+    },
+    "better-sqlite3/named_behavior/bun144": {
+      "status": "difference",
+      "classification": "native_loader_filename_guard",
+      "explanation": "The package root loads, but Bun rejects the from-source native binding under its original filename. A fresh replay agrees. Both the shipped prebuild and a byte-identical renamed compiled binding pass on the same Bun profile.",
+      "display": "Difference: native binding rejected"
+    },
+    "require-from-string/upstream_suite/node": {
+      "status": "baseline_failure",
+      "classification": "historical_error_format_assertions",
+      "explanation": "Five of seven tests pass. Both the filename/syntax-error text assertion and the fixed stack-position assertion fail on Node, Bun and Deno, including fresh replays. This is not a matched alternative-runtime regression.",
+      "display": "Baseline failure: 5/7 tests pass"
+    },
+    "require-from-string/upstream_suite/bun": {
+      "status": "baseline_failure",
+      "classification": "historical_error_format_assertions",
+      "explanation": "Five of seven tests pass. Both the filename/syntax-error text assertion and the fixed stack-position assertion fail on Node, Bun and Deno, including fresh replays. This is not a matched alternative-runtime regression.",
+      "display": "Baseline failure: 5/7 tests pass"
+    },
+    "require-from-string/upstream_suite/deno": {
+      "status": "baseline_failure",
+      "classification": "historical_error_format_assertions",
+      "explanation": "Five of seven tests pass. Both the filename/syntax-error text assertion and the fixed stack-position assertion fail on Node, Bun and Deno, including fresh replays. This is not a matched alternative-runtime regression.",
+      "display": "Baseline failure: 5/7 tests pass"
+    },
+    "spdy/upstream_suite/node": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "SPDY depends on http_parser, which is absent in the pinned Node 26 baseline. The root and suite stop before tests; the fresh replay agrees.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "spdy/upstream_suite/bun": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "The dependency requests process.binding(\"stream_wrap\"), which Bun does not implement. Node also fails this version, so the suite is not a matched regression comparison.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "spdy/upstream_suite/deno": {
+      "status": "baseline_failure",
+      "classification": "baseline_unavailable",
+      "explanation": "SPDY reaches 11 tests with zero passes and 38 failures including hooks, TLS disconnects, parser assertions and subsequent socket/port teardown errors. The fresh replay repeats this. Neither tested Node version supplies a passing baseline.",
+      "display": "No Node baseline; 0/11 tests pass"
+    },
+    "spdy/upstream_suite/node24": {
+      "status": "baseline_failure",
+      "classification": "private_node_binding",
+      "explanation": "The supplementary Node 24 baseline also lacks http_parser. It stops before tests and repeats the failure.",
+      "display": "Baseline failure: stops before tests"
+    },
+    "workerpool/named_behavior/bun": {
+      "status": "timeout",
+      "classification": "worker_message_routing",
+      "explanation": "The thread task is dispatched but does not return within 75 seconds; the supervisor terminates the container. The fresh replay repeats it. The package-free reduced worker-channel control also fails, while Node and Deno complete both cases.",
+      "display": "Timeout: thread task (75 s)"
+    },
+    "workerpool/named_behavior/bun144": {
+      "status": "timeout",
+      "classification": "worker_message_routing",
+      "explanation": "The thread task is dispatched but does not return within 75 seconds; the supervisor terminates the container. The fresh replay repeats it. The package-free reduced worker-channel control also fails, while Node and Deno complete both cases.",
+      "display": "Timeout: thread task (75 s)"
+    },
+    "import-fresh/named_behavior/bun": {
+      "status": "difference",
+      "classification": "loader_hook_missing",
+      "explanation": "Import-fresh checks module.registerHooks when its loader is created and throws because the hook is unavailable in this Bun version. The root import succeeds. The fresh replay agrees. In the upstream suite the failure occurs before test registration.",
+      "display": "Difference: loader hook unavailable"
+    },
+    "import-fresh/named_behavior/bun144": {
+      "status": "difference",
+      "classification": "loader_hook_missing",
+      "explanation": "Import-fresh checks module.registerHooks when its loader is created and throws because the hook is unavailable in this Bun version. The root import succeeds. The fresh replay agrees. In the upstream suite the failure occurs before test registration.",
+      "display": "Difference: loader hook unavailable"
+    },
+    "cls-hooked/named_behavior/bun": {
+      "status": "difference",
+      "classification": "async_context_loss",
+      "explanation": "A timer callback sees undefined rather than its namespace value during concurrent namespace runs. The fresh replay agrees. Node and Deno pass this narrow timer case; the wider subset is reported separately.",
+      "display": "Difference: timer context lost"
+    },
+    "cls-hooked/named_behavior/bun144": {
+      "status": "difference",
+      "classification": "async_context_loss",
+      "explanation": "A timer callback sees undefined rather than its namespace value during concurrent namespace runs. The fresh replay agrees. Node and Deno pass this narrow timer case; the wider subset is reported separately.",
+      "display": "Difference: timer context lost"
+    },
+    "workerpool/reduced_worker_channel/bun": {
+      "status": "difference",
+      "classification": "worker_message_routing",
+      "explanation": "The child reports web message globals, selects addEventListener(\"message\"), then does not echo a parentPort.postMessage within eight seconds. The fresh replay agrees. Node and Deno pass this reduced case.",
+      "display": "Difference: no worker echo"
+    },
+    "workerpool/reduced_worker_channel/bun144": {
+      "status": "difference",
+      "classification": "worker_message_routing",
+      "explanation": "The child reports web message globals, selects addEventListener(\"message\"), then does not echo a parentPort.postMessage within eight seconds. The fresh replay agrees. Node and Deno pass this reduced case.",
+      "display": "Difference: no worker echo"
+    },
+    "undici/bare_specifier/bun": {
+      "status": "difference",
+      "classification": "builtin_shim_resolution",
+      "explanation": "Bun resolves the bare undici specifier to its built-in shim. HTTP response assertions pass, but Agent.close is undefined; the fresh replay agrees. Loading /study/node_modules/undici/index.js explicitly passes the same case. This control does not describe failure of the pinned npm artifact.",
+      "display": "Difference: bundled shim lacks Agent.close"
+    },
+    "undici/bare_specifier/bun144": {
+      "status": "difference",
+      "classification": "builtin_shim_resolution",
+      "explanation": "Bun resolves the bare undici specifier to its built-in shim. HTTP response assertions pass, but Agent.close is undefined; the fresh replay agrees. Loading /study/node_modules/undici/index.js explicitly passes the same case. This control does not describe failure of the pinned npm artifact.",
+      "display": "Difference: bundled shim lacks Agent.close"
+    },
+    "workerpool/upstream_suite/node": {
+      "status": "baseline_failure",
+      "classification": "suite_timeout_and_coverage",
+      "explanation": "169 of 172 tests pass, two are pending, and the abort-handler Timeout case exceeds Mocha's default two-second test deadline. The fresh replay has the same one failure. The named thread probe separately passes; the suite does not provide a passing Node baseline.",
+      "display": "Baseline failure: 169/172 pass; 2 skipped"
+    },
+    "workerpool/upstream_suite/bun": {
+      "status": "baseline_failure",
+      "classification": "suite_timeout_and_coverage",
+      "explanation": "The suite records 84 passes, one pending test and 17 failures including a hook, across 101 test cases. Most failures are child/thread timeouts; a graceful-exit assertion also fails. The replay repeats 17 failures. Coverage differs from Node and Node's own suite fails, so no suite-wide runtime regression rate is inferred.",
+      "display": "Baseline failure: 84/101 pass; 1 skipped"
+    },
+    "workerpool/upstream_suite/deno": {
+      "status": "baseline_failure",
+      "classification": "suite_timeout_and_coverage",
+      "explanation": "The suite records 99 passes, two pending tests and 28 failures including a hook, across 128 test cases. Most failures are child/worker/teardown timeouts. The fresh replay has 27 failures, so the failure count is not stable. Tests assume Node child-process arguments and executable behavior; the named task passes. Unequal coverage and a failing Node baseline preclude a suite-wide regression claim.",
+      "display": "Baseline failure: 99/128 pass; 2 skipped"
+    },
+    "import-fresh/upstream_suite/bun": {
+      "status": "difference",
+      "classification": "loader_hook_missing",
+      "explanation": "Import-fresh checks module.registerHooks when its loader is created and throws because the hook is unavailable in this Bun version. The root import succeeds. The fresh replay agrees. In the upstream suite the failure occurs before test registration.",
+      "display": "Difference: loader hook unavailable"
+    },
+    "import-fresh/upstream_suite/deno": {
+      "status": "timeout",
+      "classification": "unresolved_suite_timeout",
+      "explanation": "Using deno test actually executes node:test cases. The first two ESM tests pass, then no further test finishes before the 180-second container deadline; the third source case concerns top-level await. A fresh replay produces the same two completed tests and timeout. The second file never runs. The small named ESM cache-reset probe passes; the suite stall is not isolated to a runtime defect.",
+      "display": "Timeout: 2 tests completed (180 s)"
+    },
+    "cls-hooked/upstream_subset/node": {
+      "status": "baseline_failure",
+      "classification": "async_context_and_baseline_failure",
+      "explanation": "25 of 27 tests pass. Two TCP context expectations fail in net-events.test.js and net-events2.test.js, including the fresh replay. This subset has no passing Node baseline.",
+      "display": "Baseline failure: 25/27 tests pass"
+    },
+    "cls-hooked/upstream_subset/bun": {
+      "status": "baseline_failure",
+      "classification": "async_context_and_baseline_failure",
+      "explanation": "10 of 23 test cases pass; 14 failures include a hook. Failures cover HTTP/TCP context, namespace reset and promise context. A fresh replay repeats 14 failures. The Node subset also fails and coverage differs; the independent named timer case supplies the narrower matched comparison.",
+      "display": "Baseline failure: 10/23 tests pass"
+    },
+    "cls-hooked/upstream_subset/deno": {
+      "status": "baseline_failure",
+      "classification": "async_context_and_baseline_failure",
+      "explanation": "19 of 27 tests pass; eight failures cover HTTP/TCP context, a timeout and promise context, with the same count in the fresh replay. Node also fails two TCP cases. Passing the named timer probe does not imply wider context compatibility.",
+      "display": "Baseline failure: 19/27 tests pass"
+    }
+  }
+}
