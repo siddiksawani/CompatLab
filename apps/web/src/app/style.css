@@ -248,10 +248,10 @@ nav a {
   line-height: 1.15;
   margin: 0 0 20px;
 }
-.hero-method {
-  color: var(--muted);
-  font-size: 0.86rem;
-  margin-top: 24px;
+.hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
 }
 .hero-search,
 .report-preview {
@@ -281,9 +281,6 @@ nav a {
 .preview-title {
   color: var(--ink);
   text-decoration: none;
-}
-.preview-coverage {
-  margin-top: 18px;
 }
 .site-header [aria-current="page"] {
   color: var(--accent);

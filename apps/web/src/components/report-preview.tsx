@@ -7,7 +7,7 @@ export function ReportPreviewCard({ report }: { report: ReportPreview }) {
     <section className="report-preview" aria-labelledby="preview-title">
       <div className="preview-heading">
         <div>
-          <p className="fine">From a completed scan</p>
+          <p className="fine">Example loading report</p>
           <h2 id="preview-title">
             <a className="preview-title" href={`/reports/${report.id}`}>
               {report.artifact.name}
@@ -17,13 +17,7 @@ export function ReportPreviewCard({ report }: { report: ReportPreview }) {
         </div>
         <span className={`result ${report.outcome}`}>{labels[report.outcome]}</span>
       </div>
-      <RuntimeMatrix report={report} reportId={report.id} />
-      <p className="fine preview-coverage">
-        {report.coverageComplete
-          ? "Planned checks completed."
-          : "Coverage is incomplete; see the omissions in the report."}{" "}
-        Preparation: {labels[report.preparation.outcome].toLowerCase()}.
-      </p>
+      <RuntimeMatrix report={report} reportId={report.id} rootOnly />
       <p className="fine">Linux amd64 / glibc · Observed {observedDate(report.observedAt)}</p>
       <a className="text-link" href={`/reports/${report.id}`}>
         Open full report and pinned environment →

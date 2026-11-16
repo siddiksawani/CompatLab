@@ -9,6 +9,7 @@ import {
   migrationArticle,
   novemberStudyArticle,
 } from "../content/articles";
+import loadingStudy from "../content/npm-loading-study-2026-11.json";
 import { exampleReports, recentReports } from "../server/discovery";
 import { pageMetadata, publicOrigin } from "../server/metadata";
 import { publicRead } from "../server/runtime";
@@ -49,6 +50,7 @@ export default async function Home({
   let error = "";
   const recent = await recentReports();
   const examples = await exampleReports(recent);
+  const featured = examples.find((report) => report.outcome === "pass" && report.coverageComplete);
   if (query) {
     const response = await publicRead(`/api/v1/search?${new URLSearchParams({ q: query })}`);
     if (response.ok) packages = searchResponseSchema.parse(await response.json()).packages;
@@ -61,12 +63,23 @@ export default async function Home({
       </script>
       <section className="hero">
         <div className="hero-search">
-          <h1>Check your npm package in Node.js, Bun and Deno.</h1>
+          <h1>
+            {loadingStudy.totals.allImportPass} of {loadingStudy.packages.length} npm packages
+            imported on Node.js, Bun and Deno
+          </h1>
           <p className="lede">
-            CompatLab checks how npm packages load with import and require. Pick a version, compare
-            the results and open the details when a check fails.
+            The study measured root imports on four pinned runtime versions. Search for an exact npm
+            version to compare its import and require results.
           </p>
           <Search initialQuery={query} initialPackages={packages} initialError={error} />
+          <div className="hero-links">
+            <a className="text-link" href={novemberStudyArticle.path}>
+              {novemberStudyArticle.title}
+            </a>
+            <a className="text-link" href={mcpArticle.path}>
+              Connect an AI agent with MCP
+            </a>
+          </div>
           {examples.length > 0 && (
             <section className="examples" aria-label="Example reports">
               <span>Open a completed report</span>
@@ -78,20 +91,16 @@ export default async function Home({
               ))}
             </section>
           )}
-          <p className="hero-method">
-            We test published npm packages on Linux with exact runtime versions. Install scripts
-            stay disabled. <a href="/methodology">Read how the checks work.</a>
-          </p>
         </div>
-        {examples[0] ? (
-          <ReportPreviewCard report={examples[0]} />
+        {featured ? (
+          <ReportPreviewCard report={featured} />
         ) : (
           <aside className="preview-empty">
-            <h2>No completed reports yet</h2>
-            <p>
-              Search for a package and request a scan. Its report will show the loading results for
-              each runtime.
-            </p>
+            <h2>Browse the test results</h2>
+            <p>The directory shows observed loading results for exact npm versions.</p>
+            <a className="text-link" href="/npm/compatibility">
+              npm compatibility directory →
+            </a>
           </aside>
         )}
       </section>
@@ -116,12 +125,6 @@ export default async function Home({
           </ul>
         </section>
       )}
-      <section className="page article-callout" aria-labelledby="study-title">
-        <h2 id="study-title">
-          <a href={novemberStudyArticle.path}>{novemberStudyArticle.title}</a>
-        </h2>
-        <p>{novemberStudyArticle.description}</p>
-      </section>
       <section className="page article-callout" aria-labelledby="article-title">
         <h2 id="article-title">
           <a href={compatibilityArticle.path}>{compatibilityArticle.title}</a>
@@ -139,12 +142,6 @@ export default async function Home({
           Match the versions in your lockfile to the imports in your code. Use the Axios, Zod, Sharp
           and gRPC examples to pick the next test for your application.
         </p>
-      </section>
-      <section className="page article-callout" aria-labelledby="mcp-article-title">
-        <h2 id="mcp-article-title">
-          <a href={mcpArticle.path}>{mcpArticle.title}</a>
-        </h2>
-        <p>{mcpArticle.description}</p>
       </section>
       <section className="cli-callout">
         <div>

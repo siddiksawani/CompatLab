@@ -154,7 +154,9 @@ test("publishes canonical pages and excludes query and operational surfaces", as
   await expect(page).toHaveTitle(title);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
   await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
-  await expect(page.locator(".hero .lede")).toContainText("CompatLab checks how npm packages load");
+  await expect(page.locator(".hero h1")).toHaveText(
+    "97 of 100 npm packages imported on Node.js, Bun and Deno",
+  );
   const initialHtml = await (await request.get("/")).text();
   const structuredData = initialHtml.match(
     /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/,
